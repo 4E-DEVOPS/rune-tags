@@ -1,0 +1,1752 @@
+{
+  "Abandoned Mine": [
+    [53, 50],
+    [42, 71],
+    [43, 71],
+    [42, 70],
+    [43, 70],
+    [42, 69],
+    [43, 69],
+    [53, 150]
+  ],
+  "Abyss": [
+    [47, 75]
+  ],
+  "Abyssal Area": [
+    [47, 76]
+  ],
+  "Abyssal Nexus": [
+    [46, 74],
+    [46, 75],
+    [47, 74],
+    [48, 74],
+    [48, 75]
+  ],
+  "Air Altar": [
+    [44, 75]
+  ],
+  "Agility Pyramid": [
+    [52, 44],
+    [47, 73]
+  ],
+  "Akkha": [
+    [57, 84]
+  ],
+  "Al Kharid": [
+    [51, 49]
+  ],
+  "Aldarin": [
+    [20, 46],
+    [21, 46],
+    [22, 46],
+    [21, 45]
+  ],
+  "Amoxliatl": [
+    [21, 70]
+  ],
+  "Ancient Cavern": [
+    [27, 83]
+  ],
+  "Ancient Guthixian Temple": [
+    [63, 69],
+    [64, 69],
+    [63, 68],
+    [64, 68]
+  ],
+  "Ancient Prison": [
+    [21, 149]
+  ],
+  "Ancient Shrine": [
+    [23, 149]
+  ],
+  "Anglers' Retreat": [
+    [38, 42]
+  ],
+  "Ape Atoll": [
+    [42, 43],
+    [42, 42],
+    [43, 42]
+  ],
+  "Arandar": [
+    [36, 51],
+    [37, 51],
+    [36, 50]
+  ],
+  "Araxxor's Cavern": [
+    [56, 153]
+  ],
+  "Arceuus": [
+    [25, 60],
+    [25, 59],
+    [26, 59],
+    [25, 58],
+    [26, 58]
+  ],
+  "Ardougne": [
+    [38, 51],
+    [39, 51],
+    [40, 51],
+    [41, 51]
+  ],
+  "Ardougne Rat Pits": [
+    [41, 150]
+  ],
+  "Asgarnian Ice Dungeon": [
+    [46, 149],
+    [47, 149]
+  ],
+  "Auburnvale": [
+    [21, 51],
+    [21, 52],
+    [22, 51],
+    [22, 52]
+  ],
+  "Avium Savannah": [
+    [23, 48],
+    [24, 48],
+    [23, 47],
+    [25, 47],
+    [26, 47],
+    [27, 47],
+    [24, 46],
+    [25, 46],
+    [26, 45],
+    [27, 45]
+  ],
+  "Baba Yaga's House": [
+    [38, 72]
+  ],
+  "Ba-Ba": [
+    [59, 84]
+  ],
+  "Barbarian Assault": [
+    [29, 85],
+    [29, 84],
+    [40, 82]
+  ],
+  "Barbarian Outpost": [
+    [39, 55]
+  ],
+  "Barbarian Village": [
+    [48, 53]
+  ],
+  "Barrows": [
+    [55, 51],
+    [55, 151]
+  ],
+  "Battlefront": [
+    [21, 58],
+    [21, 57]
+  ],
+  "Battlefield": [
+    [39, 50]
+  ],
+  "Baxtorian Falls": [
+    [39, 54]
+  ],
+  "Bedabin Camp": [
+    [49, 47]
+  ],
+  "Black Knight Catacombs": [
+    [64, 74],
+    [64, 73]
+  ],
+  "Blast Furnace": [
+    [30, 77]
+  ],
+  "Blast Mine": [
+    [23, 60]
+  ],
+  "Blood Altar": [
+    [50, 75]
+  ],
+  "Blood Moon": [
+    [21, 150]
+  ],
+  "Blue Moon": [
+    [22, 151]
+  ],
+  "Blue Moon Inn Basement": [
+    [50, 153]
+  ],
+  "Body Altar": [
+    [39, 75]
+  ],
+  "Brimhaven": [
+    [42, 50],
+    [43, 50],
+    [42, 49],
+    [43, 49]
+  ],
+  "Brimhaven Agility Arena": [
+    [43, 149]
+  ],
+  "Brimhaven Dungeon": [
+    [41, 149],
+    [42, 149],
+    [41, 148],
+    [42, 148],
+    [42, 147],
+    [41, 147]
+  ],
+  "Brittle Isle": [
+    [30, 63]
+  ],
+  "Lumbridge Cow Pen": [
+    [50, 51],
+    [51, 51]
+  ],
+  "Bryophyta's Lair": [
+    [50, 155]
+  ],
+  "Buccaneers' Haven": [
+    [32, 57]
+  ],
+  "Burgh de Rott": [
+    [54, 50],
+    [54, 49]
+  ],
+  "Burthorpe": [
+    [45, 55]
+  ],
+  "Burthorpe Games Room": [
+    [34, 77]
+  ],
+  "Cairn Isle": [
+    [43, 46]
+  ],
+  "Callisto's Den": [
+    [29, 180]
+  ],
+  "Canifis": [
+    [54, 54]
+  ],
+  "Camelot": [
+    [43, 54]
+  ],
+  "Cam Torum": [
+    [22, 149]
+  ],
+  "Castle Wars": [
+    [37, 48],
+    [38, 48]
+  ],
+  "Catacombs of Kourend": [
+    [25, 157],
+    [26, 157],
+    [25, 156],
+    [26, 156]
+  ],
+  "Catherby": [
+    [43, 53],
+    [44, 53]
+  ],
+  "Cerberus' Lair": [
+    [20, 20],
+    [19, 19],
+    [20, 19],
+    [21, 19]
+  ],
+  "Civitas illa Fortis": [
+    [25, 49],
+    [26, 49],
+    [27, 49],
+    [25, 48],
+    [26, 48],
+    [27, 48],
+    [28, 48]
+  ],
+  "Chambers of Xeric": [
+    [51, 89],
+    [52, 89],
+    [51, 85],
+    [52, 85],
+    [51, 84],
+    [52, 84],
+    [51, 83],
+    [52, 83],
+    [51, 82],
+    [52, 82],
+    [51, 81],
+    [52, 81],
+    [51, 80]
+  ],
+  "Chaos Altar": [
+    [35, 75]
+  ],
+  "Chaos Druid Tower Dungeon": [
+    [40, 152]
+  ],
+  "Champions' Challenge": [
+    [49, 152]
+  ],
+  "Charred Island": [
+    [41, 37]
+  ],
+  "Chasm of Fire": [
+    [22, 157]
+  ],
+  "Chinchompa Island": [
+    [29, 53]
+  ],
+  "Clan Hall": [
+    [27, 85]
+  ],
+  "Clan Wars": [
+    [49, 79],
+    [51, 79],
+    [53, 79],
+    [49, 78],
+    [51, 78],
+    [53, 78],
+    [49, 77],
+    [54, 77],
+    [53, 77],
+    [53, 76],
+    [54, 76],
+    [55, 76],
+    [51, 75],
+    [52, 75],
+    [53, 75],
+    [54, 75],
+    [55, 75],
+    [51, 74],
+    [52, 74],
+    [53, 74],
+    [54, 74],
+    [53, 73]
+  ],
+  "Clock Tower Dungeon": [
+    [40, 150]
+  ],
+  "Colossal Wyrm Remains": [
+    [25, 45]
+  ],
+  "Corporeal Beast": [
+    [46, 68],
+    [46, 66]
+  ],
+  "Corsair Cove": [
+    [40, 44]
+  ],
+  "Corsair Cove Dungeon": [
+    [31, 140]
+  ],
+  "Cosmic Altar": [
+    [33, 75]
+  ],
+  "Cosmic Entity's Plane": [
+    [32, 75]
+  ],
+  "Crabclaw Isle": [
+    [27, 53]
+  ],
+  "Crabclaw Caves": [
+    [25, 153],
+    [26, 153],
+    [25, 152],
+    [26, 152]
+  ],
+  "Crafting Guild": [
+    [45, 51]
+  ],
+  "Crandor": [
+    [44, 51],
+    [44, 50]
+  ],
+  "Crandor and Karamja Dungeon": [
+    [44, 150],
+    [44, 149]
+  ],
+  "Crash Island": [
+    [45, 42]
+  ],
+  "Creature Creation": [
+    [47, 68]
+  ],
+  "Custodia Mountains": [
+    [19, 53],
+    [20, 53],
+    [19, 52],
+    [20, 52],
+    [18, 51]
+  ],
+  "Dagannoth Kings": [
+    [45, 69],
+    [45, 68]
+  ],
+  "Daimon's Crater": [
+    [52, 64],
+    [53, 64],
+    [54, 64],
+    [52, 63],
+    [53, 63],
+    [54, 63],
+    [52, 62],
+    [53, 62],
+    [54, 62]
+  ],
+  "Darkmeyer": [
+    [55, 52],
+    [56, 52]
+  ],
+  "Darkmoon Ravine": [
+    [20, 45]
+  ],
+  "Death's Domain": [
+    [49, 89]
+  ],
+  "Death Altar": [
+    [34, 75]
+  ],
+  "Death Plateau": [
+    [44, 56]
+  ],
+  "Deepfin Point": [
+    [30, 43]
+  ],
+  "Desert Eagle Cave": [
+    [53, 149]
+  ],
+  "Desert Mining Camp": [
+    [51, 47]
+  ],
+  "Deserted Island": [
+    [53, 91],
+    [54, 91],
+    [53, 90],
+    [54, 90]
+  ],
+  "Digsite": [
+    [52, 53]
+  ],
+  "Digsite Dungeon": [
+    [52, 153],
+    [52, 152]
+  ],
+  "Dognose Island": [
+    [47, 41]
+  ],
+  "Doom of Mokhaiotl": [
+    [20, 149]
+  ],
+  "Dorgesh-Kaan": [
+    [42, 83],
+    [42, 82]
+  ],
+  "Dondakan's mine": [
+    [36, 77],
+    [37, 77],
+    [39, 77],
+    [40, 77]
+  ],
+  "Dragon Nest": [
+    [19, 148]
+  ],
+  "Draynor Village": [
+    [48, 50],
+    [48, 51]
+  ],
+  "Draynor Manor": [
+    [48, 52]
+  ],
+  "Draynor Sewers": [
+    [48, 151],
+    [48, 150]
+  ],
+  "Dream World": [
+    [60, 155]
+  ],
+  "Drumstick Isle": [
+    [33, 55]
+  ],
+  "Dwarven Mine": [
+    [47, 153],
+    [47, 152]
+  ],
+  "Eagles' Peak": [
+    [36, 54]
+  ],
+  "Earth Altar": [
+    [41, 75]
+  ],
+  "Earthbound Cavern": [
+    [21, 151]
+  ],
+  "Eastern Ardougne Sewers": [
+    [41, 151]
+  ],
+  "Eclipse Moon": [
+    [23, 150]
+  ],
+  "Edgeville": [
+    [48, 54]
+  ],
+  "Edgeville Dungeon": [
+    [48, 156],
+    [48, 155],
+    [48, 154],
+    [47, 154],
+    [48, 153]
+  ],
+  "Elemental Workshop": [
+    [30, 80],
+    [42, 154]
+  ],
+  "Elven rabbit cave": [
+    [51, 196]
+  ],
+  "Emir's Arena": [
+    [52, 50]
+  ],
+  "Enchanted Valley": [
+    [47, 70]
+  ],
+  "Entrana": [
+    [43, 52],
+    [44, 52]
+  ],
+  "Etceteria": [
+    [40, 60]
+  ],
+  "Evil Chicken's Lair": [
+    [38, 68]
+  ],
+  "Exam Centre": [
+    [52, 52]
+  ],
+  "Falador": [
+    [46, 52],
+    [47, 52]
+  ],
+  "Farming Guild": [
+    [19, 58]
+  ],
+  "Feldip Hills": [
+    [38, 46],
+    [39, 46],
+    [40, 46],
+    [41, 46],
+    [38, 45],
+    [39, 45],
+    [40, 45]
+  ],
+  "Fenkenstrain's Castle": [
+    [55, 55]
+  ],
+  "Ferox Enclave": [
+    [48, 56],
+    [49, 56],
+    [49, 156]
+  ],
+  "Fight Arena": [
+    [40, 49]
+  ],
+  "Fight Caves": [
+    [37, 79],
+    [38, 80]
+  ],
+  "Fight Pits": [
+    [37, 80]
+  ],
+  "Fire Altar": [
+    [40, 75]
+  ],
+  "Fishing Guild": [
+    [40, 53]
+  ],
+  "Fishing Platform": [
+    [43, 51]
+  ],
+  "Fishing Trawler": [
+    [29, 75],
+    [30, 75],
+    [31, 75]
+  ],
+  "Forthos Dungeon": [
+    [28, 155],
+    [28, 154]
+  ],
+  "Fortis Colosseum": [
+    [28, 146]
+  ],
+  "Fossil Island": [
+    [57, 60],
+    [58, 60],
+    [59, 60],
+    [56, 59],
+    [57, 59],
+    [58, 59],
+    [59, 59],
+    [56, 58],
+    [57, 58],
+    [58, 58],
+    [59, 58]
+  ],
+  "Fossil Island Underwater": [
+    [58, 160],
+    [59, 160],
+    [58, 159]
+  ],
+  "Fremennik Slayer Dungeon": [
+    [42, 156],
+    [43, 156],
+    [42, 155]
+  ],
+  "Ghorrock Prison": [
+    [45, 161]
+  ],
+  "Giants' Den": [
+    [22, 154]
+  ],
+  "Giants' Foundry": [
+    [52, 179]
+  ],
+  "Giants' Plateau": [
+    [52, 49],
+    [53, 49]
+  ],
+  "Gnome Hangar": [
+    [41, 70]
+  ],
+  "Goblin Cave": [
+    [40, 153]
+  ],
+  "God Wars Dungeon": [
+    [45, 83],
+    [44, 82],
+    [45, 82],
+    [44, 81],
+    [45, 81]
+  ],
+  "Gorak Plane": [
+    [47, 83]
+  ],
+  "Grand Exchange": [
+    [49, 54]
+  ],
+  "Grand Library": [
+    [50, 195]
+  ],
+  "Grand Tree Tunnels": [
+    [38, 154]
+  ],
+  "Great Olm": [
+    [50, 89]
+  ],
+  "Grimstone": [
+    [45, 63]
+  ],
+  "Grotesque Guardians": [
+    [26, 71]
+  ],
+  "Guardians of the Rift": [
+    [56, 158],
+    [56, 147]
+  ],
+  "Gu'Tanoth": [
+    [39, 47]
+  ],
+  "Gwenith": [
+    [33, 53],
+    [34, 53],
+    [35, 53]
+  ],
+  "H.A.M. Hideout": [
+    [49, 150]
+  ],
+  "Hallowed Sepulchre": [
+    [35, 93],
+    [37, 93],
+    [29, 93],
+    [35, 91],
+    [37, 91],
+    [39, 91]
+  ],
+  "Harmony Island": [
+    [59, 44]
+  ],
+  "Haunted Woods": [
+    [55, 54],
+    [56, 54],
+    [55, 53],
+    [56, 53]
+  ],
+  "Hespori Lair": [
+    [19, 157]
+  ],
+  "Hosidius": [
+    [27, 56],
+    [27, 55]
+  ],
+  "Hunter Guild": [
+    [24, 47]
+  ],
+  "Hunter Guild Caverns": [
+    [24, 147]
+  ],
+  "Hunter's End": [
+    [27, 180]
+  ],
+  "Iceberg": [
+    [41, 63],
+    [41, 62]
+  ],
+  "Ice Queen's Lair": [
+    [44, 155]
+  ],
+  "Iowerth Camp": [
+    [34, 50]
+  ],
+  "Iowerth Dungeon": [
+    [49, 194],
+    [50, 194],
+    [49, 193],
+    [50, 193]
+  ],
+  "Island of Stone": [
+    [38, 62]
+  ],
+  "Isle of Bones": [
+    [39, 39]
+  ],
+  "Isle of Souls": [
+    [32, 46],
+    [33, 46],
+    [34, 46],
+    [35, 46],
+    [36, 46],
+    [32, 45],
+    [33, 45],
+    [34, 45],
+    [35, 45],
+    [36, 45],
+    [32, 44],
+    [33, 44],
+    [34, 44],
+    [35, 44],
+    [36, 44],
+    [33, 43],
+    [34, 43],
+    [35, 43]
+  ],
+  "Isle of Souls Dungeon": [
+    [33, 145]
+  ],
+  "Jatizso": [
+    [37, 59]
+  ],
+  "Jatizso Mine": [
+    [37, 159]
+  ],
+  "Jiggig": [
+    [38, 47]
+  ],
+  "Kalphite Lair": [
+    [54, 148]
+  ],
+  "Kalphite Cave": [
+    [51, 149],
+    [51, 148],
+    [52, 148]
+  ],
+  "Karamja": [
+    [44, 48],
+    [44, 47],
+    [45, 48],
+    [45, 47],
+    [45, 46],
+    [46, 46]
+  ],
+  "Karuulm Slayer Dungeon": [
+    [20, 160],
+    [21, 160],
+    [19, 159],
+    [20, 159],
+    [19, 158]
+  ],
+  "Kastori": [
+    [21, 47]
+  ],
+  "Kebos Swamp": [
+    [18, 56],
+    [19, 56],
+    [20, 56]
+  ],
+  "Kephri": [
+    [55, 84]
+  ],
+  "Kharazi Jungle": [
+    [43, 45],
+    [44, 45],
+    [45, 45],
+    [46, 45]
+  ],
+  "King Black Dragon Lair": [
+    [35, 73]
+  ],
+  "Kourend Castle": [
+    [25, 57],
+    [26, 57]
+  ],
+  "Kourend Woodland": [
+    [23, 54],
+    [24, 53],
+    [25, 53]
+  ],
+  "Keldagrim": [
+    [44, 159],
+    [45, 159],
+    [44, 158],
+    [45, 158]
+  ],
+  "Keldagrim Rat Pits": [
+    [30, 73]
+  ],
+  "Keldagrim Tunnel": [
+    [43, 158]
+  ],
+  "Kraken Cove": [
+    [35, 156]
+  ],
+  "Laguna Aurorae": [
+    [18, 43],
+    [19, 43],
+    [18, 42]
+  ],
+  "Land's End": [
+    [23, 53]
+  ],
+  "Law Altar": [
+    [38, 75]
+  ],
+  "Legends' Guild": [
+    [42, 52]
+  ],
+  "Legends' Guild Basement": [
+    [42, 152]
+  ],
+  "Lledrith Island": [
+    [32, 49]
+  ],
+  "Lletya": [
+    [36, 49]
+  ],
+  "Lighthouse": [
+    [39, 56]
+  ],
+  "Lighthouse Dungeon": [
+    [39, 156]
+  ],
+  "Lithkren": [
+    [55, 62],
+    [56, 62]
+  ],
+  "Lithkren Vault": [
+    [24, 79]
+  ],
+  "Lizardman Caves": [
+    [20, 155]
+  ],
+  "Lizardman Settlement": [
+    [20, 55]
+  ],
+  "Lizardman Temple": [
+    [20, 157]
+  ],
+  "Locus Oasis": [
+    [26, 46]
+  ],
+  "Lovakengj": [
+    [22, 60],
+    [22, 59],
+    [23, 59],
+    [24, 59],
+    [22, 58],
+    [23, 58],
+    [24, 58]
+  ],
+  "Lumberyard": [
+    [51, 54]
+  ],
+  "Lumbridge": [
+    [50, 50]
+  ],
+  "Lumbridge Castle Basement": [
+    [50, 150]
+  ],
+  "Lumbridge Swamp": [
+    [49, 49],
+    [49, 50],
+    [50, 49]
+  ],
+  "Lumbridge Swamp Caves": [
+    [49, 149],
+    [50, 149]
+  ],
+  "Lunar Isle": [
+    [32, 61],
+    [33, 61],
+    [32, 60],
+    [33, 60]
+  ],
+  "Mage Arena Bank": [
+    [39, 73]
+  ],
+  "Mage Training Arena": [
+    [52, 51],
+    [52, 151],
+    [52, 150]
+  ],
+  "Marim": [
+    [43, 43]
+  ],
+  "McGrubor's Wood": [
+    [41, 54]
+  ],
+  "Meiyerditch": [
+    [56, 51],
+    [56, 50],
+    [56, 49]
+  ],
+  "Meiyerditch Laboratories": [
+    [55, 153],
+    [55, 152],
+    [56, 152]
+  ],
+  "Menaphos": [
+    [50, 43]
+  ],
+  "Mind Altar": [
+    [43, 75]
+  ],
+  "Mining Guild": [
+    [46, 151],
+    [47, 151]
+  ],
+  "Minotaurs' Rest": [
+    [30, 48]
+  ],
+  "Miscellania": [
+    [39, 60]
+  ],
+  "Mistrock": [
+    [21, 44]
+  ],
+  "Molch": [
+    [20, 57]
+  ],
+  "Mole Lair": [
+    [27, 81],
+    [27, 80]
+  ],
+  "Monastery": [
+    [40, 50]
+  ],
+  "Mons Gratia": [
+    [22, 50]
+  ],
+  "Moonrise Brewery and Winery": [
+    [21, 145]
+  ],
+  "Mort'ton": [
+    [54, 51]
+  ],
+  "Mort Myre Swamp": [
+    [53, 53],
+    [54, 53],
+    [53, 52],
+    [54, 52]
+  ],
+  "Mort Myre Myreque Hideout": [
+    [54, 153]
+  ],
+  "Mor Ul Rek": [
+    [39, 80],
+    [38, 79],
+    [39, 79]
+  ],
+  "Morytania Spider Cave": [
+    [57, 153]
+  ],
+  "Mos Le'Harmless": [
+    [54, 47],
+    [58, 47],
+    [59, 47],
+    [57, 46],
+    [58, 46]
+  ],
+  "Mos Le'Harmless Cave": [
+    [58, 157],
+    [59, 147],
+    [58, 146]
+  ],
+  "Motherlode Mine": [
+    [58, 87]
+  ],
+  "Mountain Camp": [
+    [43, 57]
+  ],
+  "Mount Karuulm": [
+    [19, 60],
+    [20, 60],
+    [19, 59],
+    [20, 59]
+  ],
+  "Mount Quidamortem": [
+    [19, 55]
+  ],
+  "Mourner Tunnels": [
+    [30, 72],
+    [31, 72]
+  ],
+  "Mudskipper Point": [
+    [46, 48]
+  ],
+  "Musa Point": [
+    [45, 49],
+    [44, 49]
+  ],
+  "Myths' Guild": [
+    [38, 44],
+    [29, 140],
+    [30, 140]
+  ],
+  "Nardah": [
+    [53, 45]
+  ],
+  "Nature Altar": [
+    [37, 75]
+  ],
+  "Necropolis": [
+    [51, 42],
+    [52, 42]
+  ],
+  "Neitiznot": [
+    [36, 59]
+  ],
+  "North Ardounge": [
+    [40, 52]
+  ],
+  "Northern Tundras": [
+    [24, 61],
+    [26, 61],
+    [24, 60]
+  ],
+  "Nylocas Vasilias": [
+    [51, 66]
+  ],
+  "Observatory": [
+    [38, 49]
+  ],
+  "Observatory Dungeon": [
+    [36, 146]
+  ],
+  "Osmumten's Burial Chamber": [
+    [57, 80]
+  ],
+  "Ourania Cave": [
+    [47, 87]
+  ],
+  "Paterdomus Temple": [
+    [53, 54]
+  ],
+  "Paterdomus Basement": [
+    [53, 154]
+  ],
+  "Path of Apmeken": [
+    [59, 82]
+  ],
+  "Path of Crondis": [
+    [61, 82]
+  ],
+  "Path of Het": [
+    [57, 82]
+  ],
+  "Path of Scabaras": [
+    [55, 82]
+  ],
+  "Pest Control": [
+    [41, 40]
+  ],
+  "Pestilent Bloat": [
+    [51, 69]
+  ],
+  "Phantom Muspah": [
+    [44, 68]
+  ],
+  "Pirates' Cove": [
+    [34, 59]
+  ],
+  "Piscatoris": [
+    [36, 57],
+    [35, 56],
+    [36, 56],
+    [37, 56],
+    [35, 55],
+    [36, 55]
+  ],
+  "Polar Eagle Cave": [
+    [42, 159]
+  ],
+  "Pollnivneach": [
+    [52, 46]
+  ],
+  "Port Khazard": [
+    [41, 49]
+  ],
+  "Port Phasmatys": [
+    [57, 54]
+  ],
+  "Port Piscarilius": [
+    [27, 59],
+    [28, 59],
+    [27, 58],
+    [28, 58],
+    [28, 57]
+  ],
+  "Port Roberts": [
+    [29, 51]
+  ],
+  "Port Sarim": [
+    [47, 50]
+  ],
+  "Port Sarim Rat Pits": [
+    [46, 150]
+  ],
+  "Port Tyras": [
+    [33, 48]
+  ],
+  "Prifddinas": [
+    [50, 95],
+    [51, 95],
+    [50, 94],
+    [51, 94]
+  ],
+  "Puro-Puro": [
+    [40, 67]
+  ],
+  "Pyramid": [
+    [50, 45]
+  ],
+  "Pyramid Plunder": [
+    [30, 69]
+  ],
+  "Quarry": [
+    [49, 45]
+  ],
+  "Quetzacalli Gorge": [
+    [23, 50]
+  ],
+  "Rainbow's End": [
+    [36, 35]
+  ],
+  "Ralos Rise": [
+    [22, 49],
+    [22, 48]
+  ],
+  "Ranging Guild": [
+    [41, 53]
+  ],
+  "Ratcatchers Mansion": [
+    [44, 79]
+  ],
+  "Rellekka": [
+    [41, 58],
+    [40, 57],
+    [41, 57]
+  ],
+  "Remote Island": [
+    [46, 40]
+  ],
+  "Rimmington": [
+    [45, 50],
+    [46, 50]
+  ],
+  "Rogues' Den": [
+    [46, 79],
+    [47, 79],
+    [46, 78],
+    [47, 78],
+    [47, 77]
+  ],
+  "Royal Titans": [
+    [45, 149]
+  ],
+  "Ruins of Camdozaal": [
+    [45, 91],
+    [46, 91],
+    [45, 90],
+    [46, 90],
+    [47, 90]
+  ],
+  "Ruins of Mokhaiotl": [
+    [20, 148]
+  ],
+  "Ruins of Tapoyauik": [
+    [24, 150],
+    [25, 150],
+    [26, 150]
+  ],
+  "Ruins of Ullek": [
+    [52, 43],
+    [53, 42],
+    [53, 44]
+  ],
+  "Ruins of Unkah": [
+    [49, 44]
+  ],
+  "Rune Essence Mine": [
+    [45, 75]
+  ],
+  "The Scar" : [
+    [31, 100],
+    [32, 100]
+  ],
+  "Scorpia's Lair": [
+    [50, 161]
+  ],
+  "Seers' Village": [
+    [42, 54]
+  ],
+  "Salvager Outlook": [
+    [25, 51]
+  ],
+  "Sangvesti" : [
+    [39, 122],
+    [40, 121],
+    [40, 122],
+    [41, 121],
+    [41, 122],
+    [42, 121],
+    [42, 122]
+  ],
+  "Shade Catacombs": [
+    [54, 151]
+  ],
+  "Shadow Dungeon": [
+    [41, 79],
+    [42, 79]
+  ],
+  "Shaman Caves": [
+    [43, 145]
+  ],
+  "Shantay Pass": [
+    [51, 48]
+  ],
+  "Shayzien": [
+    [23, 57],
+    [23, 56],
+    [24, 56],
+    [24, 55],
+    [23, 55]
+  ],
+  "Shilo Village": [
+    [44, 46]
+  ],
+  "Shilo Village Mine": [
+    [44, 146]
+  ],
+  "Shimmering Atoll": [
+    [24, 43]
+  ],
+  "Shipwreck Cove": [
+    [24, 51]
+  ],
+  "Shipyard": [
+    [32, 42],
+    [46, 47]
+  ],
+  "Sinclair Mansion": [
+    [42, 55]
+  ],
+  "Silk Chasm": [
+    [53, 159]
+  ],
+  "Silvarea": [
+    [52, 54]
+  ],
+  "Sisterhood Sanctuary": [
+    [59, 153],
+    [58, 152],
+    [59, 152],
+    [60, 152],
+    [58, 151],
+    [59, 151],
+    [60, 151]
+  ],
+  "Skeletal Tomb": [
+    [29, 180]
+  ],
+  "Skotizo's Lair": [
+    [35, 88]
+  ],
+  "Slayer Tower": [
+    [53, 55]
+  ],
+  "Slepe": [
+    [58, 52],
+    [58, 51]
+  ],
+  "Smoke Dungeon": [
+    [49, 146],
+    [50, 146],
+    [51, 146]
+  ],
+  "Smoke Devil Dungeon": [
+    [36, 147],
+    [37, 147]
+  ],
+  "Sophanem": [
+    [51, 43],
+    [43, 80]
+  ],
+  "Sorceress's Garden": [
+    [45, 85]
+  ],
+  "Sotetseg": [
+    [51, 67]
+  ],
+  "Soul Altar": [
+    [50, 74]
+  ],
+  "Stalker Den": [
+    [20, 153],
+    [20, 152],
+    [19, 152]
+  ],
+  "Streambound Cavern": [
+    [23, 151]
+  ],
+  "Stone Cutter Outpost": [
+    [27, 46]
+  ],
+  "Stronghold of Security": [
+    [28, 81],
+    [31, 81],
+    [33, 82],
+    [36, 81]
+  ],
+  "Sunbleak Island": [
+    [34, 36]
+  ],
+  "Sunset Coast": [
+    [23, 46]
+  ],
+  "Tai Bwo Wannai": [
+    [43, 48],
+    [43, 47]
+  ],
+  "Tal Teklan": [
+    [18, 47],
+    [19, 48]
+  ],
+  "Tarn's Lair": [
+    [49, 71]
+  ],
+  "Tarn Razorlor": [
+    [49, 72]
+  ],
+  "Taverley": [
+    [45, 53]
+  ],
+  "Taverley Dungeon": [
+    [44, 153],
+    [45, 153],
+    [44, 152],
+    [45, 152],
+    [45, 151]
+  ],
+  "Tear of the Soul": [
+    [36, 43]
+  ],
+  "Tempestus": [
+    [19, 51],
+    [20, 51],
+    [19, 50],
+    [20, 50]
+  ],
+  "Temple of Ikov": [
+    [41, 154],
+    [41, 153]
+  ],
+  "Temple of Light": [
+    [29, 71]
+  ],
+  "Tempoross Cove": [
+    [47, 46]
+  ],
+  "Theatre of Blood": [
+    [170, 169]
+  ],
+  "Tithe Farm": [
+    [28, 54]
+  ],
+  "Twilight Temple": [
+    [26, 50]
+  ],
+  "The Crown Jewel": [
+    [27, 41]
+  ],
+  "The Darkfrost": [
+    [23, 51]
+  ],
+  "The Gauntlet": [
+    [47, 95],
+    [29, 88],
+    [30, 88]
+  ],
+  "The Inferno": [
+    [35, 83]
+  ],
+  "The Little Pearl": [
+    [52, 34]
+  ],
+  "The Maiden of Sugadinti": [
+    [49, 69],
+    [50, 69]
+  ],
+  "The Nexus": [
+    [55, 80]
+  ],
+  "The Onyx Crest": [
+    [46, 35]
+  ],
+  "The Pandemonium": [
+    [47, 46]
+  ],
+  "The Proudspire": [
+    [24, 50]
+  ],
+  "The Stranglewood": [
+    [17, 53],
+    [18, 53],
+    [17, 52]
+  ],
+  "The Summer Shore": [
+    [48, 39],
+    [49, 39],
+    [50, 39],
+    [48, 38],
+    [49, 38],
+    [50, 38],
+    [48, 37],
+    [49, 37],
+    [50, 37],
+    [51, 37],
+    [50, 36],
+    [51, 36]
+  ],
+  "The Wardens": [
+    [59, 80]
+  ],
+  "The Warrens": [
+    [27, 158],
+    [28, 158]
+  ],
+  "Tlati Rainforest": [
+    [19, 49],
+    [20, 49],
+    [21, 49],
+    [20, 48],
+    [21, 48],
+    [19, 47],
+    [20, 47],
+    [19, 46]
+  ],
+  "Tolna's Rift": [
+    [48, 82]
+  ],
+  "Tombs of Amascut": [
+    [52, 142]
+  ],
+  "Tonali Cavern": [
+    [20, 147],
+    [20, 146]
+  ],
+  "Tower of Ascension": [
+    [25, 50]
+  ],
+  "Tower of Life": [
+    [41, 50]
+  ],
+  "Tarhaearn Mine": [
+    [51, 194]
+  ],
+  "Tree Gnome Stronghold": [
+    [37, 54],
+    [38, 54],
+    [37, 53],
+    [38, 53]
+  ],
+  "Tree Gnome Village": [
+    [39, 49]
+  ],
+  "Tree Gnome Village Dungeon": [
+    [39, 149]
+  ],
+  "Trollheim": [
+    [45, 57]
+  ],
+  "Trollheim Tunnel": [
+    [45, 156]
+  ],
+  "Troll Stronghold": [
+    [44, 57],
+    [44, 157]
+  ],
+  "Trollweiss Mountain": [
+    [43, 60],
+    [43, 59],
+    [43, 58]
+  ],
+  "Trollweiss Dungeon": [
+    [43, 159]
+  ],
+  "Trouble Brewing": [
+    [59, 46]
+  ],
+  "Tutorial Island": [
+    [47, 48],
+    [48, 48],
+    [49, 48],
+    [47, 47],
+    [48, 47]
+  ],
+  "Tutorial Island Mine": [
+    [48, 148]
+  ],
+  "Tyras Camp": [
+    [34, 48],
+    [34, 49]
+  ],
+  "Underground Pass": [
+    [37, 151],
+    [38, 151],
+    [37, 150],
+    [38, 150],
+    [37, 149]
+  ],
+  "Ungael": [
+    [35, 63]
+  ],
+  "Uzer": [
+    [54, 48],
+    [54, 47]
+  ],
+  "Ver Sinhaza": [
+    [57, 50]
+  ],
+  "Verzik Vitur": [
+    [49, 67]
+  ],
+  "Varrock": [
+    [50, 54],
+    [49, 53],
+    [50, 53]
+  ],
+  "Varrock Museum": [
+    [27, 77],
+    [25, 77]
+  ],
+  "Varrock Rat Pits": [
+    [45, 79]
+  ],
+  "Varrock Sewers": [
+    [49, 154],
+    [50, 154],
+    [51, 154]
+  ],
+  "Vatrachos Island": [
+    [29, 46]
+  ],
+  "Vet'ion's Rest": [
+    [51, 159]
+  ],
+    "Villa Lucens": [
+    [22, 45],
+    [23, 45]
+  ],
+  "Viyeldi Caves": [
+    [37, 73]
+  ],
+  "Void Knights' Outpost": [
+    [41, 41]
+  ],
+  "Volcanic Mine": [
+    [59, 159],
+    [59, 158]
+  ],
+  "Warriors' Guild": [
+    [44, 55]
+  ],
+  "Water Altar": [
+    [42, 75]
+  ],
+  "Waterbirth Island": [
+    [39, 58]
+  ],
+  "Waterbirth Island Dungeon": [
+    [29, 68],
+    [30, 68],
+    [38, 158],
+    [39, 158]
+  ],
+  "Watson's House" : [
+    [25, 55]
+  ],
+  "Web Chasm": [
+    [25, 180]
+  ],
+  "Weiss": [
+    [44, 61],
+    [45, 61]
+  ],
+  "Werewolf Agility Course": [
+    [55, 154]
+  ],
+  "White Wolf Mountain": [
+    [44, 54]
+  ],
+  "Wintertodt": [
+    [25, 62],
+    [25, 61]
+  ],
+  "Winttumber Island": [
+    [32, 40]
+  ],
+  "Wild Varrock": [
+    [54, 96],
+    [55, 96],
+    [56, 96],
+    [54, 95],
+    [55, 95],
+    [56, 95],
+    [55, 94],
+    [56, 94]
+  ],
+  "Wilderness": [
+    [46, 55],
+    [47, 55],
+    [48, 55],
+    [49, 55],
+    [50, 55],
+    [51, 55],
+    [52, 55],
+    [46, 56],
+    [47, 56],
+    [50, 56],
+    [51, 56],
+    [52, 56],
+    [46, 57],
+    [47, 57],
+    [48, 57],
+    [49, 57],
+    [50, 57],
+    [51, 57],
+    [52, 57],
+    [46, 58],
+    [47, 58],
+    [48, 58],
+    [49, 58],
+    [50, 58],
+    [51, 58],
+    [52, 58],
+    [46, 59], // Ghorrock
+    [47, 59],
+    [48, 59],
+    [49, 59],
+    [50, 59],
+    [51, 59],
+    [52, 59],
+    [46, 60], // Ghorrock
+    [47, 60],
+    [48, 60],
+    [49, 60],
+    [50, 60],
+    [51, 60],
+    [52, 60],
+    [46, 61], // Wilderness Agility
+    [47, 61],
+    [48, 61],
+    [49, 61],
+    [50, 61], // Rogues' Castle
+    [51, 61], // Rogues' Castle
+    [52, 61], // Wilderness Volcano
+    [49, 157], // Revenant Caves
+    [50, 157], // Revenant Caves
+    [52, 157], // Wilderness Slayer Cave
+    [53, 157], // Wilderness Slayer Cave
+    [47, 158], // Wilderness God Wars Dungeon
+    [49, 158], // Revenant Caves
+    [50, 158], // Revenant Caves
+    [52, 158], // Wilderness Slayer Cave
+    [53, 158], // Wilderness Slayer Cave
+    [49, 159], // Revenant Caves
+    [50, 159], // Revenant Caves
+    [47, 160], // Lava Maze Dungeon
+    [46, 161], // Wilderness Agility Course Dungeon
+    [47, 161], //Wilderness Deep Dungeon
+    [50, 161] //Wilderness Deep Dungeon
+  ],
+  "Witchhaven": [
+    [42, 51]
+  ],
+  "Wizards' Tower": [
+    [48, 49]
+  ],
+  "Woodcutting Guild": [
+    [24, 54],
+    [25, 54]
+  ],
+  "Woodcutting Guild Dungeon": [
+    [24, 154]
+  ],
+  "Wrath Altar": [
+    [36, 75]
+  ],
+  "Wyrmscraig" : [
+    [39, 34],
+    [39, 35],
+    [40, 34],
+    [40, 35]
+  ],
+  "Wyvern Cave": [
+    [56, 160],
+    [56, 159]
+  ],
+  "Xarpus": [
+    [49, 68]
+  ],
+  "Yama": [
+    [23, 157]
+  ],
+  "Yanille": [
+    [39, 48],
+    [40, 48]
+  ],
+  "Yanille Agility Dungeon": [
+    [40, 148]
+  ],
+  "Ynysdail": [
+    [34, 54]
+  ],
+  "Zanaris": [
+    [37, 69],
+    [38, 69],
+    [37, 68]
+  ],
+  "Zalcano": [
+    [47, 94]
+  ],
+  "Zebak": [
+    [61, 84]
+  ],
+  "Zemouregal's Base": [
+    [55, 71],
+    [56, 71]
+  ],
+  "Zul-Andra": [
+    [34, 47]
+  ]
+}

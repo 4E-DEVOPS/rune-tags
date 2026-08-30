@@ -1,0 +1,5 @@
+Location region data in Locations.json is derived from the Location Display RuneLite plugin:
+https://github.com/trinhc2/Location-Display
+
+Original project copyright/license: BSD-2-Clause.
+RuneTags should retain this attribution and the applicable license notice when distributed.
