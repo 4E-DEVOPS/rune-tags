@@ -72,7 +72,7 @@ import net.runelite.client.util.Text;
 @PluginDescriptor(
         name = "RuneTags",
         description = "Quick-card profiles for player mentions and tags.",
-        tags = {"runetags", "rune-tags", "profile", "tags", "tagging", "mentions", "players", "chat", "clan"},
+        tags = {"1877", "runetags", "rune-tags", "profile", "tags", "tagging", "mentions", "players", "chat", "clan"},
         enabledByDefault = true
 )
 public class RuneTagsPlugin extends Plugin {
