@@ -289,7 +289,7 @@ public interface RuneTagsConfig extends Config {
             position = 0
     )
     default boolean highlightBackground() {
-        return false;
+        return true;
     }
 
     @Alpha
@@ -422,6 +422,18 @@ public interface RuneTagsConfig extends Config {
     )
     default ClickablePlayerMode clickablePlayers() {
         return ClickablePlayerMode.ALL;
+    }
+
+    @ConfigItem(
+            keyName = "chatInteractionMode",
+            name = "Interaction Mode",
+            description = "Choose whether RuneTags player references use left-click, right-click, or both.",
+            section = interactionSection,
+            position = 1
+    )
+    default ChatInteractionMode chatInteractionMode()
+    {
+        return ChatInteractionMode.BOTH;
     }
 
     /*

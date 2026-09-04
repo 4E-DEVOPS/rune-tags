@@ -475,6 +475,66 @@ public class QuickProfileController
                 current.getDisplayName());
     }
 
+    public void lookup(
+            PlayerReference reference)
+    {
+        if (reference == null)
+        {
+            return;
+        }
+
+        PlayerIdentity identity =
+                reference.getIdentity();
+
+        /*
+         * PlayerReference identity is a snapshot from message-processing time.
+         * Re-resolve against the current directory when possible.
+         */
+        if (reference.getLookupName() != null
+                && !reference.getLookupName().trim().isEmpty())
+        {
+            final PlayerIdentity currentIdentity =
+                    playerDirectory
+                            .find(reference.getLookupName())
+                            .orElse(null);
+
+            if (currentIdentity != null)
+            {
+                identity = currentIdentity;
+            }
+        }
+
+        final String lookupName;
+
+        if (identity != null
+                && identity.getCanonicalName() != null
+                && !identity.getCanonicalName().trim().isEmpty())
+        {
+            lookupName =
+                    identity.getCanonicalName();
+        }
+        else if (reference.getLookupName() != null
+                && !reference.getLookupName().trim().isEmpty())
+        {
+            lookupName =
+                    reference.getLookupName();
+        }
+        else
+        {
+            lookupName =
+                    reference.getRawText();
+        }
+
+        if (lookupName == null
+                || lookupName.trim().isEmpty())
+        {
+            return;
+        }
+
+        lookupService.lookup(
+                lookupName.trim());
+    }
+
     public void lookupClan()
     {
         final QuickProfileModel current =

@@ -3,7 +3,7 @@
 RuneTags is a RuneLite Plugin Hub project for player mentions, explicit `@tags`,
 quick player profiles, local mention notifications, targeting, and mention history.
 
-## Current milestone
+## Current milestone2
 
 This repository currently contains the Phase 1 foundation:
 
@@ -23,8 +23,9 @@ provider stack.
 # RuneTags development phases
 
 ## TODO
+timestamp + bold font test
 Per-channel retention could be revisited later if real eviction problems appear.
-right-clicking a name to lookup, message, etc allows us to click thru and opens the quickcard instead
+
 add ironmen and mod chat icons
 
 ## Phase 7 — extra

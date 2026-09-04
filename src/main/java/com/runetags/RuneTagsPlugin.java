@@ -47,6 +47,7 @@ import net.runelite.api.Player;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.ScriptPreFired;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.callback.Hooks;
@@ -415,6 +416,8 @@ public class RuneTagsPlugin extends Plugin {
 
         chatReferenceMouseListener =
                 new ChatReferenceMouseListener(
+                        client,
+                        config,
                         chatHitboxRegistry,
                         quickProfileController);
 
@@ -1011,6 +1014,17 @@ public class RuneTagsPlugin extends Plugin {
                     taggedMessage.getReferences().size(),
                     taggedMessage.getLocalMentionMatch().getReason(),
                     referenceSources(taggedMessage));
+        }
+    }
+
+    @Subscribe
+    public void onMenuOpened(
+            MenuOpened event)
+    {
+        if (chatReferenceMouseListener != null)
+        {
+            chatReferenceMouseListener.onMenuOpened(
+                    event);
         }
     }
 
