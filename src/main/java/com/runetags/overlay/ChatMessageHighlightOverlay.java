@@ -4,6 +4,7 @@ import com.runetags.RuneTagsConfig;
 import com.runetags.chat.ChatReferenceLayoutService;
 import com.runetags.chat.ChatText;
 import com.runetags.chat.TaggedMessageRepository;
+import com.runetags.debug.ChatLayoutDiagnostic;
 import com.runetags.model.LocalMentionMatch;
 import com.runetags.model.MatchReason;
 import com.runetags.model.PlayerReference;
@@ -73,17 +74,20 @@ public class ChatMessageHighlightOverlay extends Overlay
     private final RuneTagsConfig config;
     private final TaggedMessageRepository repository;
     private final ChatReferenceLayoutService layoutService;
+    private final ChatLayoutDiagnostic diagnostic;
 
     public ChatMessageHighlightOverlay(
             Client client,
             RuneTagsConfig config,
             TaggedMessageRepository repository,
-            ChatReferenceLayoutService layoutService)
+            ChatReferenceLayoutService layoutService,
+            ChatLayoutDiagnostic diagnostic)
     {
         this.client = client;
         this.config = config;
         this.repository = repository;
         this.layoutService = layoutService;
+        this.diagnostic = diagnostic;
 
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ABOVE_WIDGETS);
@@ -114,6 +118,11 @@ public class ChatMessageHighlightOverlay extends Overlay
         {
             return null;
         }
+
+        final long renderStarted =
+                diagnostic != null
+                        ? System.nanoTime()
+                        : 0L;
 
         final List<TaggedMessage> messages =
                 new ArrayList<>(
@@ -165,6 +174,13 @@ public class ChatMessageHighlightOverlay extends Overlay
 
             graphics.setColor(
                     originalColor);
+        }
+
+        if (diagnostic != null)
+        {
+            diagnostic.recordLocalHighlightOverlay(
+                    System.nanoTime()
+                            - renderStarted);
         }
 
         return null;

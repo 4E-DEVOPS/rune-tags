@@ -14,6 +14,7 @@ import com.runetags.context.LocationIndex;
 import com.runetags.context.PartyContextService;
 import com.runetags.context.PlayerContextService;
 import com.runetags.context.TargetController;
+import com.runetags.debug.ChatLayoutDiagnostic;
 import com.runetags.history.MentionHistoryPanel;
 import com.runetags.history.MentionHistoryService;
 import com.runetags.input.ChatReferenceMouseListener;
@@ -76,10 +77,12 @@ import net.runelite.client.util.Text;
 @PluginDescriptor(
         name = "RuneTags",
         description = "Quick-card profiles for player mentions and tags.",
-        tags = {"1877", "runetags", "rune-tags", "profile", "tags", "tagging", "mentions", "players", "chat", "clan"},
+        tags = {"1877", "runetags", "rune-tags", "player", "players", "quick", "card", "profile", "tags", "tagging", "mentions", "chat", "clan"},
         enabledByDefault = true
 )
 public class RuneTagsPlugin extends Plugin {
+    private static final boolean CHAT_DIAGNOSTICS_ENABLED = true;
+
     private static final int MESSAGE_REPOSITORY_CAPACITY = 500;
 
     @Inject
@@ -142,6 +145,7 @@ public class RuneTagsPlugin extends Plugin {
     private ChatReferenceLayoutService chatReferenceLayoutService;
     private ChatFontLayoutService chatFontLayoutService;
 
+    private ChatLayoutDiagnostic chatLayoutDiagnostic;
     private ChatMessageHighlightOverlay chatMessageHighlightOverlay;
     private ChatReferenceOverlay chatReferenceOverlay;
     private ChatReferenceMouseListener chatReferenceMouseListener;
@@ -183,7 +187,8 @@ public class RuneTagsPlugin extends Plugin {
     private boolean nativeChatBootstrapPending;
 
     @Provides
-    RuneTagsConfig provideConfig(ConfigManager configManager) {
+    RuneTagsConfig provideConfig(ConfigManager configManager)
+    {
         return configManager.getConfig(RuneTagsConfig.class);
     }
 
@@ -406,6 +411,15 @@ public class RuneTagsPlugin extends Plugin {
                         chatReferenceLayoutService);
 
         /*
+         * Diagnostics
+         */
+        chatLayoutDiagnostic =
+                CHAT_DIAGNOSTICS_ENABLED
+                        ? new ChatLayoutDiagnostic(
+                        client)
+                        : null;
+
+        /*
          * Non-clickable local alias / normalized-self background highlights.
          *
          * This reuses ChatReferenceLayoutService's multiline geometry and must
@@ -416,7 +430,8 @@ public class RuneTagsPlugin extends Plugin {
                         client,
                         config,
                         messageRepository,
-                        chatReferenceLayoutService);
+                        chatReferenceLayoutService,
+                        chatLayoutDiagnostic);
 
         /*
          * Clickable PlayerReference highlights / hitboxes.
@@ -427,7 +442,8 @@ public class RuneTagsPlugin extends Plugin {
                         chatHitboxRegistry,
                         client,
                         config,
-                        localMentionMatcher);
+                        localMentionMatcher,
+                        chatLayoutDiagnostic);
 
         chatReferenceMouseListener =
                 new ChatReferenceMouseListener(
@@ -665,6 +681,8 @@ public class RuneTagsPlugin extends Plugin {
         chatReferenceOverlay = null;
         chatMessageHighlightOverlay = null;
 
+        chatLayoutDiagnostic = null;
+
         chatFontLayoutService = null;
         chatReferenceLayoutService = null;
         chatHitboxRegistry = null;
@@ -740,6 +758,15 @@ public class RuneTagsPlugin extends Plugin {
     public void onScriptPreFired(
             ScriptPreFired event)
     {
+        /*
+         * Diagnostic observes the untouched native construction payload first.
+         */
+        if (chatLayoutDiagnostic != null)
+        {
+            chatLayoutDiagnostic.onScriptPreFired(
+                    event);
+        }
+
         if (chatFontLayoutService != null)
         {
             chatFontLayoutService.onScriptPreFired(
@@ -751,9 +778,23 @@ public class RuneTagsPlugin extends Plugin {
     public void onPostClientTick(
             PostClientTick event)
     {
+        final long fontTickStarted =
+                chatLayoutDiagnostic != null
+                        ? System.nanoTime()
+                        : 0L;
+
         if (chatFontLayoutService != null)
         {
             chatFontLayoutService.onPostClientTick();
+        }
+
+        if (chatLayoutDiagnostic != null)
+        {
+            chatLayoutDiagnostic.recordFontPostClientTick(
+                    System.nanoTime()
+                            - fontTickStarted);
+
+            chatLayoutDiagnostic.onPostClientTick();
         }
     }
 
@@ -907,7 +948,19 @@ public class RuneTagsPlugin extends Plugin {
          */
         if (playerDirectory != null)
         {
+            final long rebuildStarted =
+                    chatLayoutDiagnostic != null
+                            ? System.nanoTime()
+                            : 0L;
+
             playerDirectory.rebuild();
+
+            if (chatLayoutDiagnostic != null)
+            {
+                chatLayoutDiagnostic.recordDirectoryRebuild(
+                        System.nanoTime()
+                                - rebuildStarted);
+            }
         }
 
         final Player localPlayer = client.getLocalPlayer();
@@ -946,12 +999,24 @@ public class RuneTagsPlugin extends Plugin {
             }
         }
 
+        final long processingStarted =
+                chatLayoutDiagnostic != null
+                        ? System.nanoTime()
+                        : 0L;
+
         final TaggedMessage taggedMessage = chatProcessor.process(
                 ++nextMessageId,
                 event.getType(),
                 Text.removeTags(event.getName()),
                 semanticMessage,
                 localName);
+
+        if (chatLayoutDiagnostic != null)
+        {
+            chatLayoutDiagnostic.recordChatProcessing(
+                    System.nanoTime()
+                            - processingStarted);
+        }
 
         /*
          * TaggedMessage remains the semantic source of truth.
@@ -1020,10 +1085,22 @@ public class RuneTagsPlugin extends Plugin {
          * Apply native chat styling while preserving the sender's
          * original text and existing RuneLite/Jagex markup.
          */
+        final long formattingStarted =
+                chatLayoutDiagnostic != null
+                        ? System.nanoTime()
+                        : 0L;
+
         final String formattedMessage = messageFormatter.format(
                 taggedMessage,
                 rawMessage,
                 localName);
+
+        if (chatLayoutDiagnostic != null)
+        {
+            chatLayoutDiagnostic.recordMessageFormatting(
+                    System.nanoTime()
+                            - formattingStarted);
+        }
 
         if (!formattedMessage.equals(rawMessage)) {
             event.getMessageNode().setValue(formattedMessage);

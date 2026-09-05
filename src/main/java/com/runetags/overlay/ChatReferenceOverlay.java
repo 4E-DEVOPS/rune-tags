@@ -4,6 +4,7 @@ import com.runetags.RuneTagsConfig;
 import com.runetags.chat.ChatHitboxRegistry;
 import com.runetags.chat.ChatReferenceHitbox;
 import com.runetags.chat.ChatReferenceLayoutService;
+import com.runetags.debug.ChatLayoutDiagnostic;
 import com.runetags.mention.LocalMentionMatcher;
 import com.runetags.model.LocalMentionMatch;
 import com.runetags.model.PlayerReference;
@@ -50,19 +51,22 @@ public class ChatReferenceOverlay extends Overlay
     private final Client client;
     private final RuneTagsConfig config;
     private final LocalMentionMatcher localMentionMatcher;
+    private final ChatLayoutDiagnostic diagnostic;
 
     public ChatReferenceOverlay(
             ChatReferenceLayoutService layoutService,
             ChatHitboxRegistry registry,
             Client client,
             RuneTagsConfig config,
-            LocalMentionMatcher localMentionMatcher)
+            LocalMentionMatcher localMentionMatcher,
+            ChatLayoutDiagnostic diagnostic)
     {
         this.layoutService = layoutService;
         this.registry = registry;
         this.client = client;
         this.config = config;
         this.localMentionMatcher = localMentionMatcher;
+        this.diagnostic = diagnostic;
 
         setPosition(OverlayPosition.DYNAMIC);
         setLayer(OverlayLayer.ABOVE_WIDGETS);
@@ -72,6 +76,11 @@ public class ChatReferenceOverlay extends Overlay
     @Override
     public Dimension render(Graphics2D graphics)
     {
+        final long renderStarted =
+                diagnostic != null
+                        ? System.nanoTime()
+                        : 0L;
+
         /*
          * RuneLite/Jagex clips native chat text to the chatbox, but custom
          * ABOVE_WIDGETS overlays are not automatically clipped with it.
@@ -97,8 +106,21 @@ public class ChatReferenceOverlay extends Overlay
         /*
          * Calculate semantic/reference hitboxes from the rendered chat.
          */
+        final long layoutStarted =
+                diagnostic != null
+                        ? System.nanoTime()
+                        : 0L;
+
         final List<ChatReferenceHitbox> hitboxes =
                 layoutService.layout();
+
+        if (diagnostic != null)
+        {
+            diagnostic.recordReferenceLayout(
+                    System.nanoTime()
+                            - layoutStarted,
+                    hitboxes.size());
+        }
 
         /*
          * Restrict CHATBOX hitboxes to the actual visible portion of the
@@ -252,6 +274,14 @@ public class ChatReferenceOverlay extends Overlay
              */
             graphics.setClip(originalClip);
             graphics.setColor(originalColor);
+        }
+
+        if (diagnostic != null)
+        {
+            diagnostic.recordReferenceOverlay(
+                    System.nanoTime()
+                            - renderStarted,
+                    visibleHitboxes.size());
         }
 
         return null;
