@@ -45,8 +45,6 @@ Per-channel retention could be revisited later if real eviction problems appear.
 ## Phase 7 — extra
 - player notes
 - runewatch
-- quest points?
-- italicize fix
 
 ## Phase 8 — Suggestions
 - Passive @username suggestion overlay
@@ -79,4 +77,28 @@ Per-channel retention could be revisited later if real eviction problems appear.
 
 V2 - Mail / Friends
     
-> Create a font plugin based off our ChatFontLayoutService
+PlayerProfile 
+[ICON: Account Type] PlayerName     (NOTEPAD: Add Note) (STAR: Favorite) (X: Close) 
+├─ Current RSN (hover or click: Previous RSNs) 
+│ 
+├─ Local 
+│ ├─ Tags 
+│ ├─ Notes 
+│ └─ RuneWatch Cases 
+│ 
+├─ Identity 
+│ ├─ Status/World • Location 
+│ └─ Channel • Rank 
+│ 
+├─ Stats 
+│ ├─ Combat • Total Level 
+│ └─ Account Build 
+│ 
+├─ Metrics 
+│ ├─ EHP • EHB 
+│ └─ Skill or Boss KC (Location Dependant) 
+│ 
+├─ Recent 
+│ └─ Achievement OR Gain 
+│ 
+└─ [Target] [Lookup]

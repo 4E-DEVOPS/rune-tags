@@ -106,6 +106,166 @@ public class ChatReferenceLayoutService
     }
 
     /**
+     * Synchronize RuneTags mention fonts against the final physical chat widgets
+     * after RuneScape has completed its clientscript reconstruction for the
+     * current client tick.
+     *
+     * Font mutation deliberately does not occur from the render overlays.
+     *
+     * One synchronization pass:
+     *
+     * - restores any physical Widget RuneTags previously modified;
+     * - resolves current semantic-message -> physical-widget ownership;
+     * - reapplies the configured font only to messages which currently own those
+     *   final rendered Widgets.
+     *
+     * Because restoration and reapplication occur synchronously in one
+     * PostClientTick callback, RuneScape cannot render the temporary native-font
+     * state between those operations.
+     */
+    public void syncMentionFonts()
+    {
+        /*
+         * Physical Widget instances are recycled by RuneScape.
+         *
+         * Always begin a reconstruction synchronization from native state so a
+         * custom font can never follow a recycled Widget into another message.
+         */
+        restoreAllOriginalFonts();
+
+        final MentionFont mentionFont =
+                config.fontMentions();
+
+        /*
+         * NORMAL requires only restoration.
+         *
+         * Avoid traversing the rendered chat entirely when there is no custom font
+         * to apply.
+         */
+        if (mentionFont == null
+                || mentionFont == MentionFont.NORMAL)
+        {
+            return;
+        }
+
+        final List<TaggedMessage> messages =
+                new ArrayList<>(
+                        repository.snapshot());
+
+        Collections.reverse(
+                messages);
+
+        /*
+         * Resolve both physical surfaces independently because one private message
+         * may legitimately be rendered in both locations.
+         */
+        syncSurfaceFonts(
+                client.getWidget(
+                        WidgetInfo.PRIVATE_CHAT_MESSAGE),
+                Surface.SPLIT_PRIVATE,
+                messages);
+
+        syncSurfaceFonts(
+                client.getWidget(
+                        WidgetInfo.CHATBOX_MESSAGE_LINES),
+                Surface.CHATBOX,
+                messages);
+    }
+
+    /**
+     * Restore every physical chat font currently owned by RuneTags.
+     *
+     * Used when the plugin is shutting down so RuneScape is never left displaying
+     * a RuneTags FontId after the plugin has been disabled.
+     */
+    public void restoreMentionFonts()
+    {
+        restoreAllOriginalFonts();
+    }
+
+    /**
+     * Resolve semantic message ownership for one physical surface and apply only
+     * font treatment.
+     *
+     * This intentionally does not calculate reference hitboxes or sender geometry.
+     * Those remain render-time responsibilities.
+     */
+    private void syncSurfaceFonts(
+            Widget surfaceWidget,
+            Surface surface,
+            List<TaggedMessage> messages)
+    {
+        if (surfaceWidget == null
+                || surfaceWidget.isHidden()
+                || messages == null
+                || messages.isEmpty())
+        {
+            return;
+        }
+
+        final List<Widget> textWidgets =
+                new ArrayList<>();
+
+        final Set<Widget> visited =
+                Collections.newSetFromMap(
+                        new IdentityHashMap<>());
+
+        collectTextWidgets(
+                surfaceWidget,
+                textWidgets,
+                visited,
+                0);
+
+        if (textWidgets.isEmpty())
+        {
+            return;
+        }
+
+        /*
+         * Preserve the exact same per-surface semantic ownership rules used by the
+         * hitbox layout.
+         *
+         * This is important for duplicate and short messages.
+         */
+        final Set<Widget> usedWidgets =
+                Collections.newSetFromMap(
+                        new IdentityHashMap<>());
+
+        for (TaggedMessage message : messages)
+        {
+            if (message == null)
+            {
+                continue;
+            }
+
+            if (surface == Surface.SPLIT_PRIVATE
+                    && !isPrivateMessage(
+                    message))
+            {
+                continue;
+            }
+
+            final Widget messageWidget =
+                    findWidgetForMessage(
+                            message,
+                            textWidgets,
+                            usedWidgets);
+
+            if (messageWidget == null)
+            {
+                continue;
+            }
+
+            usedWidgets.add(
+                    messageWidget);
+
+            applyMentionFont(
+                    messageWidget,
+                    message);
+        }
+    }
+
+    /**
      * Rebuild all currently rendered reference hitboxes.
      *
      * RuneTags does not need to query RuneScape's Split Private Chat setting
@@ -120,19 +280,12 @@ public class ChatReferenceLayoutService
     public List<ChatReferenceHitbox> layout()
     {
         /*
-         * Physical RuneScape chat widgets are recycled as rows shift, tabs change,
-         * and chat is reconstructed.
+         * Font ownership is synchronized once after native chat reconstruction.
          *
-         * Font ownership must therefore never persist merely because the same
-         * Widget instance survived from the previous frame.
-         *
-         * Restore every font RuneTags changed before resolving the current
-         * semantic-message -> physical-widget mapping. The current pass will then
-         * reapply the configured mention font only to widgets which presently
-         * belong to messages requiring that treatment.
+         * Render-time layout is read-only with respect to FontId. It may rebuild
+         * transient hitbox geometry every frame, but it must never toggle native
+         * chat fonts.
          */
-        restoreAllOriginalFonts();
-
         final List<TaggedMessage> messages =
                 new ArrayList<>(
                         repository.snapshot());
@@ -266,9 +419,12 @@ public class ChatReferenceLayoutService
             usedWidgets.add(
                     messageWidget);
 
-            applyMentionFont(
-                    messageWidget,
-                    message);
+            /*
+             * FontId is intentionally not mutated here.
+             *
+             * ChatFontLayoutService schedules one final font synchronization after native
+             * clientscript reconstruction. Render-time layout owns only geometry.
+             */
 
             /*
              * Body references and sender interaction are deliberately laid

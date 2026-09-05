@@ -49,6 +49,7 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuOpened;
+import net.runelite.api.events.PostClientTick;
 import net.runelite.api.events.ScriptPreFired;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.callback.Hooks;
@@ -610,6 +611,16 @@ public class RuneTagsPlugin extends Plugin {
          * 4. Clear runtime / cached state
          * ================================================================
          */
+
+        /*
+         * Return every physical chat widget still owned by RuneTags to its native
+         * FontId before discarding semantic/font ownership state.
+         */
+        if (chatReferenceLayoutService != null)
+        {
+            chatReferenceLayoutService.restoreMentionFonts();
+        }
+
         if (chatHitboxRegistry != null)
         {
             chatHitboxRegistry.clear();
@@ -733,6 +744,16 @@ public class RuneTagsPlugin extends Plugin {
         {
             chatFontLayoutService.onScriptPreFired(
                     event);
+        }
+    }
+
+    @Subscribe
+    public void onPostClientTick(
+            PostClientTick event)
+    {
+        if (chatFontLayoutService != null)
+        {
+            chatFontLayoutService.onPostClientTick();
         }
     }
 
@@ -937,6 +958,18 @@ public class RuneTagsPlugin extends Plugin {
          */
         messageRepository.add(taggedMessage);
 
+        /*
+         * A new supported message may cause RuneScape to reconstruct and recycle
+         * retained physical chat rows.
+         *
+         * This is only a boolean request. All messages reconstructed during this
+         * client tick are synchronized together once at PostClientTick.
+         */
+        if (chatFontLayoutService != null)
+        {
+            chatFontLayoutService.markFontsDirty();
+        }
+
         if (mentionHistoryService != null
                 && taggedMessage
                 .getLocalMentionMatch()
@@ -1052,7 +1085,20 @@ public class RuneTagsPlugin extends Plugin {
                 break;
 
             case "fontMentions":
-                clientThread.invokeLater( client::refreshChat);
+                clientThread.invokeLater(() ->
+                {
+                    client.refreshChat();
+
+                    /*
+                     * Script construction normally marks this automatically, but keep the
+                     * configuration lifecycle explicit so switching to NORMAL also forces
+                     * final restoration.
+                     */
+                    if (chatFontLayoutService != null)
+                    {
+                        chatFontLayoutService.markFontsDirty();
+                    }
+                });
                 break;
 
             default:
@@ -1186,6 +1232,17 @@ public class RuneTagsPlugin extends Plugin {
 
         nativeChatBootstrapPending =
                 false;
+
+        /*
+         * Existing native chat may already be visible when RuneTags is enabled.
+         *
+         * Request one final semantic/font synchronization so retained messages receive
+         * their configured font without waiting for another incoming message.
+         */
+        if (chatFontLayoutService != null)
+        {
+            chatFontLayoutService.markFontsDirty();
+        }
 
         log.debug(
                 "[RuneTags] Native Chat Bootstrap Complete | TaggedMessages={}",

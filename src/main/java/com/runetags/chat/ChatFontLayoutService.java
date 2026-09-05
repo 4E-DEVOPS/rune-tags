@@ -5,7 +5,9 @@ import com.runetags.config.MentionFont;
 import com.runetags.model.TaggedMessage;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import net.runelite.api.Client;
 import net.runelite.api.FontID;
@@ -15,16 +17,23 @@ import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
 
 /**
- * Adjusts RuneScape's native chat-row allocation before construction when
- * RuneTags applies a wider mention font to a rendered message body.
+ * Coordinates native chat construction for RuneTags mention fonts.
  *
- * This service owns only PRE-CONSTRUCTION geometry.
+ * Responsibilities:
  *
- * Actual FontId application remains in ChatReferenceLayoutService so:
+ * PRE-CONSTRUCTION:
  *
- * - font mutation stays attached to the resolved physical message widget;
- * - existing original-font restoration continues to work;
- * - hitbox/highlight geometry sees the final font before layout.
+ * - identify RuneTags messages which require a custom font;
+ * - measure native/custom wrapping;
+ * - adjust RuneScape's native row allocation before construction.
+ *
+ * END OF CLIENT TICK:
+ *
+ * - coalesce every row reconstruction into one final font synchronization;
+ * - apply FontId only after RuneScape has completed clientscript execution.
+ *
+ * ChatReferenceLayoutService remains authoritative for semantic
+ * message -> physical-widget ownership and actual FontId mutation.
  *
  * ---------------------------------------------------------------------
  * CONSTRUCTION PATHS
@@ -100,6 +109,23 @@ public class ChatFontLayoutService
     private final TaggedMessageRepository repository;
     private final ChatReferenceLayoutService referenceLayoutService;
 
+    /*
+     * Multiple 203 / 4483 constructors may execute during one client tick.
+     *
+     * They all collapse into one final semantic -> physical font synchronization
+     * at PostClientTick.
+     */
+    private boolean fontsDirty;
+
+    /*
+     * RuneTags only measures a very small fixed set of fonts.
+     *
+     * Resolve each FontTypeFace once rather than temporarily changing
+     * CHATBOX_INPUT for every reconstructed row.
+     */
+    private final Map<Integer, FontTypeFace> fontCache =
+            new HashMap<>();
+
     public ChatFontLayoutService(
             Client client,
             RuneTagsConfig config,
@@ -110,6 +136,40 @@ public class ChatFontLayoutService
         this.config = config;
         this.repository = repository;
         this.referenceLayoutService = referenceLayoutService;
+    }
+
+    /**
+     * Request one final font synchronization at the end of the current client
+     * tick.
+     *
+     * Repeated requests are intentionally coalesced into one boolean state.
+     */
+    public void markFontsDirty()
+    {
+        fontsDirty = true;
+    }
+
+    /**
+     * Synchronize fonts only when native chat construction or semantic chat state
+     * changed during this client tick.
+     *
+     * PostClientTick occurs after clientscript execution, so physical chat widgets
+     * have reached their final ownership positions before RuneTags mutates them.
+     */
+    public void onPostClientTick()
+    {
+        if (!fontsDirty)
+        {
+            return;
+        }
+
+        /*
+         * Clear first so any future construction creates a new request rather than
+         * being swallowed by the current synchronization.
+         */
+        fontsDirty = false;
+
+        referenceLayoutService.syncMentionFonts();
     }
 
     /**
@@ -126,16 +186,42 @@ public class ChatFontLayoutService
             return;
         }
 
+        /*
+         * Any native chat-row reconstruction can recycle a physical Widget which
+         * previously carried a RuneTags font.
+         *
+         * Mark the final font state dirty even when this particular row is
+         * ordinary. One PostClientTick synchronization will resolve all rows after
+         * the entire reconstruction sequence has completed.
+         */
+        markFontsDirty();
+
         final Object[] objectStack =
                 client.getObjectStack();
 
         final int objectStackSize =
                 client.getObjectStackSize();
 
+        /*
+         * Take one semantic repository snapshot for this entire construction
+         * attempt.
+         *
+         * The previous implementation independently snapshotted inside findBody()
+         * and findTaggedMessage().
+         */
+        final List<TaggedMessage> messages =
+                repository.snapshot();
+
+        if (messages.isEmpty())
+        {
+            return;
+        }
+
         final String rawBody =
                 findBody(
                         objectStack,
-                        objectStackSize);
+                        objectStackSize,
+                        messages);
 
         if (rawBody == null)
         {
@@ -162,7 +248,8 @@ public class ChatFontLayoutService
                 findTaggedMessage(
                         semanticBody,
                         objectStack,
-                        objectStackSize);
+                        objectStackSize,
+                        messages);
 
         if (taggedMessage == null
                 || !hasMentionFontTreatment(
@@ -405,10 +492,14 @@ public class ChatFontLayoutService
     private TaggedMessage findTaggedMessage(
             String semanticBody,
             Object[] objectStack,
-            int objectStackSize)
+            int objectStackSize,
+            List<TaggedMessage> messages)
     {
-        final List<TaggedMessage> messages =
-                repository.snapshot();
+        if (messages == null
+                || messages.isEmpty())
+        {
+            return null;
+        }
 
         TaggedMessage bodyFallback =
                 null;
@@ -539,10 +630,13 @@ public class ChatFontLayoutService
      */
     private String findBody(
             Object[] stack,
-            int size)
+            int size,
+            List<TaggedMessage> messages)
     {
         if (stack == null
-                || size <= 0)
+                || size <= 0
+                || messages == null
+                || messages.isEmpty())
         {
             return null;
         }
@@ -551,9 +645,6 @@ public class ChatFontLayoutService
                 Math.min(
                         size,
                         stack.length);
-
-        final List<TaggedMessage> messages =
-                repository.snapshot();
 
         for (int i = safeSize - 1;
              i >= 0;
@@ -805,6 +896,15 @@ public class ChatFontLayoutService
     private FontTypeFace resolveFont(
             int fontId)
     {
+        final FontTypeFace cached =
+                fontCache.get(
+                        fontId);
+
+        if (cached != null)
+        {
+            return cached;
+        }
+
         final Widget probe =
                 client.getWidget(
                         WidgetInfo.CHATBOX_INPUT);
@@ -822,7 +922,17 @@ public class ChatFontLayoutService
             probe.setFontId(
                     fontId);
 
-            return probe.getFont();
+            final FontTypeFace resolved =
+                    probe.getFont();
+
+            if (resolved != null)
+            {
+                fontCache.put(
+                        fontId,
+                        resolved);
+            }
+
+            return resolved;
         }
         finally
         {
