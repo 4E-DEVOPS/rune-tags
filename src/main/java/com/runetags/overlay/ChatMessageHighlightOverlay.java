@@ -619,6 +619,8 @@ public class ChatMessageHighlightOverlay extends Overlay
         return type
                 == ChatMessageType.PRIVATECHAT
                 || type
+                == ChatMessageType.MODPRIVATECHAT
+                || type
                 == ChatMessageType.PRIVATECHATOUT;
     }
 

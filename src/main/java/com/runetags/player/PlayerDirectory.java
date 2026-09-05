@@ -2,6 +2,7 @@ package com.runetags.player;
 
 import com.runetags.mention.NameNormalizer;
 import com.runetags.model.OnlineState;
+import com.runetags.model.PlayerAccountType;
 import com.runetags.model.PlayerIdentity;
 import com.runetags.model.PlayerSource;
 
@@ -21,6 +22,7 @@ import net.runelite.api.FriendContainer;
 import net.runelite.api.FriendsChatManager;
 import net.runelite.api.FriendsChatMember;
 import net.runelite.api.Player;
+import net.runelite.api.WorldType;
 import net.runelite.api.WorldView;
 import net.runelite.api.clan.ClanChannel;
 import net.runelite.api.clan.ClanChannelMember;
@@ -28,29 +30,119 @@ import net.runelite.api.clan.ClanMember;
 import net.runelite.api.clan.ClanSettings;
 import net.runelite.api.clan.ClanTitle;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.client.game.WorldService;
 import net.runelite.client.party.PartyMember;
 import net.runelite.client.party.PartyService;
+import net.runelite.client.util.Text;
+import net.runelite.client.util.WorldUtil;
+import net.runelite.http.api.worlds.World;
+import net.runelite.http.api.worlds.WorldResult;
 
 public class PlayerDirectory {
     private final Client client;
     private final PartyService partyService;
+    private final WorldService worldService;
     private final NameNormalizer normalizer;
-    private final Map<String, PlayerIdentity> identities = new LinkedHashMap<>();
 
-    public PlayerDirectory(Client client, PartyService partyService, NameNormalizer normalizer) {
+    private final Map<String, PlayerAccountType> observedAccountTypes =
+            new LinkedHashMap<>();
+
+    private final Map<String, PlayerAccountType> observedPermanentAccountTypes =
+            new LinkedHashMap<>();
+
+    private final Map<String, PlayerIdentity> identities =
+            new LinkedHashMap<>();
+
+    private final Map<Integer, EnumSet<WorldType>> worldTypesById =
+            new LinkedHashMap<>();
+
+    public PlayerDirectory(
+            Client client,
+            PartyService partyService,
+            WorldService worldService,
+            NameNormalizer normalizer)
+    {
         this.client = client;
         this.partyService = partyService;
+        this.worldService = worldService;
         this.normalizer = normalizer;
     }
 
-    public void rebuild() {
+    public void rebuild()
+    {
         identities.clear();
+
+        refreshWorldTypes();
+
         addFriends();
         addClan();
         addGuestClan();
         addFriendsChat();
         addParty();
         addNearbyPlayers();
+    }
+
+    public void observeAccountType(
+            String rawPlayerName)
+    {
+        if (isBlank(rawPlayerName))
+        {
+            return;
+        }
+
+        final String plainName =
+                Text.removeTags(rawPlayerName);
+
+        final String key =
+                normalizer.comparisonKey(
+                        plainName);
+
+        if (key.isEmpty())
+        {
+            return;
+        }
+
+        final boolean leaguesWorld =
+                client.getWorldType() != null
+                        && client.getWorldType().contains(
+                        WorldType.SEASONAL);
+
+        final PlayerAccountType observedType =
+                PlayerAccountType.fromChatName(
+                        rawPlayerName,
+                        leaguesWorld);
+
+        /*
+         * A genuine native chat-name observation is authoritative for the
+         * player's current displayed classification.
+         *
+         * This deliberately allows transitions such as:
+         * HARDCORE -> IRONMAN
+         * IRONMAN  -> NORMAL
+         */
+        if (observedType.isPermanentAccountType())
+        {
+            observedPermanentAccountTypes.put(key, observedType);
+        }
+
+        observedAccountTypes.put(key, observedType);
+
+        /*
+         * Update the current in-memory identity immediately as well.
+         *
+         * The observation cache ensures this value survives the next normal
+         * PlayerDirectory.rebuild().
+         */
+        final PlayerIdentity existing = identities.get(key);
+
+        if (existing != null)
+        {
+            identities.put(
+                    key,
+                    existing.toBuilder()
+                            .accountType(observedType)
+                            .build());
+        }
     }
 
     public Optional<PlayerIdentity> find(String name) {
@@ -71,8 +163,132 @@ public class PlayerDirectory {
         return players;
     }
 
-    public void clear() {
+    /**
+     * Clear live/session-derived player state while preserving durable account
+     * observations learned from native chat.
+     *
+     * RuneScape retains chat history across world hops and logout/login cycles,
+     * so RuneTags should retain the corresponding account knowledge as well.
+     *
+     * Temporary world-mode classifications are deliberately discarded because
+     * DEADMAN / LEAGUES must be re-established from the player's current world.
+     */
+    public void clearLiveState()
+    {
         identities.clear();
+        worldTypesById.clear();
+
+        observedAccountTypes.entrySet()
+                .removeIf(entry ->
+                        entry.getValue() != null
+                                && entry.getValue().isTemporary());
+    }
+
+    /**
+     * Completely clear all PlayerDirectory state.
+     *
+     * Reserved for plugin shutdown or another true RuneTags runtime reset.
+     */
+    public void clear()
+    {
+        identities.clear();
+        observedAccountTypes.clear();
+        observedPermanentAccountTypes.clear();
+        worldTypesById.clear();
+    }
+
+    /**
+     * Refresh the RuneLite world-number -> WorldType mapping.
+     *
+     * This allows temporary account classifications such as Leagues and
+     * Deadman to follow a player's actual world without relying solely on
+     * another chat message being observed.
+     */
+    private void refreshWorldTypes()
+    {
+        worldTypesById.clear();
+
+        /*
+         * The client's own current world is always authoritative and does not
+         * require the external world list.
+         */
+        if (client.getWorld() > 0
+                && client.getWorldType() != null)
+        {
+            worldTypesById.put(
+                    client.getWorld(),
+                    EnumSet.copyOf(
+                            client.getWorldType()));
+        }
+
+        if (worldService == null)
+        {
+            return;
+        }
+
+        final WorldResult worldResult =
+                worldService.getWorlds();
+
+        if (worldResult == null
+                || worldResult.getWorlds() == null)
+        {
+            return;
+        }
+
+        for (World world : worldResult.getWorlds())
+        {
+            if (world == null
+                    || world.getTypes() == null)
+            {
+                continue;
+            }
+
+            worldTypesById.put(
+                    world.getId(),
+                    WorldUtil.toWorldTypes(
+                            world.getTypes()));
+        }
+    }
+
+    /**
+     * Resolve a temporary account classification from the player's world.
+     *
+     * DEADMAN is deliberately checked before SEASONAL so that a seasonal
+     * Deadman world cannot accidentally be classified as Leagues if both
+     * world flags are ever present.
+     */
+    private PlayerAccountType worldAccountType(
+            Integer world)
+    {
+        if (world == null
+                || world <= 0)
+        {
+            return PlayerAccountType.UNKNOWN;
+        }
+
+        final Set<WorldType> worldTypes =
+                worldTypesById.get(
+                        world);
+
+        if (worldTypes == null
+                || worldTypes.isEmpty())
+        {
+            return PlayerAccountType.UNKNOWN;
+        }
+
+        if (worldTypes.contains(
+                WorldType.DEADMAN))
+        {
+            return PlayerAccountType.DEADMAN;
+        }
+
+        if (worldTypes.contains(
+                WorldType.SEASONAL))
+        {
+            return PlayerAccountType.LEAGUES;
+        }
+
+        return PlayerAccountType.UNKNOWN;
     }
 
     private void addFriends() {
@@ -381,6 +597,87 @@ public class PlayerDirectory {
 
         final PlayerIdentity existing = identities.get(key);
 
+        final PlayerAccountType observedAccountType =
+                observedAccountTypes.getOrDefault(
+                        key,
+                        PlayerAccountType.UNKNOWN);
+
+        final PlayerAccountType permanentAccountType =
+                observedPermanentAccountTypes.getOrDefault(
+                        key,
+                        PlayerAccountType.UNKNOWN);
+
+        final PlayerAccountType existingAccountType =
+                existing != null
+                        && existing.getAccountType() != null
+                        ? existing.getAccountType()
+                        : PlayerAccountType.UNKNOWN;
+
+        final PlayerAccountType temporaryWorldType =
+                worldAccountType(
+                        world);
+
+        final PlayerAccountType mergedAccountType;
+
+        /*
+         * Moderator status always supersedes world-mode and permanent account
+         * classifications.
+         */
+        if (observedAccountType.isModerator())
+        {
+            mergedAccountType =
+                    observedAccountType;
+        }
+        else if (existingAccountType.isModerator())
+        {
+            mergedAccountType =
+                    existingAccountType;
+        }
+        /*
+         * A known temporary world is authoritative for the current display icon.
+         */
+        else if (temporaryWorldType.isTemporary())
+        {
+            mergedAccountType =
+                    temporaryWorldType;
+        }
+        /*
+         * If the player is on a known non-temporary world, deliberately discard a
+         * stale LEAGUES/DEADMAN display classification and restore the permanent
+         * account mode when we know it.
+         */
+        else if (world != null
+                && world > 0
+                && worldTypesById.containsKey(world))
+        {
+            if (permanentAccountType.isKnown())
+            {
+                mergedAccountType =
+                        permanentAccountType;
+            }
+            else if (!observedAccountType.isTemporary())
+            {
+                mergedAccountType =
+                        observedAccountType;
+            }
+            else
+            {
+                mergedAccountType =
+                        PlayerAccountType.UNKNOWN;
+            }
+        }
+        /*
+         * No reliable world information: preserve the strongest information we
+         * already have rather than guessing.
+         */
+        else
+        {
+            mergedAccountType =
+                    PlayerAccountType.prefer(
+                            existingAccountType,
+                            observedAccountType);
+        }
+
         final Set<PlayerSource> sources = existing == null
                 ? EnumSet.of(source)
                 : EnumSet.copyOf(existing.getSources());
@@ -474,6 +771,7 @@ public class PlayerDirectory {
                                         ? existing.getCanonicalName()
                                         : canonicalName)
                         .normalizedName(key)
+                        .accountType(mergedAccountType)
                         .sources(Collections.unmodifiableSet(sources))
                         .combatLevel(
                                 combatLevel != null

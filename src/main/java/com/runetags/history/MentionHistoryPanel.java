@@ -740,12 +740,14 @@ public class MentionHistoryPanel extends PluginPanel
                 return "Friends Chat";
 
             case CLAN_CHAT:
+            case CLAN_GIM_CHAT:
                 return "Clan";
 
             case CLAN_GUEST_CHAT:
                 return "Guest Clan";
 
             case PRIVATECHAT:
+            case MODPRIVATECHAT:
             case PRIVATECHATOUT:
                 return "Private";
 

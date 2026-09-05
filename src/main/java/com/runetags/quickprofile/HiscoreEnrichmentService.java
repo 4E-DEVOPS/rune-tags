@@ -1,5 +1,7 @@
 package com.runetags.quickprofile;
 
+import com.runetags.model.PlayerAccountType;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -19,6 +21,94 @@ public class HiscoreEnrichmentService
 {
     private final HiscoreClient hiscoreClient;
     private final ProfileEnrichmentCache cache;
+
+    private CompletableFuture<PlayerAccountType> detectAccountType(String playerName)
+    {
+        /*
+         * Official individual HiScore endpoints can positively identify the
+         * three solo Ironman variants.
+         *
+         * If a player is absent from the solo-Ironman tables, RuneTags cannot
+         * safely distinguish NORMAL from Group Ironman using this API alone.
+         * Return UNKNOWN and allow native chat observations to resolve it later.
+         */
+        return safeLookup(
+                playerName,
+                HiscoreEndpoint.IRONMAN)
+                .thenCompose(
+                        ironmanResult ->
+                        {
+                            if (ironmanResult == null)
+                            {
+                                return CompletableFuture.completedFuture(
+                                        PlayerAccountType.UNKNOWN);
+                            }
+
+                            final CompletableFuture<HiscoreResult> hardcoreFuture =
+                                    safeLookup(
+                                            playerName,
+                                            HiscoreEndpoint.HARDCORE_IRONMAN);
+
+                            final CompletableFuture<HiscoreResult> ultimateFuture =
+                                    safeLookup(
+                                            playerName,
+                                            HiscoreEndpoint.ULTIMATE_IRONMAN);
+
+                            return hardcoreFuture.thenCombine(
+                                    ultimateFuture,
+                                    (hardcoreResult, ultimateResult) ->
+                                    {
+                                        if (hardcoreResult != null)
+                                        {
+                                            return PlayerAccountType.HARDCORE;
+                                        }
+
+                                        if (ultimateResult != null)
+                                        {
+                                            return PlayerAccountType.ULTIMATE;
+                                        }
+
+                                        return PlayerAccountType.IRONMAN;
+                                    });
+                        });
+    }
+
+    private CompletableFuture<HiscoreResult> safeLookup(
+            String playerName,
+            HiscoreEndpoint endpoint)
+    {
+        try
+        {
+            final CompletableFuture<HiscoreResult> future =
+                    hiscoreClient.lookupAsync(
+                            playerName,
+                            endpoint);
+
+            if (future == null)
+            {
+                return CompletableFuture.completedFuture(
+                        null);
+            }
+
+            return future.handle(
+                    (result, throwable) ->
+                            throwable == null
+                                    ? result
+                                    : null);
+        }
+        catch (RuntimeException ex)
+        {
+            return CompletableFuture.completedFuture(
+                    null);
+        }
+    }
+
+    @lombok.Value
+    private static class BaseLookupResult
+    {
+        HiscoreResult result;
+        Throwable throwable;
+    }
 
     private static Integer calculateCombatLevel(
             HiscoreResult result)
@@ -84,23 +174,27 @@ public class HiscoreEnrichmentService
         this.cache = cache;
     }
 
-    public EnrichmentRequest enrich(String playerName)
+    public EnrichmentRequest enrich(
+            String playerName)
     {
         final ProfileEnrichmentCache.CachedProfileEnrichment cached =
-                cache.get(playerName).orElse(null);
+                cache.get(playerName)
+                        .orElse(null);
 
         if (cached != null)
         {
-            return EnrichmentRequest.cached(cached);
+            return EnrichmentRequest.cached(
+                    cached);
         }
 
-        final CompletableFuture<HiscoreResult> future;
+        final CompletableFuture<HiscoreResult> normalFuture;
 
         try
         {
-            future = hiscoreClient.lookupAsync(
-                    playerName,
-                    HiscoreEndpoint.NORMAL);
+            normalFuture =
+                    hiscoreClient.lookupAsync(
+                            playerName,
+                            HiscoreEndpoint.NORMAL);
         }
         catch (RuntimeException ex)
         {
@@ -112,92 +206,122 @@ public class HiscoreEnrichmentService
             return EnrichmentRequest.failed();
         }
 
-        if (future == null)
+        if (normalFuture == null)
         {
             return EnrichmentRequest.failed();
         }
 
+        final CompletableFuture<PlayerAccountType> accountTypeFuture =
+                detectAccountType(
+                        playerName);
+
         final CompletableFuture<ProfileEnrichmentCache.CachedProfileEnrichment> mapped =
-                future.handle((result, throwable) ->
-                {
-                    if (throwable != null)
-                    {
-                        log.debug(
-                                "[RuneTags] HiScore-Lookup failed for Player='{}' | ERROR: {}",
-                                playerName,
-                                throwable.getMessage());
+                normalFuture.handle(
+                                (result, throwable) ->
+                                {
+                                    if (throwable != null)
+                                    {
+                                        log.debug(
+                                                "[RuneTags] HiScore-Lookup failed for Player='{}' | ERROR: {}",
+                                                playerName,
+                                                throwable.getMessage());
 
-                        return new ProfileEnrichmentCache.CachedProfileEnrichment(
-                                ProfileEnrichmentState.ERROR,
-                                null);
-                    }
+                                        return new BaseLookupResult(
+                                                null,
+                                                throwable);
+                                    }
 
-                    if (result == null)
-                    {
-                        cache.putNotFound(playerName);
+                                    return new BaseLookupResult(
+                                            result,
+                                            null);
+                                })
+                        .thenCombine(
+                                accountTypeFuture,
+                                (baseLookup, accountType) ->
+                                {
+                                    if (baseLookup.getThrowable() != null)
+                                    {
+                                        return new ProfileEnrichmentCache.CachedProfileEnrichment(
+                                                ProfileEnrichmentState.ERROR,
+                                                null);
+                                    }
 
-                        return new ProfileEnrichmentCache.CachedProfileEnrichment(
-                                ProfileEnrichmentState.NOT_FOUND,
-                                null);
-                    }
+                                    final HiscoreResult result =
+                                            baseLookup.getResult();
 
-                    final Skill overall =
-                            result.getSkill(HiscoreSkill.OVERALL);
+                                    if (result == null)
+                                    {
+                                        cache.putNotFound(
+                                                playerName);
 
-                    final Integer totalLevel =
-                            overall != null && overall.getLevel() >= 0
-                                    ? overall.getLevel()
-                                    : null;
+                                        return new ProfileEnrichmentCache.CachedProfileEnrichment(
+                                                ProfileEnrichmentState.NOT_FOUND,
+                                                null);
+                                    }
 
-                    /*
-                     * RuneLite's native HiScore panel derives Combat from the seven relevant
-                     * Hiscore skills. This allows remote/unresolved RuneTags profiles to display
-                     * an accurate combat level without requiring the player to be nearby.
-                     */
-                    final Integer combatLevel =
-                            calculateCombatLevel(result);
+                                    final Skill overall =
+                                            result.getSkill(
+                                                    HiscoreSkill.OVERALL);
 
-                    /*
-                     * Store boss + activity values only.
-                     */
-                    final Map<String, Integer> contextValues =
-                            new LinkedHashMap<>();
+                                    final Integer totalLevel =
+                                            overall != null
+                                                    && overall.getLevel() >= 0
+                                                    ? overall.getLevel()
+                                                    : null;
 
-                    for (HiscoreSkill hiscoreSkill : HiscoreSkill.values())
-                    {
-                        if (hiscoreSkill.getType() != HiscoreSkillType.BOSS
-                                && hiscoreSkill.getType() != HiscoreSkillType.ACTIVITY
-                                && hiscoreSkill.getType() != HiscoreSkillType.SKILL)
-                        {
-                            continue;
-                        }
+                                    final Integer combatLevel =
+                                            calculateCombatLevel(
+                                                    result);
 
-                        final Skill skill = result.getSkill(hiscoreSkill);
+                                    final Map<String, Integer> contextValues =
+                                            new LinkedHashMap<>();
 
-                        if (skill == null || skill.getLevel() < 0)
-                        {
-                            continue;
-                        }
+                                    for (HiscoreSkill hiscoreSkill
+                                            : HiscoreSkill.values())
+                                    {
+                                        if (hiscoreSkill.getType()
+                                                != HiscoreSkillType.BOSS
+                                                && hiscoreSkill.getType()
+                                                != HiscoreSkillType.ACTIVITY
+                                                && hiscoreSkill.getType()
+                                                != HiscoreSkillType.SKILL)
+                                        {
+                                            continue;
+                                        }
 
-                        contextValues.put(
-                                hiscoreSkill.name(),
-                                skill.getLevel());
-                    }
+                                        final Skill skill =
+                                                result.getSkill(
+                                                        hiscoreSkill);
 
-                    final HiscoreProfileData data =
-                            new HiscoreProfileData(
-                                    combatLevel,
-                                    totalLevel,
-                                    contextValues);
+                                        if (skill == null
+                                                || skill.getLevel() < 0)
+                                        {
+                                            continue;
+                                        }
 
-                    cache.putSuccess(playerName, data);
+                                        contextValues.put(
+                                                hiscoreSkill.name(),
+                                                skill.getLevel());
+                                    }
 
-                    return new ProfileEnrichmentCache.CachedProfileEnrichment(
-                            ProfileEnrichmentState.LOADED,
-                            data);
-                });
+                                    final HiscoreProfileData data =
+                                            new HiscoreProfileData(
+                                                    combatLevel,
+                                                    totalLevel,
+                                                    accountType,
+                                                    contextValues);
 
-        return EnrichmentRequest.loading(mapped);
+                                    cache.putSuccess(
+                                            playerName,
+                                            data);
+
+                                    return new ProfileEnrichmentCache.CachedProfileEnrichment(
+                                            ProfileEnrichmentState.LOADED,
+                                            data);
+                                });
+
+        return EnrichmentRequest.loading(
+                mapped);
     }
 
     @lombok.Value

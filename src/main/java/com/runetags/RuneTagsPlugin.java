@@ -58,6 +58,7 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.hiscore.HiscoreClient;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.Notifier;
+import net.runelite.client.game.WorldService;
 import net.runelite.client.party.PartyService;
 import net.runelite.client.plugins.party.messages.LocationUpdate;
 import net.runelite.client.plugins.Plugin;
@@ -99,6 +100,8 @@ public class RuneTagsPlugin extends Plugin {
     private OverlayManager overlayManager;
     @Inject
     private PartyService partyService;
+    @Inject
+    private WorldService worldService;
     @Inject
     private RuneTagsConfig config;
     @Inject
@@ -174,7 +177,6 @@ public class RuneTagsPlugin extends Plugin {
      * Runtime state.
      */
     private long nextMessageId;
-    private String retainedAccountKey;
 
     @Provides
     RuneTagsConfig provideConfig(ConfigManager configManager) {
@@ -199,6 +201,7 @@ public class RuneTagsPlugin extends Plugin {
                 new PlayerDirectory(
                         client,
                         partyService,
+                        worldService,
                         nameNormalizer);
 
         tagParser =
@@ -427,7 +430,6 @@ public class RuneTagsPlugin extends Plugin {
          * ================================================================
          */
         nextMessageId = 0;
-        retainedAccountKey = null;
 
         /*
          * RuneTags may be enabled from RuneLite's Swing configuration UI.
@@ -442,17 +444,6 @@ public class RuneTagsPlugin extends Plugin {
                     != GameState.LOGGED_IN)
             {
                 return;
-            }
-
-            final Player localPlayer =
-                    client.getLocalPlayer();
-
-            if (localPlayer != null
-                    && localPlayer.getName() != null)
-            {
-                retainedAccountKey =
-                        nameNormalizer.comparisonKey(
-                                localPlayer.getName());
             }
 
             if (playerContextService != null)
@@ -713,7 +704,6 @@ public class RuneTagsPlugin extends Plugin {
          * Runtime counters.
          */
         nextMessageId = 0;
-        retainedAccountKey = null;
 
         log.debug(
                 "[RuneTags] Plugin Terminated!");
@@ -772,52 +762,6 @@ public class RuneTagsPlugin extends Plugin {
 
         if (gameState == GameState.LOGGED_IN)
         {
-            final Player localPlayer =
-                    client.getLocalPlayer();
-
-            final String currentAccountKey =
-                    localPlayer != null
-                            && localPlayer.getName() != null
-                            ? nameNormalizer.comparisonKey(
-                            localPlayer.getName())
-                            : null;
-
-            /*
-             * Preserve RuneTags chat semantics through:
-             *
-             * - world hops;
-             * - normal logout/login cycles;
-             * - time spent on the login screen.
-             *
-             * However, self/alias matching belongs to the account which was
-             * active when the TaggedMessage was created. If a genuinely different
-             * account logs into the same RuneLite client, discard the retained
-             * semantic history rather than applying the previous account's
-             * self-match state to it.
-             */
-            if (retainedAccountKey != null
-                    && currentAccountKey != null
-                    && !retainedAccountKey.equals(
-                    currentAccountKey))
-            {
-                if (messageRepository != null)
-                {
-                    messageRepository.clear();
-                }
-
-                if (chatHitboxRegistry != null)
-                {
-                    chatHitboxRegistry.clear();
-                }
-            }
-
-            if (currentAccountKey != null
-                    && !currentAccountKey.isEmpty())
-            {
-                retainedAccountKey =
-                        currentAccountKey;
-            }
-
             if (playerContextService != null)
             {
                 playerContextService.refresh();
@@ -831,16 +775,16 @@ public class RuneTagsPlugin extends Plugin {
         if (gameState == GameState.HOPPING)
         {
             /*
-             * World-specific identity/context is temporarily invalid, but native
-             * chat history survives the hop. Preserve TaggedMessageRepository so
-             * RuneTags can rebuild the same reference hitboxes after login.
+             * RuneScape preserves visible chat across a normal world hop.
+             *
+             * Preserve:
+             * - TaggedMessageRepository;
+             * - currently rendered reference hitboxes;
+             * - durable account observations.
+             *
+             * Only live world/session-derived profile state becomes invalid.
              */
-            playerDirectory.clear();
-
-            if (chatHitboxRegistry != null)
-            {
-                chatHitboxRegistry.clear();
-            }
+            playerDirectory.clearLiveState();
 
             if (quickProfileController != null)
             {
@@ -871,17 +815,17 @@ public class RuneTagsPlugin extends Plugin {
             /*
              * RuneScape retains chat history while the client remains open.
              *
-             * Preserve TaggedMessageRepository and retainedAccountKey here.
-             * If the same account logs back in, its existing semantic references
-             * immediately become interactive again. A different-account login is
-             * detected and handled in the LOGGED_IN branch above.
+             * Preserve:
+             * - TaggedMessageRepository;
+             * - currently derived reference hitboxes;
+             * - durable account observations.
+             *
+             * Only live world/session-derived player state becomes invalid.
+             *
+             * ChatReferenceOverlay remains responsible for replacing the physical
+             * hitbox geometry as RuneScape's rendered chat widgets change.
              */
-            playerDirectory.clear();
-
-            if (chatHitboxRegistry != null)
-            {
-                chatHitboxRegistry.clear();
-            }
+            playerDirectory.clearLiveState();
 
             if (quickProfileController != null)
             {
@@ -930,6 +874,25 @@ public class RuneTagsPlugin extends Plugin {
 
         final String semanticMessage =
                 ChatText.toSemanticPlain(rawMessage);
+
+        if (playerDirectory != null
+                && event.getName() != null
+                && !event.getName().trim().isEmpty())
+        {
+            /*
+             * Only incoming/player-authored chat is authoritative evidence of the
+             * named player's native account icon.
+             *
+             * PRIVATECHATOUT names the recipient. Its lack of an account icon tells
+             * us nothing about that recipient and must not overwrite an account type
+             * previously learned from their own chat.
+             */
+            if (event.getType() != ChatMessageType.PRIVATECHATOUT)
+            {
+                playerDirectory.observeAccountType(
+                        event.getName());
+            }
+        }
 
         final TaggedMessage taggedMessage = chatProcessor.process(
                 ++nextMessageId,
@@ -1152,15 +1115,27 @@ public class RuneTagsPlugin extends Plugin {
         }
     }
 
-    private static boolean isSupportedChatType(ChatMessageType type) {
-        switch (type) {
+    private static boolean isSupportedChatType(ChatMessageType type)
+    {
+        if (type == null)
+        {
+            return false;
+        }
+
+        switch (type)
+        {
             case PUBLICCHAT:
             case MODCHAT:
+
+            case PRIVATECHAT:
+            case MODPRIVATECHAT:
+            case PRIVATECHATOUT:
+
             case FRIENDSCHAT:
+
             case CLAN_CHAT:
             case CLAN_GUEST_CHAT:
-            case PRIVATECHAT:
-            case PRIVATECHATOUT:
+            case CLAN_GIM_CHAT:
                 return true;
 
             default:
@@ -1190,6 +1165,7 @@ public class RuneTagsPlugin extends Plugin {
         switch (taggedMessage.getType())
         {
             case CLAN_CHAT:
+            case CLAN_GIM_CHAT:
                 return context.getChannelSource() == PlayerSource.CLAN
                         ? context.getChannelName()
                         : null;

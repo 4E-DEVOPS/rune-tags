@@ -2,6 +2,7 @@ package com.runetags.quickprofile;
 
 import com.runetags.context.ContextMetricValue;
 import com.runetags.model.OnlineState;
+import com.runetags.model.PlayerAccountType;
 import com.runetags.model.PlayerIdentity;
 import com.runetags.model.PlayerSource;
 
@@ -19,6 +20,9 @@ public class QuickProfileModel
 {
     String displayName;
     boolean resolved;
+
+    @Builder.Default
+    PlayerAccountType accountType = PlayerAccountType.UNKNOWN;
 
     Integer combatLevel;
     Integer totalLevel;

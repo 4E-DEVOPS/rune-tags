@@ -1969,6 +1969,7 @@ public class ChatReferenceLayoutService
                 message.getType();
 
         return type == ChatMessageType.PRIVATECHAT
+                || type == ChatMessageType.MODPRIVATECHAT
                 || type == ChatMessageType.PRIVATECHATOUT;
     }
 

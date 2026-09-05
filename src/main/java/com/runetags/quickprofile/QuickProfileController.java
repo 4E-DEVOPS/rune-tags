@@ -8,6 +8,7 @@ import com.runetags.context.PlayerContext;
 import com.runetags.context.PlayerContextService;
 import com.runetags.context.TargetController;
 import com.runetags.model.OnlineState;
+import com.runetags.model.PlayerAccountType;
 import com.runetags.model.PlayerIdentity;
 import com.runetags.model.PlayerReference;
 import com.runetags.model.PlayerSource;
@@ -118,6 +119,10 @@ public class QuickProfileController
             model = QuickProfileModel.builder()
                     .displayName(identity.getCanonicalName())
                     .resolved(true)
+                    .accountType(
+                            identity.getAccountType() != null
+                                    ? identity.getAccountType()
+                                    : PlayerAccountType.UNKNOWN)
                     .combatLevel(identity.getCombatLevel())
                     .world(identity.getWorld())
                     .onlineState(
@@ -170,9 +175,10 @@ public class QuickProfileController
                         : "[UNRESOLVED]";
 
         log.debug(
-                "[RuneTags] Quick-Card opened for Player='{}' | Resolved={} Nearby={} Sources={} World={} Location='{}'",
+                "[RuneTags] Quick-Card opened for Player='{}' | Resolved={} AccountType={} Nearby={} Sources={} World={} Location='{}'",
                 model.getDisplayName(),
                 model.isResolved(),
+                model.getAccountType(),
                 model.isNearby(),
                 resolutionSources,
                 model.getWorld(),
@@ -254,6 +260,10 @@ public class QuickProfileController
                         enrichmentData);
 
         model = current.toBuilder()
+                .accountType(
+                        identity.getAccountType() != null
+                                ? identity.getAccountType()
+                                : current.getAccountType())
                 .world(identity.getWorld())
                 .onlineState(
                         identity.getOnlineState() != null
@@ -632,6 +642,10 @@ public class QuickProfileController
                         enrichmentData);
 
         model = current.toBuilder()
+                .accountType(
+                        resolveAccountType(
+                                current.getAccountType(),
+                                data))
                 .combatLevel(
                         data != null
                                 && data.getCombatLevel() != null
@@ -646,9 +660,10 @@ public class QuickProfileController
                 .build();
 
         log.debug(
-                "[RuneTags] Profile Enrichment for Player='{}' | State={} Combat={} TotalLvl={} World={} Location='{}' Metrics={}",
+                "[RuneTags] Profile Enrichment for Player='{}' | State={} AccountType={} Combat={} TotalLvl={} World={} Location='{}' Metrics={}",
                 playerName,
                 state,
+                model.getAccountType(),
                 model.getCombatLevel(),
                 model.getTotalLevel(),
                 model.getWorld(),
@@ -656,6 +671,20 @@ public class QuickProfileController
                         ? playerContext.getLocationName()
                         : null,
                 contextMetrics);
+    }
+
+    private static PlayerAccountType resolveAccountType(
+            PlayerAccountType current,
+            HiscoreProfileData data)
+    {
+        final PlayerAccountType enriched =
+                data != null
+                        ? data.getAccountType()
+                        : PlayerAccountType.UNKNOWN;
+
+        return PlayerAccountType.prefer(
+                current,
+                enriched);
     }
 
     private PlayerContext resolveProfileContext(
@@ -767,6 +796,7 @@ public class QuickProfileController
         switch (chatType)
         {
             case PRIVATECHAT:
+            case MODPRIVATECHAT:
             case PRIVATECHATOUT:
                 return "Private";
 

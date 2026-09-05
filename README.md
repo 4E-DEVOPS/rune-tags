@@ -26,7 +26,16 @@ provider stack.
 timestamp + bold font test
 Per-channel retention could be revisited later if real eviction problems appear.
 
-add ironmen and mod chat icons
+[✓] 1. Authoritative account observations / PRIVATECHATOUT
+[✓] 2. Lifecycle preservation
+[ ] 3. Event-driven PlayerDirectory
+[ ] 4. Targeted live QuickCard refresh
+[ ] 5. Account/world classification finalization
+[ ] 6. Native Chat Bootstrap
+[ ] 7. Chat-type consistency audit
+[ ] 8. Sender/hitbox reliability
+[ ] 9. Performance pass
+[ ] 10. Phase 99 final testing
 
 ## Phase 7 — extra
 - player notes

@@ -3,6 +3,7 @@ package com.runetags.overlay;
 import com.runetags.RuneTagsConfig;
 import com.runetags.context.ContextMetricValue;
 import com.runetags.model.OnlineState;
+import com.runetags.model.PlayerAccountType;
 import com.runetags.model.PlayerSource;
 import com.runetags.quickprofile.ProfileEnrichmentState;
 import com.runetags.quickprofile.QuickProfileController;
@@ -13,8 +14,11 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.util.EnumMap;
+import java.util.Map;
 
 import net.runelite.api.Client;
 import net.runelite.client.config.RuneLiteConfig;
@@ -24,6 +28,7 @@ import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayPriority;
+import net.runelite.client.util.ImageUtil;
 
 public class QuickProfileOverlay extends Overlay
 {
@@ -50,6 +55,12 @@ public class QuickProfileOverlay extends Overlay
     private static final int PLAYER_NAME_BASELINE_OFFSET = 12;
     private static final int PLAYER_NAME_FONT_INCREASE = 2;
     private static final int PLAYER_NAME_INDENT = 3;
+
+    private static final int ACCOUNT_ICON_SLOT_WIDTH = 13;
+    private static final int ACCOUNT_ICON_SLOT_HEIGHT = 13;
+    private static final int ACCOUNT_ICON_GAP = 3;
+
+    private static final Map<PlayerAccountType, BufferedImage> ACCOUNT_ICONS = loadAccountIcons();
 
     /*
      * Quick Card theme:
@@ -441,6 +452,54 @@ public class QuickProfileOverlay extends Overlay
                 playerNameX;
 
         graphics.setColor(TEXT_PRIMARY);
+
+        /*
+         * Every Quick-Card reserves the same 13px account-icon slot BEFORE the
+         * bracketed player name, including UNKNOWN.
+         */
+        final PlayerAccountType accountType =
+                model.getAccountType() != null
+                        ? model.getAccountType()
+                        : PlayerAccountType.UNKNOWN;
+
+        final BufferedImage accountIcon =
+                ACCOUNT_ICONS.get(
+                        accountType);
+
+        if (accountIcon != null)
+        {
+            final FontMetrics nameMetrics =
+                    graphics.getFontMetrics(
+                            normalFont);
+
+            final int iconX =
+                    nameX
+                            + Math.max(
+                            0,
+                            (ACCOUNT_ICON_SLOT_WIDTH
+                                    - accountIcon.getWidth()) / 2);
+
+            final int iconY =
+                    textY
+                            - nameMetrics.getAscent()
+                            + Math.max(
+                            0,
+                            (nameMetrics.getHeight()
+                                    - accountIcon.getHeight()) / 2);
+
+            graphics.drawImage(
+                    accountIcon,
+                    iconX,
+                    iconY,
+                    null);
+        }
+
+        /*
+         * Advance past the fixed account-icon slot before drawing the name frame.
+         */
+        nameX +=
+                ACCOUNT_ICON_SLOT_WIDTH
+                        + ACCOUNT_ICON_GAP;
 
         graphics.setFont(bracketFont);
 
@@ -1140,6 +1199,32 @@ public class QuickProfileOverlay extends Overlay
         }
     }
 
+    private static Map<PlayerAccountType, BufferedImage> loadAccountIcons()
+    {
+        final Map<PlayerAccountType, BufferedImage> icons =
+                new EnumMap<>(
+                        PlayerAccountType.class);
+
+        for (PlayerAccountType accountType
+                : PlayerAccountType.values())
+        {
+            if (accountType == null
+                    || accountType.getIconFileName() == null)
+            {
+                continue;
+            }
+
+            icons.put(
+                    accountType,
+                    ImageUtil.loadImageResource(
+                            QuickProfileOverlay.class,
+                            "/com/runetags/icons/"
+                                    + accountType.getIconFileName()));
+        }
+
+        return icons;
+    }
+
     private static void drawStatusLine(
             Graphics2D graphics,
             QuickProfileModel model,
@@ -1506,7 +1591,9 @@ public class QuickProfileOverlay extends Overlay
                 graphics.getFontMetrics();
 
         int contentWidth =
-                metrics.stringWidth(
+                ACCOUNT_ICON_SLOT_WIDTH
+                        + ACCOUNT_ICON_GAP
+                        + metrics.stringWidth(
                         safe(model.getDisplayName()));
 
         int sectionContentWidth = 0;

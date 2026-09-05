@@ -12,7 +12,7 @@ public class TagParserTest
     public void whitespaceTerminatesExplicitTag()
     {
         NameNormalizer normalizer = new NameNormalizer();
-        PlayerDirectory directory = new PlayerDirectory(null, null, normalizer);
+        PlayerDirectory directory = new PlayerDirectory(null, null, null, normalizer);
         TagParser parser = new TagParser(normalizer, directory);
 
         List<PlayerReference> refs = parser.parse("hey @party hat");
@@ -25,7 +25,7 @@ public class TagParserTest
     public void underscoreRemainsInsideTag()
     {
         NameNormalizer normalizer = new NameNormalizer();
-        PlayerDirectory directory = new PlayerDirectory(null, null, normalizer);
+        PlayerDirectory directory = new PlayerDirectory(null, null, null, normalizer);
         TagParser parser = new TagParser(normalizer, directory);
 
         List<PlayerReference> refs = parser.parse("hey @santa_clause");

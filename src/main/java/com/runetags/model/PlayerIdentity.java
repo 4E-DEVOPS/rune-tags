@@ -16,6 +16,10 @@ public class PlayerIdentity
     String normalizedName;
 
     @Builder.Default
+    PlayerAccountType accountType =
+            PlayerAccountType.UNKNOWN;
+
+    @Builder.Default
     Set<PlayerSource> sources = Collections.emptySet();
 
     Integer combatLevel;
