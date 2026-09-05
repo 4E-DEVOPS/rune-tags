@@ -24,10 +24,12 @@ import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 
 import net.runelite.api.ChatMessageType;
+import net.runelite.client.callback.ClientThread;
 
 @Slf4j
 public class QuickProfileController
 {
+    private final ClientThread clientThread;
     private final PlayerDirectory playerDirectory;
     private final HiscoreEnrichmentService hiscoreEnrichmentService;
     private final PlayerContextService playerContextService;
@@ -59,6 +61,7 @@ public class QuickProfileController
     private long openGeneration;
 
     public QuickProfileController(
+            ClientThread clientThread,
             PlayerDirectory playerDirectory,
             HiscoreEnrichmentService hiscoreEnrichmentService,
             PlayerContextService playerContextService,
@@ -68,6 +71,7 @@ public class QuickProfileController
             LookupService lookupService,
             ClanLookupService clanLookupService)
     {
+        this.clientThread = clientThread;
         this.playerDirectory = playerDirectory;
         this.hiscoreEnrichmentService = hiscoreEnrichmentService;
         this.playerContextService = playerContextService;
@@ -78,7 +82,39 @@ public class QuickProfileController
         this.clanLookupService = clanLookupService;
     }
 
-    public void open(PlayerReference reference, Point clickPoint)
+    public void open(
+            PlayerReference reference,
+            Point clickPoint)
+    {
+        if (reference == null)
+        {
+            return;
+        }
+
+        final Point requestedPoint =
+                clickPoint != null
+                        ? new Point(clickPoint)
+                        : null;
+
+        clientThread.invokeLater(() ->
+        {
+            playerDirectory.rebuild();
+
+            openResolved(
+                    reference,
+                    requestedPoint);
+        });
+    }
+
+    /*
+     * Only a player physically present in our nearby-player directory
+     * OR inside the same Party may share the local world context.
+     *
+     * An unresolved explicit @tag must not inherit our own location or contextual KC.
+     */
+    private void openResolved(
+            PlayerReference reference,
+            Point clickPoint)
     {
         if (reference == null)
         {
@@ -89,9 +125,16 @@ public class QuickProfileController
 
         enrichmentData = null;
 
-        PlayerIdentity identity = reference.getIdentity();
+        PlayerIdentity identity = null;
 
-        if (identity == null && reference.getLookupName() != null)
+        /*
+         * PlayerReference contains a snapshot from message-processing time.
+         *
+         * Prefer the freshly rebuilt PlayerDirectory so opening an older chat
+         * reference reflects the player's current world/source/nearby state.
+         */
+        if (reference.getLookupName() != null
+                && !reference.getLookupName().trim().isEmpty())
         {
             identity = playerDirectory
                     .find(reference.getLookupName())
@@ -99,11 +142,14 @@ public class QuickProfileController
         }
 
         /*
-         * Only a player physically present in our nearby-player directory
-         * OR inside the same Party may share the local world context.
-         *
-         * An unresolved explicit @tag must not inherit our own location or contextual KC.
+         * Fall back to the historical identity only when the current directory
+         * cannot resolve the player.
          */
+        if (identity == null)
+        {
+            identity = reference.getIdentity();
+        }
+
         profileContext =
                 resolveProfileContext(identity);
 
@@ -217,10 +263,14 @@ public class QuickProfileController
         }
 
         /*
-         * Re-resolve the identity because PlayerDirectory is rebuilt every tick.
-         * The PlayerIdentity stored in the QuickProfileModel is only a snapshot
-         * from when the card was opened.
+         * Refresh only the player represented by the open QuickCard.
+         *
+         * The PlayerIdentity stored in QuickProfileModel is a snapshot from when the
+         * card was opened, while PlayerDirectory may contain newer live state.
          */
+        playerDirectory.refreshPlayer(
+                current.getDisplayName());
+
         final PlayerIdentity identity =
                 playerDirectory
                         .find(current.getDisplayName())
@@ -261,9 +311,9 @@ public class QuickProfileController
 
         model = current.toBuilder()
                 .accountType(
-                        identity.getAccountType() != null
-                                ? identity.getAccountType()
-                                : current.getAccountType())
+                        resolveAccountType(
+                                identity.getAccountType(),
+                                enrichmentData))
                 .world(identity.getWorld())
                 .onlineState(
                         identity.getOnlineState() != null
@@ -358,26 +408,39 @@ public class QuickProfileController
             return;
         }
 
-        final PlayerIdentity identity =
-                playerDirectory
-                        .find(playerName)
-                        .orElse(null);
+        final String requestedName =
+                playerName.trim();
 
-        final PlayerReference reference =
-                PlayerReference.builder()
-                        .rawText(playerName)
-                        .lookupName(
-                                identity != null
-                                        ? identity.getCanonicalName()
-                                        : playerName)
-                        .locallyResolved(identity != null)
-                        .identity(identity)
-                        .chatType(chatType)
-                        .build();
+        final Point requestedPoint =
+                clickPoint != null
+                        ? new Point(clickPoint)
+                        : null;
 
-        open(
-                reference,
-                clickPoint);
+        clientThread.invokeLater(() ->
+        {
+            playerDirectory.rebuild();
+
+            final PlayerIdentity identity =
+                    playerDirectory
+                            .find(requestedName)
+                            .orElse(null);
+
+            final PlayerReference reference =
+                    PlayerReference.builder()
+                            .rawText(requestedName)
+                            .lookupName(
+                                    identity != null
+                                            ? identity.getCanonicalName()
+                                            : requestedName)
+                            .locallyResolved(identity != null)
+                            .identity(identity)
+                            .chatType(chatType)
+                            .build();
+
+            openResolved(
+                    reference,
+                    requestedPoint);
+        });
     }
 
     public Rectangle getCardBounds()
@@ -795,14 +858,24 @@ public class QuickProfileController
 
         switch (chatType)
         {
+            case PUBLICCHAT:
+            case MODCHAT:
+                return "Public";
+
             case PRIVATECHAT:
             case MODPRIVATECHAT:
             case PRIVATECHATOUT:
                 return "Private";
 
-            case PUBLICCHAT:
-            case MODCHAT:
-                return "Public";
+            case FRIENDSCHAT:
+                return "Friends Chat";
+
+            case CLAN_CHAT:
+            case CLAN_GIM_CHAT:
+                return "Clan";
+
+            case CLAN_GUEST_CHAT:
+                return "Guest Clan";
 
             default:
                 return null;

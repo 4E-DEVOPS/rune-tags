@@ -28,12 +28,17 @@ Per-channel retention could be revisited later if real eviction problems appear.
 
 [✓] 1. Authoritative account observations / PRIVATECHATOUT
 [✓] 2. Lifecycle preservation
-[ ] 3. Event-driven PlayerDirectory
-[ ] 4. Targeted live QuickCard refresh
-[ ] 5. Account/world classification finalization
-[ ] 6. Native Chat Bootstrap
-[ ] 7. Chat-type consistency audit
-[ ] 8. Sender/hitbox reliability
+[✓] 3. Event-driven PlayerDirectory
+[✓] 4. Targeted live QuickCard refresh
+[✓] 5. Account/world classification finalization
+[✓] 6. Native Chat Bootstrap
+[✓] 7. Chat-type consistency audit
+[ ] 8. Sender/hitbox/rendering reliability
+    - newest/bottom chat line incorrectly appears bold
+    - formatting must follow semantic message, not physical row
+    - investigate highlight/bold flash when chat rows shift
+    - duplicate/short-message row matching
+    - sender/reference hitbox alignment/reliability
 [ ] 9. Performance pass
 [ ] 10. Phase 99 final testing
 
@@ -55,6 +60,7 @@ Per-channel retention could be revisited later if real eviction problems appear.
 - timeouts/rate limiting/caching
 - third-party notices
 - tests and CI
+- check if runetags maintains mentions and chat history after nerd log.
 - Plugin Hub submission
 
 ## Phase 99 — Debug / Testing

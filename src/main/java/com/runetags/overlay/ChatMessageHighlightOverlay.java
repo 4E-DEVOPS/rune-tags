@@ -256,7 +256,7 @@ public class ChatMessageHighlightOverlay extends Overlay
             }
 
             final Widget widget =
-                    findWidgetForMessage(
+                    layoutService.findRenderedMessageWidget(
                             message,
                             textWidgets,
                             usedWidgets);
@@ -512,59 +512,6 @@ public class ChatMessageHighlightOverlay extends Overlay
         }
 
         return false;
-    }
-
-    /**
-     * Find the physical body widget for one semantic TaggedMessage.
-     *
-     * This intentionally mirrors ChatReferenceLayoutService's message-body
-     * association. Each surface maintains its own used-widget set.
-     */
-    private Widget findWidgetForMessage(
-            TaggedMessage message,
-            List<Widget> widgets,
-            Set<Widget> usedWidgets)
-    {
-        final String needle =
-                message.getOriginalMessage();
-
-        if (needle == null
-                || needle.isEmpty())
-        {
-            return null;
-        }
-
-        for (Widget widget : widgets)
-        {
-            if (widget == null
-                    || usedWidgets.contains(
-                    widget)
-                    || widget.isHidden())
-            {
-                continue;
-            }
-
-            final String raw =
-                    widget.getText();
-
-            if (raw == null
-                    || raw.isEmpty())
-            {
-                continue;
-            }
-
-            final String semantic =
-                    ChatText.toSemanticPlain(
-                            raw);
-
-            if (semantic.contains(
-                    needle))
-            {
-                return widget;
-            }
-        }
-
-        return null;
     }
 
     /**

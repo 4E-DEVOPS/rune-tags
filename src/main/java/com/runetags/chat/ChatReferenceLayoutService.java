@@ -119,6 +119,20 @@ public class ChatReferenceLayoutService
      */
     public List<ChatReferenceHitbox> layout()
     {
+        /*
+         * Physical RuneScape chat widgets are recycled as rows shift, tabs change,
+         * and chat is reconstructed.
+         *
+         * Font ownership must therefore never persist merely because the same
+         * Widget instance survived from the previous frame.
+         *
+         * Restore every font RuneTags changed before resolving the current
+         * semantic-message -> physical-widget mapping. The current pass will then
+         * reapply the configured mention font only to widgets which presently
+         * belong to messages requiring that treatment.
+         */
+        restoreAllOriginalFonts();
+
         final List<TaggedMessage> messages =
                 new ArrayList<>(
                         repository.snapshot());
@@ -399,6 +413,82 @@ public class ChatReferenceLayoutService
     }
 
     /**
+     * Restore every physical Widget previously modified by RuneTags.
+     *
+     * RuneScape recycles chat widgets as messages shift and chat surfaces are
+     * reconstructed. A Widget which represented a mention during the previous
+     * pass may represent an unrelated message during the current pass.
+     *
+     * Resetting all tracked widgets before current semantic ownership is resolved
+     * prevents mention fonts from following the physical row instead of the
+     * TaggedMessage.
+     */
+    private void restoreAllOriginalFonts()
+    {
+        if (originalFontIds.isEmpty())
+        {
+            return;
+        }
+
+        final Map<Widget, Integer> fontsToRestore =
+                new IdentityHashMap<>(
+                        originalFontIds);
+
+        originalFontIds.clear();
+
+        for (Map.Entry<Widget, Integer> entry
+                : fontsToRestore.entrySet())
+        {
+            final Widget widget =
+                    entry.getKey();
+
+            final Integer originalFontId =
+                    entry.getValue();
+
+            if (widget == null
+                    || originalFontId == null)
+            {
+                continue;
+            }
+
+            if (widget.getFontId()
+                    != originalFontId)
+            {
+                widget.setFontId(
+                        originalFontId);
+            }
+        }
+    }
+
+    /**
+     * Resolve the physical message-body widget for one semantic TaggedMessage.
+     *
+     * This exposes the same sender-aware association used by clickable reference
+     * layout so other RuneTags rendering layers do not maintain a second,
+     * potentially divergent widget-matching implementation.
+     *
+     * Widget ownership remains local to the caller's physical surface pass through
+     * the supplied usedWidgets set.
+     */
+    public Widget findRenderedMessageWidget(
+            TaggedMessage message,
+            List<Widget> widgets,
+            Set<Widget> usedWidgets)
+    {
+        if (message == null
+                || widgets == null
+                || usedWidgets == null)
+        {
+            return null;
+        }
+
+        return findWidgetForMessage(
+                message,
+                widgets,
+                usedWidgets);
+    }
+
+    /**
      * Find the rendered widget containing the semantic message body.
      */
     private Widget findWidgetForMessage(
@@ -406,6 +496,12 @@ public class ChatReferenceLayoutService
             List<Widget> widgets,
             Set<Widget> usedWidgets)
     {
+        if (message == null
+                || widgets == null)
+        {
+            return null;
+        }
+
         final String needle =
                 message.getOriginalMessage();
 
@@ -418,9 +514,13 @@ public class ChatReferenceLayoutService
         final boolean whitespaceOnly =
                 needle.trim().isEmpty();
 
+        Widget bodyFallback =
+                null;
+
         for (Widget widget : widgets)
         {
-            if (usedWidgets.contains(widget)
+            if (widget == null
+                    || usedWidgets.contains(widget)
                     || widget.isHidden())
             {
                 continue;
@@ -436,41 +536,73 @@ public class ChatReferenceLayoutService
             }
 
             final String semantic =
-                    ChatText.toSemanticPlain(raw);
+                    ChatText.toSemanticPlain(
+                            raw);
+
+            final boolean bodyMatches;
 
             /*
-             * RuneScape can render a real message body containing only
-             * whitespace. A normal contains() lookup is unsafe for such a
-             * message because a one-space needle would match almost every
-             * ordinary sentence.
-             *
-             * Instead, require the rendered candidate itself to contain
-             * only whitespace and verify that the expected sender exists
-             * on the same physical row.
+             * Whitespace-only messages require the entire rendered body to remain
+             * whitespace. A normal contains() check would match almost every
+             * sentence containing a space.
              */
             if (whitespaceOnly)
             {
-                if (semantic != null
-                        && !semantic.isEmpty()
-                        && semantic.trim().isEmpty()
-                        && hasSenderOnRow(
-                        widget,
-                        message,
-                        widgets))
-                {
-                    return widget;
-                }
+                bodyMatches =
+                        semantic != null
+                                && !semantic.isEmpty()
+                                && semantic.trim().isEmpty();
+            }
+            else
+            {
+                bodyMatches =
+                        semantic != null
+                                && semantic.equals(
+                                needle);
+            }
 
+            if (!bodyMatches)
+            {
                 continue;
             }
 
-            if (semantic.contains(needle))
+            /*
+             * Preserve the first body match as a compatibility fallback.
+             *
+             * Some native presentations may not expose a separately discoverable
+             * sender widget. We therefore prefer sender-confirmed ownership without
+             * making sender discovery an absolute requirement.
+             */
+            if (bodyFallback == null)
+            {
+                bodyFallback =
+                        widget;
+            }
+
+            /*
+             * Strong match:
+             *
+             * the expected semantic body and expected sender both belong to this
+             * rendered row.
+             *
+             * Prefer this over body-only matching so identical/short messages,
+             * messages retained across channel tabs, and reconstructed chat rows
+             * cannot easily claim one another's physical widgets.
+             */
+            if (hasSenderOnRow(
+                    widget,
+                    message,
+                    widgets))
             {
                 return widget;
             }
         }
 
-        return null;
+        /*
+         * Fall back only when RuneScape did not expose enough row/sender structure
+         * for positive sender confirmation.
+         */
+        return bodyFallback;
     }
 
     /**
@@ -1369,8 +1501,16 @@ public class ChatReferenceLayoutService
                 continue;
             }
 
+            /*
+             * Preserve rendered leading markup on the first physical line.
+             *
+             * In particular, <img=...> tags occupy horizontal space even though they
+             * do not exist in semantic plain text.
+             */
             final int rawLineStart =
-                    map.rawBoundary(
+                    line.start == 0
+                            ? 0
+                            : map.rawBoundary(
                             line.start);
 
             final int rawSegmentStart =
@@ -1497,8 +1637,25 @@ public class ChatReferenceLayoutService
                 continue;
             }
 
+            /*
+             * The first semantic character may be preceded by rendered markup such as:
+             *
+             *     <img=...>
+             *
+             * MessageMarkupMap correctly maps semantic offset 0 to the first visible
+             * text character, which is appropriate for formatting insertion.
+             *
+             * Geometry is different: leading image markup occupies real horizontal
+             * space inside the Widget. For the first visual line, measure from the
+             * beginning of the raw Widget text so FontTypeFace includes that rendered
+             * prefix width.
+             *
+             * Wrapped continuation lines still begin at their semantic raw boundary.
+             */
             final int rawLineStart =
-                    map.rawBoundary(
+                    line.start == 0
+                            ? 0
+                            : map.rawBoundary(
                             line.start);
 
             final int rawSegmentStart =

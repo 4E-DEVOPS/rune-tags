@@ -7,6 +7,7 @@ import com.runetags.chat.ChatProcessor;
 import com.runetags.chat.ChatReferenceLayoutService;
 import com.runetags.chat.ChatText;
 import com.runetags.chat.MessageFormatter;
+import com.runetags.chat.NativeChatBootstrapService;
 import com.runetags.chat.TaggedMessageRepository;
 import com.runetags.context.ContextMetricResolver;
 import com.runetags.context.LocationIndex;
@@ -134,6 +135,7 @@ public class RuneTagsPlugin extends Plugin {
      * Chat storage / rendering / interaction.
      */
     private TaggedMessageRepository messageRepository;
+    private NativeChatBootstrapService nativeChatBootstrapService;
 
     private ChatHitboxRegistry chatHitboxRegistry;
     private ChatReferenceLayoutService chatReferenceLayoutService;
@@ -177,6 +179,7 @@ public class RuneTagsPlugin extends Plugin {
      * Runtime state.
      */
     private long nextMessageId;
+    private boolean nativeChatBootstrapPending;
 
     @Provides
     RuneTagsConfig provideConfig(ConfigManager configManager) {
@@ -285,6 +288,7 @@ public class RuneTagsPlugin extends Plugin {
 
         quickProfileController =
                 new QuickProfileController(
+                        clientThread,
                         playerDirectory,
                         hiscoreEnrichmentService,
                         playerContextService,
@@ -367,6 +371,13 @@ public class RuneTagsPlugin extends Plugin {
                 new TaggedMessageRepository(
                         MESSAGE_REPOSITORY_CAPACITY);
 
+        nativeChatBootstrapService =
+                new NativeChatBootstrapService(
+                        client,
+                        playerDirectory,
+                        chatProcessor,
+                        messageRepository);
+
         chatHitboxRegistry =
                 new ChatHitboxRegistry();
 
@@ -430,6 +441,7 @@ public class RuneTagsPlugin extends Plugin {
          * ================================================================
          */
         nextMessageId = 0;
+        nativeChatBootstrapPending = true;
 
         /*
          * RuneTags may be enabled from RuneLite's Swing configuration UI.
@@ -455,6 +467,8 @@ public class RuneTagsPlugin extends Plugin {
             {
                 playerDirectory.rebuild();
             }
+
+            bootstrapNativeChatIfPending();
 
             if (targetController != null)
             {
@@ -654,6 +668,7 @@ public class RuneTagsPlugin extends Plugin {
         /*
          * Structured chat services.
          */
+        nativeChatBootstrapService = null;
         messageRepository = null;
 
         mentionHistoryService = null;
@@ -704,6 +719,7 @@ public class RuneTagsPlugin extends Plugin {
          * Runtime counters.
          */
         nextMessageId = 0;
+        nativeChatBootstrapPending = false;
 
         log.debug(
                 "[RuneTags] Plugin Terminated!");
@@ -730,20 +746,21 @@ public class RuneTagsPlugin extends Plugin {
             playerContextService.refresh();
         }
 
-        if (playerDirectory != null) {
-            playerDirectory.rebuild();
-        }
-
         /*
-         * Refresh an already-open Quick Card after rebuilding PlayerDirectory so
-         * Nearby/Party/status/world/channel changes are reflected immediately.
+         * An open QuickCard refreshes only the player it represents.
+         *
+         * Full PlayerDirectory discovery remains event-driven for chat parsing,
+         * initial profile opening, login synchronization, and future consumers such
+         * as player suggestions.
          */
         if (quickProfileController != null
                 && quickProfileController.isOpen()) {
+
             quickProfileController.refreshContext();
         }
 
-        if (targetController != null) {
+        if (targetController != null
+                && targetController.isTargeting()) {
             targetController.refresh();
         }
     }
@@ -768,6 +785,8 @@ public class RuneTagsPlugin extends Plugin {
             }
 
             playerDirectory.rebuild();
+
+            bootstrapNativeChatIfPending();
 
             return;
         }
@@ -856,6 +875,18 @@ public class RuneTagsPlugin extends Plugin {
                 || !isSupportedChatType(event.getType())
                 || event.getMessageNode() == null) {
             return;
+        }
+
+        /*
+         * Known-player mention parsing is event-driven.
+         *
+         * Refresh the directory immediately before processing a supported chat
+         * message so KnownPlayerMentionParser sees the current Friends / Clan /
+         * Guest Clan / Friends Chat / Party / Nearby snapshot.
+         */
+        if (playerDirectory != null)
+        {
+            playerDirectory.rebuild();
         }
 
         final Player localPlayer = client.getLocalPlayer();
@@ -1113,6 +1144,52 @@ public class RuneTagsPlugin extends Plugin {
                     regionY,
                     context.getLocationName());
         }
+    }
+
+    private void bootstrapNativeChatIfPending()
+    {
+        if (!nativeChatBootstrapPending
+                || nativeChatBootstrapService == null
+                || messageRepository == null
+                || chatProcessor == null
+                || client.getGameState()
+                != GameState.LOGGED_IN)
+        {
+            return;
+        }
+
+        final Player localPlayer =
+                client.getLocalPlayer();
+
+        final String localPlayerName =
+                localPlayer != null
+                        ? localPlayer.getName()
+                        : null;
+
+        /*
+         * startUp() normally creates an empty repository.
+         *
+         * Clearing here also handles the narrow case where a live ChatMessage
+         * reached RuneTags after plugin startup but before this client-thread
+         * bootstrap callback executed. That message already exists in RuneScape's
+         * native buffer and will therefore be reconstructed exactly once below.
+         */
+        messageRepository.clear();
+
+        nextMessageId = 0;
+
+        nextMessageId =
+                nativeChatBootstrapService.bootstrap(
+                        nextMessageId,
+                        localPlayerName,
+                        RuneTagsPlugin::isSupportedChatType);
+
+        nativeChatBootstrapPending =
+                false;
+
+        log.debug(
+                "[RuneTags] Native Chat Bootstrap Complete | TaggedMessages={}",
+                messageRepository.size());
     }
 
     private static boolean isSupportedChatType(ChatMessageType type)

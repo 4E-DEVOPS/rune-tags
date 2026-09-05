@@ -74,12 +74,55 @@ public class PlayerDirectory {
 
         refreshWorldTypes();
 
-        addFriends();
-        addClan();
-        addGuestClan();
-        addFriendsChat();
-        addParty();
-        addNearbyPlayers();
+        addFriends(null);
+        addClan(null);
+        addGuestClan(null);
+        addFriendsChat(null);
+        addParty(null);
+        addNearbyPlayers(null);
+    }
+
+    /**
+     * Refresh the current live identity for one player without rebuilding the
+     * complete directory.
+     *
+     * The existing entry is removed first so sources which are no longer valid
+     * cannot survive from an older snapshot. The player is then re-evaluated
+     * against the same sources and merge rules used by a full rebuild.
+     *
+     * Passing a specific player here does not disturb any other identities in the
+     * directory. Full-directory discovery remains available through rebuild().
+     */
+    public void refreshPlayer(String playerName)
+    {
+        if (isBlank(playerName))
+        {
+            return;
+        }
+
+        final String targetKey =
+                normalizer.comparisonKey(
+                        playerName);
+
+        if (targetKey.isEmpty())
+        {
+            return;
+        }
+
+        /*
+         * Start this player's live identity from a clean state.
+         *
+         * Durable account observations are stored separately and are therefore
+         * preserved while Friends / Clan / Party / Nearby state is reconstructed.
+         */
+        identities.remove(targetKey);
+
+        addFriends(targetKey);
+        addClan(targetKey);
+        addGuestClan(targetKey);
+        addFriendsChat(targetKey);
+        addParty(targetKey);
+        addNearbyPlayers(targetKey);
     }
 
     public void observeAccountType(
@@ -291,14 +334,18 @@ public class PlayerDirectory {
         return PlayerAccountType.UNKNOWN;
     }
 
-    private void addFriends() {
+    private void addFriends(String targetKey) {
         final FriendContainer container = client.getFriendContainer();
         if (container == null || container.getMembers() == null) {
             return;
         }
 
         for (Friend friend : container.getMembers()) {
-            if (friend == null || isBlank(friend.getName())) {
+            if (friend == null
+                    || isBlank(friend.getName())
+                    || !shouldInclude(
+                    friend.getName(),
+                    targetKey)) {
                 continue;
             }
 
@@ -311,13 +358,17 @@ public class PlayerDirectory {
         }
     }
 
-    private void addClan() {
+    private void addClan(String targetKey) {
         final ClanSettings settings = client.getClanSettings();
         final ClanChannel channel = client.getClanChannel();
 
         if (settings != null && settings.getMembers() != null) {
             for (ClanMember member : settings.getMembers()) {
-                if (member == null || isBlank(member.getName())) {
+                if (member == null
+                        || isBlank(member.getName())
+                        || !shouldInclude(
+                        member.getName(),
+                        targetKey)) {
                     continue;
                 }
 
@@ -335,7 +386,11 @@ public class PlayerDirectory {
 
         if (channel != null && channel.getMembers() != null) {
             for (ClanChannelMember member : channel.getMembers()) {
-                if (member == null || isBlank(member.getName())) {
+                if (member == null
+                        || isBlank(member.getName())
+                        || !shouldInclude(
+                        member.getName(),
+                        targetKey)) {
                     continue;
                 }
 
@@ -362,7 +417,7 @@ public class PlayerDirectory {
         }
     }
 
-    private void addGuestClan() {
+    private void addGuestClan(String targetKey) {
         final ClanSettings settings =
                 client.getGuestClanSettings();
 
@@ -375,7 +430,11 @@ public class PlayerDirectory {
          */
         if (settings != null && settings.getMembers() != null) {
             for (ClanMember member : settings.getMembers()) {
-                if (member == null || isBlank(member.getName())) {
+                if (member == null
+                        || isBlank(member.getName())
+                        || !shouldInclude(
+                        member.getName(),
+                        targetKey)) {
                     continue;
                 }
 
@@ -410,7 +469,11 @@ public class PlayerDirectory {
          */
         if (channel != null && channel.getMembers() != null) {
             for (ClanChannelMember member : channel.getMembers()) {
-                if (member == null || isBlank(member.getName())) {
+                if (member == null
+                        || isBlank(member.getName())
+                        || !shouldInclude(
+                        member.getName(),
+                        targetKey)) {
                     continue;
                 }
 
@@ -454,7 +517,7 @@ public class PlayerDirectory {
         }
     }
 
-    private void addFriendsChat() {
+    private void addFriendsChat(String targetKey) {
         final FriendsChatManager manager = client.getFriendsChatManager();
 
         if (manager == null || manager.getMembers() == null) {
@@ -467,7 +530,11 @@ public class PlayerDirectory {
                         : "Friends Chat";
 
         for (FriendsChatMember member : manager.getMembers()) {
-            if (member == null || isBlank(member.getName())) {
+            if (member == null
+                    || isBlank(member.getName())
+                    || !shouldInclude(
+                    member.getName(),
+                    targetKey)) {
                 continue;
             }
 
@@ -508,13 +575,17 @@ public class PlayerDirectory {
                 : "Party";
     }
 
-    private void addParty() {
+    private void addParty(String targetKey) {
         if (partyService == null || !partyService.isInParty()) {
             return;
         }
 
         for (PartyMember member : partyService.getMembers()) {
-            if (member == null || isBlank(member.getDisplayName())) {
+            if (member == null
+                    || isBlank(member.getDisplayName())
+                    || !shouldInclude(
+                    member.getDisplayName(),
+                    targetKey)) {
                 continue;
             }
 
@@ -533,14 +604,18 @@ public class PlayerDirectory {
         }
     }
 
-    private void addNearbyPlayers() {
+    private void addNearbyPlayers(String targetKey) {
         final WorldView worldView = client.getTopLevelWorldView();
         if (worldView == null) {
             return;
         }
 
         for (Player player : worldView.players()) {
-            if (player == null || isBlank(player.getName())) {
+            if (player == null
+                    || isBlank(player.getName())
+                    || !shouldInclude(
+                    player.getName(),
+                    targetKey)) {
                 continue;
             }
 
@@ -607,12 +682,6 @@ public class PlayerDirectory {
                         key,
                         PlayerAccountType.UNKNOWN);
 
-        final PlayerAccountType existingAccountType =
-                existing != null
-                        && existing.getAccountType() != null
-                        ? existing.getAccountType()
-                        : PlayerAccountType.UNKNOWN;
-
         final PlayerAccountType temporaryWorldType =
                 worldAccountType(
                         world);
@@ -620,21 +689,21 @@ public class PlayerDirectory {
         final PlayerAccountType mergedAccountType;
 
         /*
-         * Moderator status always supersedes world-mode and permanent account
-         * classifications.
+         * Native chat observations are authoritative for moderator status.
+         *
+         * A currently observed moderator crown always takes precedence over temporary
+         * world modes and permanent account classifications.
          */
         if (observedAccountType.isModerator())
         {
             mergedAccountType =
                     observedAccountType;
         }
-        else if (existingAccountType.isModerator())
-        {
-            mergedAccountType =
-                    existingAccountType;
-        }
         /*
-         * A known temporary world is authoritative for the current display icon.
+         * A known temporary world controls the temporary display classification.
+         *
+         * DEADMAN / LEAGUES are display states derived from the player's current
+         * world rather than durable account modes.
          */
         else if (temporaryWorldType.isTemporary())
         {
@@ -642,9 +711,9 @@ public class PlayerDirectory {
                     temporaryWorldType;
         }
         /*
-         * If the player is on a known non-temporary world, deliberately discard a
-         * stale LEAGUES/DEADMAN display classification and restore the permanent
-         * account mode when we know it.
+         * A known non-temporary world explicitly removes any stale temporary display
+         * classification and restores the latest authoritative permanent account
+         * mode when one is known.
          */
         else if (world != null
                 && world > 0
@@ -667,15 +736,23 @@ public class PlayerDirectory {
             }
         }
         /*
-         * No reliable world information: preserve the strongest information we
-         * already have rather than guessing.
+         * Without reliable world information, use the latest durable/native
+         * observation. Do not allow a partially rebuilt identity to override it.
          */
+        else if (!observedAccountType.isTemporary())
+        {
+            mergedAccountType =
+                    observedAccountType;
+        }
+        else if (permanentAccountType.isKnown())
+        {
+            mergedAccountType =
+                    permanentAccountType;
+        }
         else
         {
             mergedAccountType =
-                    PlayerAccountType.prefer(
-                            existingAccountType,
-                            observedAccountType);
+                    PlayerAccountType.UNKNOWN;
         }
 
         final Set<PlayerSource> sources = existing == null
@@ -804,7 +881,27 @@ public class PlayerDirectory {
                         .build());
     }
 
-    private static boolean isBlank(String value) {
+    private boolean shouldInclude(
+            String playerName,
+            String targetKey)
+    {
+        if (targetKey == null)
+        {
+            return true;
+        }
+
+        if (isBlank(playerName))
+        {
+            return false;
+        }
+
+        return targetKey.equals(
+                normalizer.comparisonKey(
+                        playerName));
+    }
+
+    private static boolean isBlank(String value)
+    {
         return value == null || value.trim().isEmpty();
     }
 }
