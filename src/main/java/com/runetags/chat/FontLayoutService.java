@@ -11,9 +11,9 @@ import java.util.Map;
 import net.runelite.api.Client;
 import net.runelite.api.FontID;
 import net.runelite.api.FontTypeFace;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.events.ScriptPreFired;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 
 /**
  * Coordinates native chat construction for RuneTags mention fonts.
@@ -895,8 +895,7 @@ public class FontLayoutService
         }
 
         final Widget probe =
-                client.getWidget(
-                        WidgetInfo.CHATBOX_INPUT);
+                client.getWidget(InterfaceID.Chatbox.INPUT);
 
         if (probe == null)
         {

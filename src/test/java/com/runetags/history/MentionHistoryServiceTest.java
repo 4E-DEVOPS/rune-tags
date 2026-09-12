@@ -1,5 +1,6 @@
 package com.runetags.history;
 
+import com.google.gson.Gson;
 import com.runetags.Configurations;
 import com.runetags.mention.MatchReason;
 
@@ -36,7 +37,8 @@ public class MentionHistoryServiceTest
 
         historyService =
                 new MentionHistoryService(
-                        config);
+                        config,
+                        new Gson());
 
         entries().clear();
     }

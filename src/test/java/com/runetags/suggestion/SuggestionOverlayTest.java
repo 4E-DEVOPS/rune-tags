@@ -12,9 +12,9 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import net.runelite.api.Client;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.VarClientID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.callback.ClientThread;
 
 import org.junit.Assert;
@@ -91,7 +91,7 @@ public class SuggestionOverlayTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_INPUT))
+                                InterfaceID.Chatbox.INPUT))
                 .thenReturn(
                         inputWidget);
 
@@ -146,7 +146,7 @@ public class SuggestionOverlayTest
                         client,
                         Mockito.never())
                 .getWidget(
-                        WidgetInfo.CHATBOX_INPUT);
+                        InterfaceID.Chatbox.INPUT);
 
         Mockito.verify(
                         graphics,
@@ -165,7 +165,7 @@ public class SuggestionOverlayTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_INPUT))
+                                InterfaceID.Chatbox.INPUT))
                 .thenReturn(
                         null);
 

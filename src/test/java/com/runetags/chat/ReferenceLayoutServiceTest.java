@@ -23,8 +23,8 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.FontID;
 import net.runelite.api.FontTypeFace;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.api.widgets.WidgetTextAlignment;
 
 import org.junit.Assert;
@@ -629,13 +629,13 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -832,13 +832,13 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -920,13 +920,13 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -985,13 +985,13 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         splitPrivate);
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         null);
 
@@ -1062,13 +1062,13 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         splitPrivate);
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -1134,7 +1134,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
@@ -1149,7 +1149,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -1225,7 +1225,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
@@ -1240,7 +1240,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -1305,7 +1305,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
@@ -1321,7 +1321,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -1400,7 +1400,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
@@ -1416,7 +1416,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -1460,7 +1460,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
@@ -1475,7 +1475,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -1526,7 +1526,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
@@ -1541,7 +1541,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -1622,13 +1622,13 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -1769,13 +1769,13 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -1897,13 +1897,13 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
@@ -2466,13 +2466,13 @@ public class ReferenceLayoutServiceTest
 
             Mockito.when(
                             client.getWidget(
-                                    WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                    InterfaceID.PM_CHAT))
                     .thenReturn(
                             null);
 
             Mockito.when(
                             client.getWidget(
-                                    WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                    InterfaceID.Chatbox.SCROLLAREA))
                     .thenReturn(
                             chatbox);
 

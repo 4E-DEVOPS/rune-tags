@@ -19,6 +19,8 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 
+import javax.inject.Inject;
+
 import lombok.extern.slf4j.Slf4j;
 
 import net.runelite.api.ChatMessageType;
@@ -47,11 +49,13 @@ public class MentionHistoryService
     private final Deque<MentionHistoryEntry> entries =
             new ArrayDeque<>();
 
+    @Inject
     public MentionHistoryService(
-            Configurations config)
+            Configurations config,
+            Gson gson)
     {
         this.config = config;
-        this.gson = new Gson();
+        this.gson = gson;
 
         load();
     }

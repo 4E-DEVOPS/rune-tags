@@ -2,6 +2,7 @@ package com.runetags.location;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
@@ -11,6 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.inject.Inject;
+
 /**
  * Loads RuneTags' coarse-location map from the bundled Locations.json.
  *
@@ -18,14 +21,14 @@ import java.util.Map;
  */
 public class LocationIndex
 {
-    private static final String RESOURCE =
-        "/com/runetags/context/Locations.json";
+    private static final String RESOURCE = "/com/runetags/context/Locations.json";
 
     private final Map<Integer, String> byRegion;
 
-    public LocationIndex()
+    @Inject
+    public LocationIndex(Gson gson)
     {
-        this.byRegion = load();
+        this.byRegion = load(gson);
     }
 
     public String findName(int regionId)
@@ -38,28 +41,28 @@ public class LocationIndex
         return byRegion.size();
     }
 
-    private static Map<Integer, String> load()
+    private static Map<Integer, String> load(Gson gson)
     {
         final InputStream stream =
-            LocationIndex.class.getResourceAsStream(RESOURCE);
+                LocationIndex.class.getResourceAsStream(RESOURCE);
 
         if (stream == null)
         {
             throw new IllegalStateException(
-                "Missing RuneTags location resource: " + RESOURCE);
+                    "Missing RuneTags location resource: " + RESOURCE);
         }
 
         final Type type =
-            new TypeToken<LinkedHashMap<String, List<List<Integer>>>>() { }
-                .getType();
+                new TypeToken<LinkedHashMap<String, List<List<Integer>>>>() { }
+                        .getType();
 
         final Map<String, List<List<Integer>>> source =
-            new Gson().fromJson(
-                new InputStreamReader(stream, StandardCharsets.UTF_8),
-                type);
+                gson.fromJson(
+                        new InputStreamReader(stream, StandardCharsets.UTF_8),
+                        type);
 
         final Map<Integer, String> result =
-            new LinkedHashMap<>();
+                new LinkedHashMap<>();
 
         for (Map.Entry<String, List<List<Integer>>> entry : source.entrySet())
         {

@@ -1,5 +1,6 @@
 package com.runetags.location;
 
+import com.google.gson.Gson;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -17,7 +18,8 @@ public class LocationIndexTest
     public void indexLoadsBundledLocations()
     {
         final LocationIndex index =
-                new LocationIndex();
+                new LocationIndex(
+                        new Gson());
 
         Assert.assertTrue(
                 index.size() > 0);
@@ -27,7 +29,8 @@ public class LocationIndexTest
     public void knownRegionResolvesExpectedLocation()
     {
         final LocationIndex index =
-                new LocationIndex();
+                new LocationIndex(
+                        new Gson());
 
         Assert.assertEquals(
                 "Al Kharid",
@@ -41,7 +44,8 @@ public class LocationIndexTest
     public void knownInstancedRegionResolvesExpectedLocation()
     {
         final LocationIndex index =
-                new LocationIndex();
+                new LocationIndex(
+                        new Gson());
 
         Assert.assertEquals(
                 "Ancient Prison",
@@ -55,7 +59,8 @@ public class LocationIndexTest
     public void alternateRegionForSameLocationResolvesExpectedLocation()
     {
         final LocationIndex index =
-                new LocationIndex();
+                new LocationIndex(
+                        new Gson());
 
         Assert.assertEquals(
                 "Abandoned Mine",
@@ -69,7 +74,8 @@ public class LocationIndexTest
     public void unknownRegionReturnsNull()
     {
         final LocationIndex index =
-                new LocationIndex();
+                new LocationIndex(
+                        new Gson());
 
         Assert.assertNull(
                 index.findName(
@@ -82,10 +88,12 @@ public class LocationIndexTest
     public void sizeIsStableAcrossInstances()
     {
         final LocationIndex first =
-                new LocationIndex();
+                new LocationIndex(
+                        new Gson());
 
         final LocationIndex second =
-                new LocationIndex();
+                new LocationIndex(
+                        new Gson());
 
         Assert.assertEquals(
                 first.size(),
@@ -104,7 +112,8 @@ public class LocationIndexTest
         }
 
         final LocationIndex index =
-                new LocationIndex();
+                new LocationIndex(
+                        new Gson());
 
         final int knownRegion =
                 regionId(

@@ -24,8 +24,8 @@ import java.util.List;
 
 import net.runelite.api.Client;
 import net.runelite.api.Player;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -111,13 +111,13 @@ public class ChatReferenceOverlayTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         chatbox);
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                InterfaceID.PM_CHAT))
                 .thenReturn(
                         null);
 
@@ -414,7 +414,7 @@ public class ChatReferenceOverlayTest
     {
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                InterfaceID.Chatbox.SCROLLAREA))
                 .thenReturn(
                         null);
 
@@ -1854,13 +1854,13 @@ public class ChatReferenceOverlayTest
 
             Mockito.when(
                             client.getWidget(
-                                    WidgetInfo.CHATBOX_MESSAGE_LINES))
+                                    InterfaceID.Chatbox.SCROLLAREA))
                     .thenReturn(
                             chatbox);
 
             Mockito.when(
                             client.getWidget(
-                                    WidgetInfo.PRIVATE_CHAT_MESSAGE))
+                                    InterfaceID.PM_CHAT))
                     .thenReturn(
                             null);
 

@@ -144,6 +144,10 @@ public class RuneTags extends Plugin {
     @Inject
     private KeyManager keyManager;
     @Inject
+    private LocationIndex locationIndex;
+    @Inject
+    private MentionHistoryService mentionHistoryService;
+    @Inject
     private MouseManager mouseManager;
     @Inject
     private Provider<MenuManager> menuManager;
@@ -187,7 +191,6 @@ public class RuneTags extends Plugin {
      */
     private MentionNotificationService mentionNotificationService;
 
-    private MentionHistoryService mentionHistoryService;
     private MentionHistoryPanel mentionHistoryPanel;
     private NavigationButton mentionHistoryNavigation;
     private boolean mentionHistoryNavigationAdded;
@@ -210,7 +213,6 @@ public class RuneTags extends Plugin {
     /*
      * Context / profile enrichment.
      */
-    private LocationIndex locationIndex;
     private PlayerLocationService playerLocationService;
     private ProfileMetricResolver profileMetricResolver;
 
@@ -341,9 +343,6 @@ public class RuneTags extends Plugin {
                         okHttpClient,
                         gson);
 
-        locationIndex =
-                new LocationIndex();
-
         playerLocationService =
                 new PlayerLocationService(
                         client,
@@ -449,10 +448,6 @@ public class RuneTags extends Plugin {
                         client,
                         config,
                         notifier);
-
-        mentionHistoryService =
-                new MentionHistoryService(
-                        config);
 
         mentionHistoryPanel =
                 new MentionHistoryPanel(

@@ -18,8 +18,8 @@ import net.runelite.api.Client;
 import net.runelite.api.FontID;
 import net.runelite.api.FontTypeFace;
 import net.runelite.api.events.ScriptPreFired;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -741,7 +741,7 @@ public class FontLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_INPUT))
+                                InterfaceID.Chatbox.INPUT))
                 .thenReturn(
                         probe.widget);
 
@@ -827,7 +827,7 @@ public class FontLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                WidgetInfo.CHATBOX_INPUT))
+                                InterfaceID.Chatbox.INPUT))
                 .thenReturn(
                         probe.widget);
 
@@ -1472,7 +1472,7 @@ public class FontLayoutServiceTest
 
             Mockito.when(
                             client.getWidget(
-                                    WidgetInfo.CHATBOX_INPUT))
+                                    InterfaceID.Chatbox.INPUT))
                     .thenReturn(
                             probe);
 

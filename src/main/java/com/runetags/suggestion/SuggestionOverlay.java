@@ -8,8 +8,8 @@ import java.awt.Rectangle;
 import java.util.List;
 
 import net.runelite.api.Client;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -53,7 +53,7 @@ public final class SuggestionOverlay extends Overlay
             return null;
         }
 
-        final Widget input = client.getWidget(WidgetInfo.CHATBOX_INPUT);
+        final Widget input = client.getWidget(InterfaceID.Chatbox.INPUT);
 
         if (input == null || input.isHidden())
         {

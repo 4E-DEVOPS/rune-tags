@@ -26,8 +26,8 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.FontID;
 import net.runelite.api.FontTypeFace;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.api.widgets.WidgetTextAlignment;
 
 /**
@@ -477,13 +477,13 @@ public class ReferenceLayoutService
 
         syncSurfaceFonts(
                 client.getWidget(
-                        WidgetInfo.PRIVATE_CHAT_MESSAGE),
+                        InterfaceID.PM_CHAT),
                 Surface.SPLIT_PRIVATE,
                 messages);
 
         syncSurfaceFonts(
                 client.getWidget(
-                        WidgetInfo.CHATBOX_MESSAGE_LINES),
+                        InterfaceID.Chatbox.SCROLLAREA),
                 Surface.CHATBOX,
                 messages);
     }
@@ -580,7 +580,7 @@ public class ReferenceLayoutService
 
         final Widget chatbox =
                 client.getWidget(
-                        WidgetInfo.CHATBOX_MESSAGE_LINES);
+                        InterfaceID.Chatbox.SCROLLAREA);
 
         if (chatbox == null
                 || chatbox.isHidden())
@@ -1341,7 +1341,7 @@ public class ReferenceLayoutService
          */
         layoutSurface(
                 client.getWidget(
-                        WidgetInfo.PRIVATE_CHAT_MESSAGE),
+                        InterfaceID.PM_CHAT),
                 Surface.SPLIT_PRIVATE,
                 messages,
                 hitboxes,
@@ -1350,7 +1350,7 @@ public class ReferenceLayoutService
 
         layoutSurface(
                 client.getWidget(
-                        WidgetInfo.CHATBOX_MESSAGE_LINES),
+                        InterfaceID.Chatbox.SCROLLAREA),
                 Surface.CHATBOX,
                 messages,
                 hitboxes,

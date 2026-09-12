@@ -25,8 +25,8 @@ import java.util.Set;
 
 import net.runelite.api.Client;
 import net.runelite.api.Player;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -77,8 +77,7 @@ public class ChatReferenceOverlay extends Overlay
          * not. Use the visible chat area to constrain RuneTags rendering and input.
          */
         final Widget chatbox =
-                client.getWidget(
-                        WidgetInfo.CHATBOX_MESSAGE_LINES);
+                client.getWidget(InterfaceID.Chatbox.SCROLLAREA);
 
         final Rectangle chatboxBounds =
                 chatbox != null
@@ -109,8 +108,7 @@ public class ChatReferenceOverlay extends Overlay
          * widgets outside CHATBOX_MESSAGE_LINES and must not use that clip.
          */
         final Widget splitPrivateRoot =
-                client.getWidget(
-                        WidgetInfo.PRIVATE_CHAT_MESSAGE);
+                client.getWidget(InterfaceID.PM_CHAT);
 
         /*
          * ABOVE_WIDGETS is not automatically obscured by interfaces covering chat, so
