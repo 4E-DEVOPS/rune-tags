@@ -1,4 +1,3 @@
-
 package com.runetags.input;
 
 import com.runetags.Configurations;
@@ -27,12 +26,16 @@ import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.events.MenuOpened;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.VarClientID;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetUtil;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.Keybind;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 public class InputListenerTest
@@ -1417,6 +1420,199 @@ public class InputListenerTest
     }
 
     @Test
+    public void splitPrivateSenderMenuCreatesOpenProfileEntry()
+    {
+        final TestHarness harness =
+                createSplitPrivateNativeMenuHarness(
+                        false);
+
+        final MenuEntry profileEntry =
+                menuEntryBuilder();
+
+        Mockito.when(
+                        harness.client.createMenuEntry(
+                                1))
+                .thenReturn(
+                        profileEntry);
+
+        harness.listener.onMenuOpened(
+                splitPrivateMenuEvent(
+                        harness,
+                        "Santa"));
+
+        Mockito.verify(
+                        profileEntry)
+                .setOption(
+                        "Open Profile");
+
+        Mockito.verify(
+                        profileEntry)
+                .setTarget(
+                        "<col=00ff00>Santa</col>");
+    }
+
+    @Test
+    public void splitPrivateSenderMenuCreatesTargetWhenEnabled()
+    {
+        final TestHarness harness =
+                createSplitPrivateNativeMenuHarness(
+                        true);
+
+        final MenuEntry profileEntry =
+                menuEntryBuilder();
+
+        final MenuEntry targetEntry =
+                menuEntryBuilder();
+
+        Mockito.when(
+                        harness.client.createMenuEntry(
+                                1))
+                .thenReturn(
+                        profileEntry);
+
+        Mockito.when(
+                        harness.client.createMenuEntry(
+                                -1))
+                .thenReturn(
+                        targetEntry);
+
+        harness.listener.onMenuOpened(
+                splitPrivateMenuEvent(
+                        harness,
+                        "Santa"));
+
+        Mockito.verify(
+                        targetEntry)
+                .setOption(
+                        Mockito.contains(
+                                "Target"));
+    }
+
+    @Test
+    public void splitPrivateMentionSuppressesNativeSenderMenu()
+    {
+        assertSplitPrivateReferenceSuppressesNativeSenderMenu(
+                ReferenceType.MENTION);
+    }
+
+    @Test
+    public void splitPrivateTagSuppressesNativeSenderMenu()
+    {
+        assertSplitPrivateReferenceSuppressesNativeSenderMenu(
+                ReferenceType.TAG);
+    }
+
+    @Test
+    public void ownMessageMentionSuppressesWalkHereWithoutReport()
+    {
+        final TestHarness harness =
+                createSemanticMenuHarness(
+                        ReferenceType.MENTION,
+                        false);
+
+        final MenuEntry walkHere =
+                nativeMenuEntry(
+                        "Walk here",
+                        "",
+                        0);
+
+        final MenuEntry[] nativeEntries =
+                new MenuEntry[]
+                        {
+                                walkHere
+                        };
+
+        Mockito.when(
+                        harness.client.getMenuEntries())
+                .thenReturn(
+                        nativeEntries);
+
+        harness.listener.onMenuOpened(
+                emptyMenuEvent());
+
+        final ArgumentCaptor<MenuEntry[]> entriesCaptor =
+                ArgumentCaptor.forClass(
+                        MenuEntry[].class);
+
+        Mockito.verify(
+                        harness.client)
+                .setMenuEntries(
+                        entriesCaptor.capture());
+
+        final MenuEntry[] remaining =
+                entriesCaptor.getValue();
+
+        Assert.assertEquals(
+                0,
+                remaining.length);
+
+        Mockito.verify(
+                        harness.client)
+                .createMenuEntry(
+                        -1);
+
+        Mockito.verify(
+                        harness.client)
+                .createMenuEntry(
+                        -3);
+    }
+
+    @Test
+    public void ownMessageTagSuppressesWalkHereWithoutReport()
+    {
+        final TestHarness harness =
+                createSemanticMenuHarness(
+                        ReferenceType.TAG,
+                        false);
+
+        final MenuEntry walkHere =
+                nativeMenuEntry(
+                        "Walk here",
+                        "",
+                        0);
+
+        final MenuEntry[] nativeEntries =
+                new MenuEntry[]
+                        {
+                                walkHere
+                        };
+
+        Mockito.when(
+                        harness.client.getMenuEntries())
+                .thenReturn(
+                        nativeEntries);
+
+        harness.listener.onMenuOpened(
+                emptyMenuEvent());
+
+        final ArgumentCaptor<MenuEntry[]> entriesCaptor =
+                ArgumentCaptor.forClass(
+                        MenuEntry[].class);
+
+        Mockito.verify(
+                        harness.client)
+                .setMenuEntries(
+                        entriesCaptor.capture());
+
+        final MenuEntry[] remaining =
+                entriesCaptor.getValue();
+
+        Assert.assertEquals(
+                0,
+                remaining.length);
+
+        Mockito.verify(
+                        harness.client)
+                .createMenuEntry(
+                        -1);
+
+        Mockito.verify(
+                        harness.client)
+                .createMenuEntry(
+                        -3);
+    }
+
+    @Test
     public void cleanPlayerNameRemovesMarkup()
             throws Exception
     {
@@ -1704,6 +1900,289 @@ public class InputListenerTest
                                                 PlayerIdentity.sourceSet(
                                                         PlayerSource.FRIEND))
                                         .build()));
+    }
+
+    private static TestHarness createSplitPrivateNativeMenuHarness(
+            boolean targetable)
+    {
+        final TestHarness harness =
+                createHarness();
+
+        Mockito.when(
+                        harness.config.chatInteractionMode())
+                .thenReturn(
+                        ChatInteractionMode.RIGHT_CLICK);
+
+        Mockito.when(
+                        harness.config.targetPlayerOption())
+                .thenReturn(
+                        targetable);
+
+        Mockito.when(
+                        harness.config.targetColor())
+                .thenReturn(
+                        Color.RED);
+
+        Mockito.when(
+                        harness.controller.canTarget(
+                                Mockito.any(
+                                        PlayerReference.class)))
+                .thenReturn(
+                        targetable);
+
+        stubMouseCanvasPoint(
+                harness.client,
+                50,
+                50);
+
+        Mockito.when(
+                        harness.registry.find(
+                                Mockito.any(
+                                        Point.class)))
+                .thenReturn(
+                        Optional.empty());
+
+        stubSplitPrivateWidgets(
+                harness.client);
+
+        return harness;
+    }
+
+    private static void assertSplitPrivateReferenceSuppressesNativeSenderMenu(
+            ReferenceType type)
+    {
+        final TestHarness harness =
+                createHarness();
+
+        Mockito.when(
+                        harness.config.chatInteractionMode())
+                .thenReturn(
+                        ChatInteractionMode.RIGHT_CLICK);
+
+        stubMouseCanvasPoint(
+                harness.client,
+                50,
+                50);
+
+        final PlayerReference reference =
+                reference(
+                        type,
+                        "Tagged Player");
+
+        Mockito.when(
+                        harness.registry.find(
+                                Mockito.any(
+                                        Point.class)))
+                .thenReturn(
+                        Optional.of(
+                                hitbox(
+                                        reference)));
+
+        stubSplitPrivateWidgets(
+                harness.client);
+
+        final MenuEntry report =
+                nativeMenuEntry(
+                        "Report",
+                        "<col=00ff00>Sender</col>",
+                        InterfaceID.PmChat.PM1);
+
+        final MenuEntry message =
+                nativeMenuEntry(
+                        "Message",
+                        "<col=00ff00>Sender</col>",
+                        InterfaceID.PmChat.PM1);
+
+        final MenuEntry cancel =
+                nativeMenuEntry(
+                        "Cancel",
+                        "",
+                        0);
+
+        final MenuEntry[] nativeEntries =
+                new MenuEntry[]
+                        {
+                                cancel,
+                                report,
+                                message
+                        };
+
+        Mockito.when(
+                        harness.client.getMenuEntries())
+                .thenReturn(
+                        nativeEntries);
+
+        stubMenuEntryCreation(
+                harness.client);
+
+        final MenuOpened event =
+                Mockito.mock(
+                        MenuOpened.class);
+
+        Mockito.when(
+                        event.getMenuEntries())
+                .thenReturn(
+                        nativeEntries);
+
+        harness.listener.onMenuOpened(
+                event);
+
+        final ArgumentCaptor<MenuEntry[]> entriesCaptor =
+                ArgumentCaptor.forClass(
+                        MenuEntry[].class);
+
+        Mockito.verify(
+                        harness.client)
+                .setMenuEntries(
+                        entriesCaptor.capture());
+
+        final MenuEntry[] remaining =
+                entriesCaptor.getValue();
+
+        Assert.assertEquals(
+                1,
+                remaining.length);
+
+        Assert.assertSame(
+                cancel,
+                remaining[0]);
+
+        Mockito.verify(
+                        harness.client)
+                .createMenuEntry(
+                        -1);
+
+        Mockito.verify(
+                        harness.client)
+                .createMenuEntry(
+                        -3);
+    }
+
+    private static MenuOpened splitPrivateMenuEvent(
+            TestHarness harness,
+            String playerName)
+    {
+        final MenuEntry report =
+                nativeMenuEntry(
+                        "Report",
+                        "<col=00ff00>"
+                                + playerName
+                                + "</col>",
+                        InterfaceID.PmChat.PM1);
+
+        final MenuEntry[] entries =
+                new MenuEntry[]
+                        {
+                                report
+                        };
+
+        Mockito.when(
+                        harness.client.getMenuEntries())
+                .thenReturn(
+                        entries);
+
+        final MenuOpened event =
+                Mockito.mock(
+                        MenuOpened.class);
+
+        Mockito.when(
+                        event.getMenuEntries())
+                .thenReturn(
+                        entries);
+
+        return event;
+    }
+
+    private static void stubSplitPrivateWidgets(
+            Client client)
+    {
+        final Widget container =
+                Mockito.mock(
+                        Widget.class);
+
+        final Widget message =
+                Mockito.mock(
+                        Widget.class);
+
+        Mockito.when(
+                        client.getWidget(
+                                InterfaceID.PM_CHAT,
+                                WidgetUtil.componentToId(
+                                        InterfaceID.PmChat.PM1)))
+                .thenReturn(
+                        message);
+
+        Mockito.when(
+                        client.getWidget(
+                                InterfaceID.PmChat.CONTAINER))
+                .thenReturn(
+                        container);
+
+        Mockito.when(
+                        message.getParent())
+                .thenReturn(
+                        container);
+    }
+
+    private static MenuEntry nativeMenuEntry(
+            String option,
+            String target,
+            int param1)
+    {
+        final MenuEntry entry =
+                Mockito.mock(
+                        MenuEntry.class);
+
+        Mockito.when(
+                        entry.getOption())
+                .thenReturn(
+                        option);
+
+        Mockito.when(
+                        entry.getTarget())
+                .thenReturn(
+                        target);
+
+        Mockito.when(
+                        entry.getParam1())
+                .thenReturn(
+                        param1);
+
+        return entry;
+    }
+
+    private static MenuEntry menuEntryBuilder()
+    {
+        final MenuEntry entry =
+                Mockito.mock(
+                        MenuEntry.class);
+
+        Mockito.when(
+                        entry.setOption(
+                                Mockito.anyString()))
+                .thenReturn(
+                        entry);
+
+        Mockito.when(
+                        entry.setTarget(
+                                Mockito.anyString()))
+                .thenReturn(
+                        entry);
+
+        Mockito.when(
+                        entry.setType(
+                                Mockito.any(
+                                        MenuAction.class)))
+                .thenReturn(
+                        entry);
+
+        Mockito.when(
+                        entry.onClick(
+                                Mockito.any()))
+                .thenReturn(
+                        entry);
+
+        return entry;
     }
 
     private static TestHarness createOpenProfileHarness()

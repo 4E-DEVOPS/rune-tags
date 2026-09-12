@@ -477,7 +477,7 @@ public class ReferenceLayoutService
 
         syncSurfaceFonts(
                 client.getWidget(
-                        InterfaceID.PM_CHAT),
+                        InterfaceID.PmChat.CONTAINER),
                 Surface.SPLIT_PRIVATE,
                 messages);
 
@@ -1341,7 +1341,7 @@ public class ReferenceLayoutService
          */
         layoutSurface(
                 client.getWidget(
-                        InterfaceID.PM_CHAT),
+                        InterfaceID.PmChat.CONTAINER),
                 Surface.SPLIT_PRIVATE,
                 messages,
                 hitboxes,

@@ -376,7 +376,21 @@ public class MentionHistoryPanel extends PluginPanel
             MentionHistoryEntry entry)
     {
         final JPanel panel =
-                new RoundedPanel(4, ColorScheme.MEDIUM_GRAY_COLOR);
+                new RoundedPanel(
+                        4,
+                        ColorScheme.MEDIUM_GRAY_COLOR)
+                {
+                    @Override
+                    public Dimension getMaximumSize()
+                    {
+                        final Dimension preferred =
+                                getPreferredSize();
+
+                        return new Dimension(
+                                Integer.MAX_VALUE,
+                                preferred.height);
+                    }
+                };
 
         panel.setLayout(
                 new BoxLayout(

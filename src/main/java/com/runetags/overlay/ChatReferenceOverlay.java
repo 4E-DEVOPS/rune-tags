@@ -108,7 +108,7 @@ public class ChatReferenceOverlay extends Overlay
          * widgets outside CHATBOX_MESSAGE_LINES and must not use that clip.
          */
         final Widget splitPrivateRoot =
-                client.getWidget(InterfaceID.PM_CHAT);
+                client.getWidget(InterfaceID.PmChat.CONTAINER);
 
         /*
          * ABOVE_WIDGETS is not automatically obscured by interfaces covering chat, so

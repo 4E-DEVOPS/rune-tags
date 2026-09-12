@@ -2,16 +2,10 @@ package com.runetags.history;
 
 import com.google.gson.Gson;
 import com.runetags.Configurations;
+import com.runetags.Constants;
 import com.runetags.mention.MatchReason;
 import com.runetags.chat.TaggedMessage;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -24,27 +18,23 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 
 import net.runelite.api.ChatMessageType;
-import net.runelite.client.RuneLite;
+import net.runelite.client.config.ConfigManager;
 
 @Slf4j
 public class MentionHistoryService
 {
-    private static final Path HISTORY_DIRECTORY =
-            RuneLite.RUNELITE_DIR
-                    .toPath()
-                    .resolve("RuneTags")
-                    .resolve("history");
+    private static final int STORE_VERSION = 1;
 
-    private static final Path HISTORY_FILE =
-            HISTORY_DIRECTORY.resolve(
-                    "history.jsonl");
-
-    private static final Path HISTORY_TEMP_FILE =
-            HISTORY_DIRECTORY.resolve(
-                    "history.jsonl.tmp");
+    /*
+     * v1 launch storage. Keep this key stable so a later file-backed release can
+     * migrate existing user history without losing data.
+     */
+    private static final String CONFIG_KEY =
+            "mentionHistoryV1";
 
     private final Configurations config;
     private final Gson gson;
+    private final ConfigManager configManager;
 
     private final Deque<MentionHistoryEntry> entries =
             new ArrayDeque<>();
@@ -52,12 +42,25 @@ public class MentionHistoryService
     @Inject
     public MentionHistoryService(
             Configurations config,
-            Gson gson)
+            Gson gson,
+            ConfigManager configManager)
     {
         this.config = config;
         this.gson = gson;
+        this.configManager = configManager;
 
         load();
+    }
+
+    /*
+     * Test-only convenience constructor. Production construction is owned by
+     * RuneLite/Guice through the @Inject constructor above.
+     */
+    MentionHistoryService(
+            Configurations config,
+            Gson gson)
+    {
+        this(config, gson, null);
     }
 
     public synchronized void add(
@@ -139,110 +142,93 @@ public class MentionHistoryService
     {
         entries.clear();
 
-        if (!Files.exists(HISTORY_FILE))
+        if (configManager == null)
         {
             return;
         }
 
-        try (BufferedReader reader =
-                     Files.newBufferedReader(
-                             HISTORY_FILE,
-                             StandardCharsets.UTF_8))
+        final String json =
+                configManager.getConfiguration(
+                        Constants.CONFIG_GROUP,
+                        CONFIG_KEY);
+
+        if (json == null
+                || json.trim().isEmpty())
         {
-            String line;
+            return;
+        }
 
-            while ((line = reader.readLine()) != null)
+        try
+        {
+            final PersistedStore store =
+                    gson.fromJson(
+                            json,
+                            PersistedStore.class);
+
+            if (store == null
+                    || store.entries == null)
             {
-                if (line.trim().isEmpty())
-                {
-                    continue;
-                }
+                return;
+            }
 
-                try
-                {
-                    final PersistedEntry persisted =
-                            gson.fromJson(
-                                    line,
-                                    PersistedEntry.class);
+            for (PersistedEntry persisted : store.entries)
+            {
+                final MentionHistoryEntry entry =
+                        fromPersisted(persisted);
 
-                    final MentionHistoryEntry entry =
-                            fromPersisted(persisted);
-
-                    if (entry != null)
-                    {
-                        /*
-                         * The file is stored newest-to-oldest; preserve that order when loading.
-                         */
-                        entries.addLast(entry);
-                    }
-                }
-                catch (RuntimeException ex)
+                if (entry != null)
                 {
                     /*
-                     * One corrupt line must not discard the rest of the history.
+                     * Stored entries are newest-to-oldest; preserve that order.
                      */
-                    log.debug("[RuneTags][Mention-History] Unable to Read Entry", ex);
+                    entries.addLast(entry);
                 }
             }
 
             trim();
-
-            //log.debug("[RuneTags][Mention-History] Loaded {} Entries from '{}'", entries.size(), HISTORY_FILE);
         }
-        catch (IOException ex)
+        catch (RuntimeException ex)
         {
-            log.warn("[RuneTags][Mention-History] Unable to Load from '{}'", HISTORY_FILE, ex);
+            log.warn(
+                    "[RuneTags][Mention-History] Unable to Load Persisted History",
+                    ex);
         }
     }
 
     private void save()
     {
+        if (configManager == null)
+        {
+            return;
+        }
+
+        final PersistedStore store =
+                new PersistedStore();
+
+        store.version =
+                STORE_VERSION;
+
+        store.entries =
+                new ArrayList<>();
+
+        for (MentionHistoryEntry entry : entries)
+        {
+            store.entries.add(
+                    toPersisted(entry));
+        }
+
         try
         {
-            Files.createDirectories(
-                    HISTORY_DIRECTORY);
-
-            try (BufferedWriter writer =
-                         Files.newBufferedWriter(
-                                 HISTORY_TEMP_FILE,
-                                 StandardCharsets.UTF_8))
-            {
-                for (MentionHistoryEntry entry : entries)
-                {
-                    writer.write(
-                            gson.toJson(
-                                    toPersisted(entry)));
-
-                    writer.newLine();
-                }
-            }
-
-            /*
-             * Write to a temporary file first so an interrupted write is
-             * less likely to leave history.jsonl partially written.
-             */
-            try
-            {
-                Files.move(
-                        HISTORY_TEMP_FILE,
-                        HISTORY_FILE,
-                        StandardCopyOption.REPLACE_EXISTING,
-                        StandardCopyOption.ATOMIC_MOVE);
-            }
-            catch (IOException atomicMoveFailure)
-            {
-                /*
-                 * Some file systems do not support ATOMIC_MOVE.
-                 */
-                Files.move(
-                        HISTORY_TEMP_FILE,
-                        HISTORY_FILE,
-                        StandardCopyOption.REPLACE_EXISTING);
-            }
+            configManager.setConfiguration(
+                    Constants.CONFIG_GROUP,
+                    CONFIG_KEY,
+                    gson.toJson(store));
         }
-        catch (IOException ex)
+        catch (RuntimeException ex)
         {
-            log.warn("[RuneTags][Mention-History] Unable to Save to '{}'", HISTORY_FILE, ex);
+            log.warn(
+                    "[RuneTags][Mention-History] Unable to Save Persisted History",
+                    ex);
         }
     }
 
@@ -350,7 +336,7 @@ public class MentionHistoryService
 
     /*
      * Store primitives and enum names instead of RuneLite objects or Instant so
-     * the on-disk format remains simple and tolerant of internal model changes.
+     * the persisted format remains simple and tolerant of internal model changes.
      */
     private static class PersistedEntry
     {
@@ -368,4 +354,13 @@ public class MentionHistoryService
 
         long timestampMillis;
     }
+    private static final class PersistedStore
+    {
+        private int version =
+                STORE_VERSION;
+
+        private List<PersistedEntry> entries =
+                new ArrayList<>();
+    }
+
 }

@@ -132,7 +132,7 @@ public interface Configurations extends Config {
             keyName = "showReports",
             name = "RuneWatch Reports",
             description = "Display report records for players with a valid RuneWatch or We Do Raids case.<br>"
-                    + "NOTE: Connects to RuneWatch server and caches the public report list locally.",
+                    + "NOTE: Connects to RuneWatch report feed and caches the public report list.",
             warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers.",
             section = recordDetailsSection,
             position = 4

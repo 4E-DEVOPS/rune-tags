@@ -117,7 +117,7 @@ public class ChatReferenceOverlayTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -1860,7 +1860,7 @@ public class ChatReferenceOverlayTest
 
             Mockito.when(
                             client.getWidget(
-                                    InterfaceID.PM_CHAT))
+                                    InterfaceID.PmChat.CONTAINER))
                     .thenReturn(
                             null);
 

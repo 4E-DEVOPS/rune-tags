@@ -1,6 +1,8 @@
 package com.runetags.records;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.runetags.Constants;
 import com.runetags.mention.NameNormalizer;
 
 import java.lang.reflect.Field;
@@ -14,6 +16,9 @@ import java.util.Map;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
+
+import net.runelite.client.config.ConfigManager;
 
 public class LocalPlayerRecordServiceTest
 {
@@ -21,25 +26,30 @@ public class LocalPlayerRecordServiceTest
     private static final int PERFORMANCE_WARMUP_ITERATIONS = 10_000;
     private static final int PERFORMANCE_ITERATIONS = 100_000;
 
+    private Gson gson;
+    private NameNormalizer normalizer;
+    private ConfigManager configManager;
     private LocalPlayerRecordService recordService;
 
     @Before
     public void setUp()
             throws Exception
     {
+        gson =
+                new Gson();
+
+        normalizer =
+                new NameNormalizer();
+
+        configManager =
+                Mockito.mock(
+                        ConfigManager.class);
+
         recordService =
                 new LocalPlayerRecordService(
-                        new Gson(),
-                        new NameNormalizer());
-
-        /*
-         * Prevent every mutation in this unit-test fixture from scheduling
-         * writes to the user's real RuneTags players.json.
-         *
-         * Public record behavior remains available after shutdown(); only
-         * background persistence is disabled.
-         */
-        recordService.shutdown();
+                        gson,
+                        normalizer,
+                        configManager);
 
         records(
                 recordService)
@@ -472,7 +482,7 @@ public class LocalPlayerRecordServiceTest
                         + "• Split Twisted Bow, and Ancestral Robe Top. 10/10 Player.";
 
         /*
-         * Seed the same durable state we would have loaded from players.json:
+         * Seed the same durable state we would have loaded from persistent storage:
          *
          * "whipaholic": {
          *     "currentRsn": "Whipaholic",
@@ -894,6 +904,175 @@ public class LocalPlayerRecordServiceTest
         Assert.assertNotNull(
                 recordService.get(
                         "Santa Clause"));
+    }
+
+    @Test
+    public void mutationPersistsVersionedRecordsToConfigManager()
+    {
+        recordService.setFavorite(
+                "Santa",
+                true);
+
+        final org.mockito.ArgumentCaptor<String> jsonCaptor =
+                org.mockito.ArgumentCaptor.forClass(
+                        String.class);
+
+        Mockito.verify(
+                        configManager)
+                .setConfiguration(
+                        Mockito.eq(
+                                Constants.CONFIG_GROUP),
+                        Mockito.eq(
+                                "localPlayerRecordsV1"),
+                        jsonCaptor.capture());
+
+        final JsonObject root =
+                new Gson().fromJson(
+                        jsonCaptor.getValue(),
+                        JsonObject.class);
+
+        Assert.assertEquals(
+                1,
+                root.get(
+                                "version")
+                        .getAsInt());
+
+        final JsonObject players =
+                root.getAsJsonObject(
+                        "players");
+
+        Assert.assertEquals(
+                1,
+                players.size());
+    }
+
+    @Test
+    public void persistedRecordsReloadAcrossServiceInstances()
+    {
+        recordService.setFavorite(
+                "Santa",
+                true);
+
+        recordService.setNote(
+                "Santa",
+                "Persistent note");
+
+        recordService.setTags(
+                "Santa",
+                Arrays.asList(
+                        "Alt",
+                        "BiS"));
+
+        recordService.observeNameChange(
+                "Santa Clause",
+                "Santa");
+
+        final org.mockito.ArgumentCaptor<String> jsonCaptor =
+                org.mockito.ArgumentCaptor.forClass(
+                        String.class);
+
+        Mockito.verify(
+                        configManager,
+                        Mockito.atLeastOnce())
+                .setConfiguration(
+                        Mockito.eq(
+                                Constants.CONFIG_GROUP),
+                        Mockito.eq(
+                                "localPlayerRecordsV1"),
+                        jsonCaptor.capture());
+
+        final List<String> savedValues =
+                jsonCaptor.getAllValues();
+
+        final String persisted =
+                savedValues.get(
+                        savedValues.size() - 1);
+
+        final ConfigManager reloadedConfigManager =
+                Mockito.mock(
+                        ConfigManager.class);
+
+        Mockito.when(
+                        reloadedConfigManager.getConfiguration(
+                                Constants.CONFIG_GROUP,
+                                "localPlayerRecordsV1"))
+                .thenReturn(
+                        persisted);
+
+        final LocalPlayerRecordService reloaded =
+                new LocalPlayerRecordService(
+                        gson,
+                        normalizer,
+                        reloadedConfigManager);
+
+        Assert.assertTrue(
+                reloaded.isFavorite(
+                        "Santa Clause"));
+
+        Assert.assertEquals(
+                "Persistent note",
+                reloaded.getNote(
+                        "Santa Clause"));
+
+        Assert.assertEquals(
+                Arrays.asList(
+                        "Alt",
+                        "BiS"),
+                reloaded.getTags(
+                        "Santa Clause"));
+
+        Assert.assertEquals(
+                Collections.singletonList(
+                        "Santa"),
+                reloaded.getPreviousRsns(
+                        "Santa Clause"));
+    }
+
+    @Test
+    public void malformedPersistedRecordsAreIgnored()
+    {
+        final ConfigManager malformedConfigManager =
+                Mockito.mock(
+                        ConfigManager.class);
+
+        Mockito.when(
+                        malformedConfigManager.getConfiguration(
+                                Constants.CONFIG_GROUP,
+                                "localPlayerRecordsV1"))
+                .thenReturn(
+                        "{not-valid-json");
+
+        final LocalPlayerRecordService malformedService =
+                new LocalPlayerRecordService(
+                        gson,
+                        normalizer,
+                        malformedConfigManager);
+
+        Assert.assertNull(
+                malformedService.get(
+                        "Santa"));
+    }
+
+    @Test
+    public void shutdownPreventsFurtherPersistence()
+    {
+        recordService.shutdown();
+
+        recordService.setFavorite(
+                "Santa",
+                true);
+
+        Assert.assertTrue(
+                recordService.isFavorite(
+                        "Santa"));
+
+        Mockito.verify(
+                        configManager,
+                        Mockito.never())
+                .setConfiguration(
+                        Mockito.anyString(),
+                        Mockito.anyString(),
+                        Mockito.anyString());
     }
 
     /*

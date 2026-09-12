@@ -170,6 +170,8 @@ public class RuneTags extends Plugin {
     @Inject
     private Configurations config;
     @Inject
+    private ConfigManager configManager;
+    @Inject
     private RuneLiteConfig runeLiteConfig;
 
     /*
@@ -290,7 +292,8 @@ public class RuneTags extends Plugin {
         localPlayerRecordService =
                 new LocalPlayerRecordService(
                         gson,
-                        nameNormalizer);
+                        nameNormalizer,
+                        configManager);
 
         playerDirectory =
                 new PlayerDirectory(

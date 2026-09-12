@@ -19,8 +19,7 @@ import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.events.MenuOpened;
-import net.runelite.api.widgets.ComponentID;
-import net.runelite.api.widgets.InterfaceID;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetUtil;
 import net.runelite.client.input.KeyListener;
@@ -434,7 +433,7 @@ public class InputListener extends MouseAdapter
 
         for (MenuEntry entry : entries)
         {
-            if (isChatboxReportMenuEntry(entry))
+            if (isNativeChatReportMenuEntry(entry))
             {
                 return cleanPlayerName(
                         entry.getTarget());
@@ -466,14 +465,15 @@ public class InputListener extends MouseAdapter
         final String option =
                 entry.getOption();
 
-        return "Walk here".equalsIgnoreCase(option)
-                || "Add friend".equalsIgnoreCase(option)
-                || "Add ignore".equalsIgnoreCase(option)
-                || "Message".equalsIgnoreCase(option)
-                || "Lookup".equalsIgnoreCase(option)
-                || "WOM lookup".equalsIgnoreCase(option)
-                || "Report".equalsIgnoreCase(option)
-                || "Copy to clipboard".equalsIgnoreCase(option);
+        return "WALK HERE".equalsIgnoreCase(option)
+                || "ADD FRIEND".equalsIgnoreCase(option)
+                || "ADD IGNORE".equalsIgnoreCase(option)
+                || "MESSAGE".equalsIgnoreCase(option)
+                || "LOOKUP".equalsIgnoreCase(option)
+                || "WOM LOOKUP".equalsIgnoreCase(option)
+                || "TCG TRADE REQUEST".equalsIgnoreCase(option)
+                || "REPORT".equalsIgnoreCase(option)
+                || "COPY TO CLIPBOARD".equalsIgnoreCase(option);
     }
 
     private boolean isNativeMovementMenu(
@@ -484,26 +484,31 @@ public class InputListener extends MouseAdapter
             return false;
         }
 
-        return "Walk here".equalsIgnoreCase(
+        return "WALK HERE".equalsIgnoreCase(
                 entry.getOption());
     }
 
     private void suppressNativeMenu(
             String senderName)
     {
-        if (senderName == null
-                || senderName.isEmpty())
+        final MenuEntry[] entries =
+                client.getMenuEntries();
+
+        if (entries == null
+                || entries.length == 0)
         {
             return;
         }
 
-        final MenuEntry[] entries =
-                client.getMenuEntries();
+        final boolean hasSender =
+                senderName != null
+                        && !senderName.isEmpty();
 
         client.setMenuEntries(
                 Arrays.stream(entries)
                         .filter(entry ->
-                                !isNativePlayerMenu(
+                                !hasSender
+                                        || !isNativePlayerMenu(
                                         entry,
                                         senderName))
                         .filter(entry ->
@@ -671,7 +676,7 @@ public class InputListener extends MouseAdapter
             final MenuEntry entry =
                     menuEntries[i];
 
-            if (!isChatboxReportMenuEntry(
+            if (!isNativeChatReportMenuEntry(
                     entry))
             {
                 continue;
@@ -813,11 +818,11 @@ public class InputListener extends MouseAdapter
 
     /**
      * Identify RuneScape's native Report action only when
-     * it belongs to an actual chatbox message row.
+     * it belongs to a supported player-chat surface.
      *
      * RuneTags never creates Report.
      */
-    private boolean isChatboxReportMenuEntry(
+    private boolean isNativeChatReportMenuEntry(
             MenuEntry entry)
     {
         return entry != null
@@ -825,14 +830,38 @@ public class InputListener extends MouseAdapter
                 && NATIVE_MENU_REPORT.equals(
                 Text.removeTags(
                         entry.getOption()))
-                && isChatboxMessageEntry(
+                && isSupportedChatMessageEntry(
                 entry.getParam1());
     }
 
     /**
-     * Confirm that a packed widget ID belongs to a RuneScape chatbox message row,
-     * preventing unrelated interfaces with a Report action from being treated as
-     * player chat.
+     * Confirm that a native menu entry belongs to either the normal chatbox
+     * or split-private-chat surface.
+     */
+    private boolean isSupportedChatMessageEntry(
+            int packedWidgetId)
+    {
+        final int groupId =
+                WidgetUtil.componentToInterface(
+                        packedWidgetId);
+
+        if (groupId == InterfaceID.CHATBOX)
+        {
+            return isChatboxMessageEntry(
+                    packedWidgetId);
+        }
+
+        if (groupId == InterfaceID.PM_CHAT)
+        {
+            return isSplitPrivateMessageEntry(
+                    packedWidgetId);
+        }
+
+        return false;
+    }
+
+    /**
+     * Confirm that a native menu entry belongs to a normal chatbox message row.
      */
     private boolean isChatboxMessageEntry(
             int packedWidgetId)
@@ -845,8 +874,7 @@ public class InputListener extends MouseAdapter
                 WidgetUtil.componentToId(
                         packedWidgetId);
 
-        if (groupId
-                != InterfaceID.CHATBOX)
+        if (groupId != InterfaceID.CHATBOX)
         {
             return false;
         }
@@ -864,29 +892,87 @@ public class InputListener extends MouseAdapter
         final Widget parent =
                 widget.getParent();
 
-        if (parent == null
-                || parent.getId()
-                != ComponentID.CHATBOX_MESSAGE_LINES)
+        return parent != null
+                && parent.getId()
+                == InterfaceID.Chatbox.SCROLLAREA;
+    }
+
+    /**
+     * Confirm that a native menu entry belongs to one of RuneScape's
+     * split-private-chat message components.
+     */
+    private boolean isSplitPrivateMessageEntry(
+            int packedWidgetId)
+    {
+        final int groupId =
+                WidgetUtil.componentToInterface(
+                        packedWidgetId);
+
+        if (groupId != InterfaceID.PM_CHAT)
         {
             return false;
         }
 
-        /*
-         * Chatbox rows are dynamic children of CHATBOX_MESSAGE_LINES; confirm the
-         * corresponding child actually exists.
-         */
-        final int firstMessageChildId =
+        final int childId =
                 WidgetUtil.componentToId(
-                        ComponentID.CHATBOX_FIRST_MESSAGE);
+                        packedWidgetId);
 
-        final int dynamicChildId =
-                (childId
-                        - firstMessageChildId)
-                        * 4
-                        + 1;
+        final Widget widget =
+                client.getWidget(
+                        groupId,
+                        childId);
 
-        return parent.getChild(
-                dynamicChildId) != null;
+        if (widget == null)
+        {
+            return false;
+        }
+
+        final Widget container =
+                client.getWidget(
+                        InterfaceID.PmChat.CONTAINER);
+
+        if (container == null)
+        {
+            return false;
+        }
+
+        final Widget parent =
+                widget.getParent();
+
+        return widget == container
+                || parent == container
+                || isChildOf(
+                widget,
+                container);
+    }
+
+    private static boolean isChildOf(
+            Widget widget,
+            Widget ancestor)
+    {
+        if (widget == null
+                || ancestor == null)
+        {
+            return false;
+        }
+
+        Widget current =
+                widget.getParent();
+
+        while (current != null)
+        {
+            if (current == ancestor
+                    || current.getId()
+                    == ancestor.getId())
+            {
+                return true;
+            }
+
+            current =
+                    current.getParent();
+        }
+
+        return false;
     }
 
     /**

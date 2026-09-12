@@ -629,7 +629,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -832,7 +832,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -920,7 +920,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -985,7 +985,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         splitPrivate);
 
@@ -1062,7 +1062,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         splitPrivate);
 
@@ -1134,7 +1134,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -1225,7 +1225,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -1305,7 +1305,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -1400,7 +1400,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -1460,7 +1460,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -1526,7 +1526,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -1622,7 +1622,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -1769,7 +1769,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -1897,7 +1897,7 @@ public class ReferenceLayoutServiceTest
 
         Mockito.when(
                         client.getWidget(
-                                InterfaceID.PM_CHAT))
+                                InterfaceID.PmChat.CONTAINER))
                 .thenReturn(
                         null);
 
@@ -2466,7 +2466,7 @@ public class ReferenceLayoutServiceTest
 
             Mockito.when(
                             client.getWidget(
-                                    InterfaceID.PM_CHAT))
+                                    InterfaceID.PmChat.CONTAINER))
                     .thenReturn(
                             null);
 
