@@ -9,6 +9,10 @@ import com.google.gson.annotations.SerializedName;
 import com.runetags.Configurations;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -26,6 +30,7 @@ import java.util.function.Consumer;
 
 import lombok.extern.slf4j.Slf4j;
 
+import net.runelite.client.RuneLite;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.util.Text;
 
@@ -42,6 +47,26 @@ public class ReportCaseService
     private static final String REPORT_LIST_URL =
             "https://raw.githubusercontent.com/while-loop/runelite-plugins/runewatch-updater/mixedlist.json";
 
+    /*
+     * Persistent last-known-good report dataset.
+     *
+     * This follows RuneTags' existing persistent-storage convention under
+     * RuneLite.RUNELITE_DIR.
+     */
+    private static final Path DEFAULT_REPORT_DIRECTORY =
+            RuneLite.RUNELITE_DIR
+                    .toPath()
+                    .resolve("RuneTags")
+                    .resolve("reports");
+
+    private static final Path DEFAULT_REPORT_LIST_FILE =
+            DEFAULT_REPORT_DIRECTORY.resolve(
+                    "mixedlist.json");
+
+    private static final Path DEFAULT_REPORT_LIST_TEMP_FILE =
+            DEFAULT_REPORT_DIRECTORY.resolve(
+                    "mixedlist.json.tmp");
+
     private static final Duration REFRESH_INTERVAL =
             Duration.ofMinutes(15);
 
@@ -57,6 +82,9 @@ public class ReportCaseService
     private final Gson gson;
     private final ClientThread clientThread;
     private final Configurations config;
+    private final Path reportDirectory;
+    private final Path reportListFile;
+    private final Path reportListTempFile;
 
     private final ExecutorService parserExecutor =
             Executors.newSingleThreadExecutor(runnable ->
@@ -74,9 +102,15 @@ public class ReportCaseService
             new Object();
 
     /*
-     * Runtime-only report dataset for v1 launch.
+     * Runtime snapshot of the persistent report dataset.
      *
-     * The downloaded feed is retained in memory for the current logged-in session.
+     * The physical last-known-good copy lives at:
+     *
+     *     .runelite/RuneTags/reports/mixedlist.json
+     *
+     * On login RuneTags loads and parses that snapshot once in the background.
+     * The parsed map then serves every Quick-Card through local HashMap lookups.
+     *
      * No periodic refresh timer exists. Once the snapshot becomes 15 minutes old,
      * opening a Quick-Card is what requests a fresh copy.
      */
@@ -106,18 +140,43 @@ public class ReportCaseService
             ClientThread clientThread,
             Configurations config)
     {
+        this(
+                httpClient,
+                gson,
+                clientThread,
+                config,
+                DEFAULT_REPORT_LIST_FILE);
+    }
+
+    ReportCaseService(
+            OkHttpClient httpClient,
+            Gson gson,
+            ClientThread clientThread,
+            Configurations config,
+            Path reportListFile)
+    {
         this.httpClient = httpClient;
         this.gson = gson;
         this.clientThread = clientThread;
         this.config = config;
+        this.reportListFile = reportListFile;
+        this.reportDirectory = reportListFile.getParent();
+        this.reportListTempFile = reportListFile.resolveSibling(
+                reportListFile.getFileName().toString() + ".tmp");
     }
 
     /**
      * Initialize Reports for the current logged-in session.
      *
-     * v1 keeps the public report feed in memory only. The first initialization
-     * downloads and parses the feed in the background. World hops retain the
-     * current in-memory snapshot; logout clears it.
+     * Prefer the persistent last-known-good snapshot when one exists:
+     *
+     * 1. Load it from disk on the background parser thread.
+     * 2. Parse it immediately so the first Quick-Card is only a map lookup.
+     * 3. Refresh from the public feed only when the saved snapshot is missing
+     *    or at least 15 minutes old.
+     *
+     * World hops retain the existing in-memory snapshot. Logout clears memory but
+     * intentionally leaves the persistent file untouched.
      */
     public void refreshInitialIfMissing()
     {
@@ -146,9 +205,16 @@ public class ReportCaseService
         {
             try
             {
-                requestRefresh(
-                        false,
-                        () -> parsedReportsForCurrentDataset());
+                loadSavedDataset(
+                        epoch);
+
+                /*
+                 * Parse the saved snapshot once during initialization.
+                 *
+                 * This keeps JSON parsing off the client thread while ensuring the
+                 * first Quick-Card normally requires only a local HashMap lookup.
+                 */
+                parsedReportsForCurrentDataset();
             }
             finally
             {
@@ -160,17 +226,144 @@ public class ReportCaseService
                     }
                 }
             }
+
+            /*
+             * This is intentionally NOT forced.
+             *
+             * A saved snapshot younger than 15 minutes is accepted as current.
+             * A missing/stale snapshot downloads a replacement. Successful
+             * downloads are immediately parsed on the same background executor.
+             */
+            requestRefresh(
+                    false,
+                    () -> parsedReportsForCurrentDataset());
         });
+    }
+
+    private void saveDataset(
+            String dataset)
+    {
+        if (dataset == null
+                || dataset.trim().isEmpty())
+        {
+            return;
+        }
+
+        try
+        {
+            Files.createDirectories(
+                    reportDirectory);
+
+            Files.write(
+                    reportListTempFile,
+                    dataset.getBytes(
+                            StandardCharsets.UTF_8));
+
+            /*
+             * Never overwrite the last-known-good snapshot with a partially written
+             * response. Write a temporary file first, then replace the live dataset.
+             */
+            try
+            {
+                Files.move(
+                        reportListTempFile,
+                        reportListFile,
+                        StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.ATOMIC_MOVE);
+            }
+            catch (IOException atomicMoveFailure)
+            {
+                /*
+                 * Some file systems do not support ATOMIC_MOVE.
+                 */
+                Files.move(
+                        reportListTempFile,
+                        reportListFile,
+                        StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            //log.debug("[RuneTags][Reports] Saved Dataset to '{}'", reportListFile);
+        }
+        catch (IOException exception)
+        {
+            log.warn("[RuneTags][Reports] Unable to Save Dataset to '{}'", reportListFile, exception);
+        }
+    }
+
+    private void loadSavedDataset(
+            long epoch)
+    {
+        if (!Files.isRegularFile(
+                reportListFile))
+        {
+            return;
+        }
+
+        try
+        {
+            final byte[] bytes =
+                    Files.readAllBytes(
+                            reportListFile);
+
+            if (bytes.length == 0)
+            {
+                return;
+            }
+
+            final String savedDataset =
+                    new String(
+                            bytes,
+                            StandardCharsets.UTF_8);
+
+            if (savedDataset.trim().isEmpty())
+            {
+                return;
+            }
+
+            final Instant savedAt =
+                    Files.getLastModifiedTime(
+                                    reportListFile)
+                            .toInstant();
+
+            synchronized (stateLock)
+            {
+                if (closed
+                        || epoch != lifecycleEpoch)
+                {
+                    return;
+                }
+
+                rawDataset =
+                        savedDataset;
+
+                /*
+                 * The file's last-modified timestamp represents when RuneTags last
+                 * successfully replaced the local feed snapshot.
+                 */
+                lastSuccessfulDownload =
+                        savedAt;
+
+                ++datasetRevision;
+                parsedRevision = -1L;
+            }
+
+            //log.debug("[RuneTags][Reports] Loaded Saved Dataset from '{}'", reportListFile);
+        }
+        catch (IOException exception)
+        {
+            log.warn("[RuneTags][Reports] Unable to Load Dataset from '{}'", reportListFile, exception);
+        }
     }
 
     /**
      * Request the latest published report summary for one Quick-Card player.
      *
-     * The downloaded dataset is parsed once and reused for local map lookups.
+     * The persisted dataset is parsed once during login initialization, so normal
+     * Quick-Card access is only a local map lookup.
      *
-     * If the in-memory dataset is 15+ minutes old, the current parsed snapshot
-     * remains usable immediately while a fresh copy is downloaded and parsed in
-     * the background.
+     * If the saved dataset is 15+ minutes old, the current parsed snapshot remains
+     * usable immediately while a fresh copy is downloaded, persisted, parsed, and
+     * atomically promoted in the background.
      */
     public void requestReports(
             String playerName,
@@ -215,8 +408,8 @@ public class ReportCaseService
         /*
          * Serve the current parsed snapshot immediately.
          *
-         * Once the current dataset has been parsed, Quick-Card report lookup is a
-         * local HashMap lookup.
+         * Because login initialization parses the persisted dataset in advance, this
+         * normally reduces Quick-Card report lookup to a HashMap lookup.
          */
         if (hasDataset)
         {
@@ -234,8 +427,8 @@ public class ReportCaseService
          * - a Quick-Card was opened after the 15-minute freshness window.
          *
          * The old parsed snapshot stays active during the refresh. Once the new
-         * dataset has been parsed, deliver the replacement result to the still-open
-         * card.
+         * dataset has been persisted and parsed, deliver the replacement result to
+         * the still-open card.
          */
         if (!hasDataset || stale)
         {
@@ -443,6 +636,18 @@ public class ReportCaseService
     {
         final List<Runnable> callbacks;
 
+        /*
+         * Persist successful responses before promoting them to the current runtime
+         * snapshot. A failed disk write does not invalidate the freshly downloaded
+         * in-memory copy, but the previous physical file remains available for the
+         * next client session.
+         */
+        if (success)
+        {
+            saveDataset(
+                    downloadedBody);
+        }
+
         synchronized (stateLock)
         {
             if (closed
@@ -483,7 +688,7 @@ public class ReportCaseService
                 /*
                  * The refresh failed, but an older downloaded dataset is still
                  * available and has not yet been parsed. Let the waiting card use
-                 * that in-memory snapshot rather than showing nothing.
+                 * that saved snapshot rather than showing nothing.
                  */
                 callbacks =
                         new ArrayList<>(
@@ -500,7 +705,7 @@ public class ReportCaseService
 
         if (success)
         {
-            //log.debug("[RuneTags][Reports] Report-list Dataset Downloaded | Background Parse Requested");
+            //log.debug("[RuneTags][Reports] Report-list Dataset Downloaded and Persisted | Background Parse Requested");
         }
 
         for (Runnable callback : callbacks)

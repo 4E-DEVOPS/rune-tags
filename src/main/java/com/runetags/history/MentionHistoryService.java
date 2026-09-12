@@ -3,9 +3,16 @@ package com.runetags.history;
 import com.google.gson.Gson;
 import com.runetags.Configurations;
 import com.runetags.Constants;
-import com.runetags.mention.MatchReason;
 import com.runetags.chat.TaggedMessage;
+import com.runetags.mention.MatchReason;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -18,6 +25,7 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 
 import net.runelite.api.ChatMessageType;
+import net.runelite.client.RuneLite;
 import net.runelite.client.config.ConfigManager;
 
 @Slf4j
@@ -25,16 +33,25 @@ public class MentionHistoryService
 {
     private static final int STORE_VERSION = 1;
 
-    /*
-     * v1 launch storage. Keep this key stable so a later file-backed release can
-     * migrate existing user history without losing data.
-     */
-    private static final String CONFIG_KEY =
+    private static final String LEGACY_CONFIG_KEY =
             "mentionHistoryV1";
+
+    private static final Path DEFAULT_HISTORY_DIRECTORY =
+            RuneLite.RUNELITE_DIR
+                    .toPath()
+                    .resolve("RuneTags")
+                    .resolve("history");
+
+    private static final Path DEFAULT_HISTORY_FILE =
+            DEFAULT_HISTORY_DIRECTORY.resolve(
+                    "history.json");
 
     private final Configurations config;
     private final Gson gson;
     private final ConfigManager configManager;
+    private final Path historyDirectory;
+    private final Path historyFile;
+    private final Path historyTempFile;
 
     private final Deque<MentionHistoryEntry> entries =
             new ArrayDeque<>();
@@ -45,22 +62,39 @@ public class MentionHistoryService
             Gson gson,
             ConfigManager configManager)
     {
-        this.config = config;
-        this.gson = gson;
-        this.configManager = configManager;
-
-        load();
+        this(
+                config,
+                gson,
+                configManager,
+                DEFAULT_HISTORY_FILE);
     }
 
-    /*
-     * Test-only convenience constructor. Production construction is owned by
-     * RuneLite/Guice through the @Inject constructor above.
-     */
     MentionHistoryService(
             Configurations config,
             Gson gson)
     {
-        this(config, gson, null);
+        this(
+                config,
+                gson,
+                null,
+                DEFAULT_HISTORY_FILE);
+    }
+
+    MentionHistoryService(
+            Configurations config,
+            Gson gson,
+            ConfigManager configManager,
+            Path historyFile)
+    {
+        this.config = config;
+        this.gson = gson;
+        this.configManager = configManager;
+        this.historyFile = historyFile;
+        this.historyDirectory = historyFile.getParent();
+        this.historyTempFile = historyFile.resolveSibling(
+                historyFile.getFileName().toString() + ".tmp");
+
+        load();
     }
 
     public synchronized void add(
@@ -72,9 +106,7 @@ public class MentionHistoryService
         if (!config.mentionHistory()
                 || taggedMessage == null
                 || taggedMessage.getLocalMentionMatch() == null
-                || !taggedMessage
-                .getLocalMentionMatch()
-                .isMatchesLocalPlayer())
+                || !taggedMessage.getLocalMentionMatch().isMatchesLocalPlayer())
         {
             return;
         }
@@ -85,18 +117,14 @@ public class MentionHistoryService
                         taggedMessage.getCanonicalSender(),
                         taggedMessage.getOriginalMessage(),
                         taggedMessage.getType(),
-                        taggedMessage
-                                .getLocalMentionMatch()
-                                .getReason(),
+                        taggedMessage.getLocalMentionMatch().getReason(),
                         world,
                         locationName,
                         channelName,
                         taggedMessage.getTimestamp());
 
         entries.addFirst(entry);
-
         trim();
-
         save();
     }
 
@@ -111,25 +139,15 @@ public class MentionHistoryService
         return entries.size();
     }
 
-    /**
-     * Clear persistent history intentionally.
-     *
-     * Do not call this during normal plugin shutdown.
-     */
     public synchronized void clear()
     {
         entries.clear();
         save();
     }
 
-    /**
-     * Re-apply the configured maximum and persist if entries were removed.
-     */
     public synchronized void enforceLimit()
     {
-        final int before =
-                entries.size();
-
+        final int before = entries.size();
         trim();
 
         if (entries.size() != before)
@@ -142,6 +160,53 @@ public class MentionHistoryService
     {
         entries.clear();
 
+        if (Files.isRegularFile(historyFile))
+        {
+            if (loadFile())
+            {
+                removeLegacyConfig();
+            }
+            return;
+        }
+
+        migrateLegacyConfig();
+    }
+
+    private boolean loadFile()
+    {
+        try (BufferedReader reader =
+                     Files.newBufferedReader(
+                             historyFile,
+                             StandardCharsets.UTF_8))
+        {
+            final PersistedStore store =
+                    gson.fromJson(
+                            reader,
+                            PersistedStore.class);
+
+            if (!isValidStore(store))
+            {
+                log.warn(
+                        "[RuneTags][Mention-History] Ignoring Invalid Store '{}'",
+                        historyFile);
+                return false;
+            }
+
+            loadStore(store);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            log.warn(
+                    "[RuneTags][Mention-History] Unable to Load from '{}'",
+                    historyFile,
+                    exception);
+            return false;
+        }
+    }
+
+    private void migrateLegacyConfig()
+    {
         if (configManager == null)
         {
             return;
@@ -150,7 +215,7 @@ public class MentionHistoryService
         final String json =
                 configManager.getConfiguration(
                         Constants.CONFIG_GROUP,
-                        CONFIG_KEY);
+                        LEGACY_CONFIG_KEY);
 
         if (json == null
                 || json.trim().isEmpty())
@@ -165,70 +230,166 @@ public class MentionHistoryService
                             json,
                             PersistedStore.class);
 
-            if (store == null
-                    || store.entries == null)
+            if (!isValidStore(store))
             {
+                log.warn(
+                        "[RuneTags][Mention-History] Legacy Config Store is Invalid; Leaving it Untouched");
                 return;
             }
 
-            for (PersistedEntry persisted : store.entries)
-            {
-                final MentionHistoryEntry entry =
-                        fromPersisted(persisted);
+            entries.clear();
+            loadStore(store);
+            save();
 
-                if (entry != null)
-                {
-                    /*
-                     * Stored entries are newest-to-oldest; preserve that order.
-                     */
-                    entries.addLast(entry);
-                }
+            entries.clear();
+            if (!loadFile())
+            {
+                log.warn(
+                        "[RuneTags][Mention-History] Migration Verification Failed; Legacy Config Preserved");
+                entries.clear();
+                loadStore(store);
+                return;
             }
 
-            trim();
+            removeLegacyConfig();
+            log.info(
+                    "[RuneTags][Mention-History] Migrated Legacy ConfigManager History to '{}'",
+                    historyFile);
         }
-        catch (RuntimeException ex)
+        catch (RuntimeException exception)
         {
             log.warn(
-                    "[RuneTags][Mention-History] Unable to Load Persisted History",
-                    ex);
+                    "[RuneTags][Mention-History] Unable to Migrate Legacy ConfigManager History | ERROR: {}",
+                    exception.getMessage());
         }
     }
 
+    private void loadStore(
+            PersistedStore store)
+    {
+        if (store == null
+                || store.entries == null)
+        {
+            return;
+        }
+
+        for (PersistedEntry persisted : store.entries)
+        {
+            final MentionHistoryEntry entry =
+                    fromPersisted(persisted);
+
+            if (entry != null)
+            {
+                entries.addLast(entry);
+            }
+        }
+
+        trim();
+    }
+
+    private static boolean isValidStore(
+            PersistedStore store)
+    {
+        return store != null
+                && store.version == STORE_VERSION
+                && store.entries != null;
+    }
+
     private void save()
+    {
+        final PersistedStore store =
+                new PersistedStore();
+
+        store.version = STORE_VERSION;
+        store.entries = new ArrayList<>();
+
+        for (MentionHistoryEntry entry : entries)
+        {
+            store.entries.add(toPersisted(entry));
+        }
+
+        try
+        {
+            Files.createDirectories(historyDirectory);
+
+            try (BufferedWriter writer =
+                         Files.newBufferedWriter(
+                                 historyTempFile,
+                                 StandardCharsets.UTF_8))
+            {
+                gson.newBuilder()
+                        .setPrettyPrinting()
+                        .create()
+                        .toJson(
+                                store,
+                                PersistedStore.class,
+                                writer);
+            }
+
+            moveIntoPlace(
+                    historyTempFile,
+                    historyFile);
+        }
+        catch (IOException exception)
+        {
+            log.warn(
+                    "[RuneTags][Mention-History] Unable to Save to '{}'",
+                    historyFile,
+                    exception);
+        }
+    }
+
+    private void removeLegacyConfig()
     {
         if (configManager == null)
         {
             return;
         }
 
-        final PersistedStore store =
-                new PersistedStore();
+        final String json =
+                configManager.getConfiguration(
+                        Constants.CONFIG_GROUP,
+                        LEGACY_CONFIG_KEY);
 
-        store.version =
-                STORE_VERSION;
-
-        store.entries =
-                new ArrayList<>();
-
-        for (MentionHistoryEntry entry : entries)
+        if (json == null
+                || json.trim().isEmpty())
         {
-            store.entries.add(
-                    toPersisted(entry));
+            return;
         }
 
         try
         {
-            configManager.setConfiguration(
+            configManager.unsetConfiguration(
                     Constants.CONFIG_GROUP,
-                    CONFIG_KEY,
-                    gson.toJson(store));
+                    LEGACY_CONFIG_KEY);
         }
-        catch (RuntimeException ex)
+        catch (RuntimeException exception)
         {
             log.warn(
-                    "[RuneTags][Mention-History] Unable to Save Persisted History",
-                    ex);
+                    "[RuneTags][Mention-History] Unable to Remove Migrated Legacy Config",
+                    exception);
+        }
+    }
+
+    private static void moveIntoPlace(
+            Path source,
+            Path target)
+            throws IOException
+    {
+        try
+        {
+            Files.move(
+                    source,
+                    target,
+                    StandardCopyOption.REPLACE_EXISTING,
+                    StandardCopyOption.ATOMIC_MOVE);
+        }
+        catch (IOException atomicMoveFailure)
+        {
+            Files.move(
+                    source,
+                    target,
+                    StandardCopyOption.REPLACE_EXISTING);
         }
     }
 

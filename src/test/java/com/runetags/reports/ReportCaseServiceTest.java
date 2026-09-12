@@ -6,6 +6,8 @@ import com.runetags.Configurations;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -34,9 +36,11 @@ public class ReportCaseServiceTest
     private Configurations config;
 
     private ReportCaseService service;
+    private Path reportFile;
 
     @Before
     public void setUp()
+            throws Exception
     {
         httpClient =
                 Mockito.mock(
@@ -71,12 +75,19 @@ public class ReportCaseServiceTest
                         Mockito.any(
                                 Runnable.class));
 
+        reportFile =
+                Files.createTempDirectory(
+                                "runetags-reports-test")
+                        .resolve(
+                                "mixedlist.json");
+
         service =
                 new ReportCaseService(
                         httpClient,
                         new Gson(),
                         clientThread,
-                        config);
+                        config,
+                        reportFile);
     }
 
     @After

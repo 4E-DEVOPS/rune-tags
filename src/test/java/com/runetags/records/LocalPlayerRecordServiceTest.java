@@ -6,6 +6,9 @@ import com.runetags.Constants;
 import com.runetags.mention.NameNormalizer;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,6 +33,7 @@ public class LocalPlayerRecordServiceTest
     private NameNormalizer normalizer;
     private ConfigManager configManager;
     private LocalPlayerRecordService recordService;
+    private Path recordFile;
 
     @Before
     public void setUp()
@@ -45,11 +49,18 @@ public class LocalPlayerRecordServiceTest
                 Mockito.mock(
                         ConfigManager.class);
 
+        recordFile =
+                Files.createTempDirectory(
+                                "runetags-records-test")
+                        .resolve(
+                                "players.json");
+
         recordService =
                 new LocalPlayerRecordService(
                         gson,
                         normalizer,
-                        configManager);
+                        configManager,
+                        recordFile);
 
         records(
                 recordService)
@@ -907,154 +918,116 @@ public class LocalPlayerRecordServiceTest
     }
 
     @Test
-    public void mutationPersistsVersionedRecordsToConfigManager()
+    public void mutationPersistsVersionedRecordsToFile()
+            throws Exception
     {
         recordService.setFavorite(
                 "Santa",
                 true);
 
-        final org.mockito.ArgumentCaptor<String> jsonCaptor =
-                org.mockito.ArgumentCaptor.forClass(
-                        String.class);
-
-        Mockito.verify(
-                        configManager)
-                .setConfiguration(
-                        Mockito.eq(
-                                Constants.CONFIG_GROUP),
-                        Mockito.eq(
-                                "localPlayerRecordsV1"),
-                        jsonCaptor.capture());
+        waitForFile(recordFile);
 
         final JsonObject root =
-                new Gson().fromJson(
-                        jsonCaptor.getValue(),
+                gson.fromJson(
+                        new String(
+                                Files.readAllBytes(recordFile),
+                                StandardCharsets.UTF_8),
                         JsonObject.class);
 
         Assert.assertEquals(
                 1,
-                root.get(
-                                "version")
-                        .getAsInt());
-
-        final JsonObject players =
-                root.getAsJsonObject(
-                        "players");
+                root.get("version").getAsInt());
 
         Assert.assertEquals(
                 1,
-                players.size());
+                root.getAsJsonObject("players").size());
     }
 
     @Test
-    public void persistedRecordsReloadAcrossServiceInstances()
+    public void legacyConfigMigratesToFileAndIsRemoved()
+            throws Exception
     {
-        recordService.setFavorite(
-                "Santa",
-                true);
+        final LocalPlayerRecord record =
+                LocalPlayerRecord.builder()
+                        .currentRsn("Santa")
+                        .favorite(true)
+                        .note("Persistent note")
+                        .tags(Arrays.asList("Alt", "BiS"))
+                        .build();
 
-        recordService.setNote(
-                "Santa",
-                "Persistent note");
+        final JsonObject players = new JsonObject();
+        players.add(
+                normalizer.comparisonKey("Santa"),
+                gson.toJsonTree(record));
 
-        recordService.setTags(
-                "Santa",
-                Arrays.asList(
-                        "Alt",
-                        "BiS"));
-
-        recordService.observeNameChange(
-                "Santa Clause",
-                "Santa");
-
-        final org.mockito.ArgumentCaptor<String> jsonCaptor =
-                org.mockito.ArgumentCaptor.forClass(
-                        String.class);
-
-        Mockito.verify(
-                        configManager,
-                        Mockito.atLeastOnce())
-                .setConfiguration(
-                        Mockito.eq(
-                                Constants.CONFIG_GROUP),
-                        Mockito.eq(
-                                "localPlayerRecordsV1"),
-                        jsonCaptor.capture());
-
-        final List<String> savedValues =
-                jsonCaptor.getAllValues();
-
-        final String persisted =
-                savedValues.get(
-                        savedValues.size() - 1);
-
-        final ConfigManager reloadedConfigManager =
-                Mockito.mock(
-                        ConfigManager.class);
+        final JsonObject store = new JsonObject();
+        store.addProperty("version", 1);
+        store.add("players", players);
 
         Mockito.when(
-                        reloadedConfigManager.getConfiguration(
+                        configManager.getConfiguration(
                                 Constants.CONFIG_GROUP,
                                 "localPlayerRecordsV1"))
-                .thenReturn(
-                        persisted);
+                .thenReturn(gson.toJson(store));
 
-        final LocalPlayerRecordService reloaded =
+        final LocalPlayerRecordService migrated =
                 new LocalPlayerRecordService(
                         gson,
                         normalizer,
-                        reloadedConfigManager);
+                        configManager,
+                        recordFile);
 
         Assert.assertTrue(
-                reloaded.isFavorite(
-                        "Santa Clause"));
-
+                migrated.isFavorite("Santa"));
         Assert.assertEquals(
                 "Persistent note",
-                reloaded.getNote(
-                        "Santa Clause"));
-
+                migrated.getNote("Santa"));
         Assert.assertEquals(
-                Arrays.asList(
-                        "Alt",
-                        "BiS"),
-                reloaded.getTags(
-                        "Santa Clause"));
+                Arrays.asList("Alt", "BiS"),
+                migrated.getTags("Santa"));
+        Assert.assertTrue(
+                Files.isRegularFile(recordFile));
 
-        Assert.assertEquals(
-                Collections.singletonList(
-                        "Santa"),
-                reloaded.getPreviousRsns(
-                        "Santa Clause"));
+        Mockito.verify(configManager)
+                .unsetConfiguration(
+                        Constants.CONFIG_GROUP,
+                        "localPlayerRecordsV1");
+
+        migrated.shutdown();
     }
 
     @Test
-    public void malformedPersistedRecordsAreIgnored()
+    public void malformedLegacyConfigIsIgnoredAndPreserved()
     {
-        final ConfigManager malformedConfigManager =
-                Mockito.mock(
-                        ConfigManager.class);
-
         Mockito.when(
-                        malformedConfigManager.getConfiguration(
+                        configManager.getConfiguration(
                                 Constants.CONFIG_GROUP,
                                 "localPlayerRecordsV1"))
-                .thenReturn(
-                        "{not-valid-json");
+                .thenReturn("{not-valid-json");
 
         final LocalPlayerRecordService malformedService =
                 new LocalPlayerRecordService(
                         gson,
                         normalizer,
-                        malformedConfigManager);
+                        configManager,
+                        recordFile);
 
         Assert.assertNull(
-                malformedService.get(
-                        "Santa"));
+                malformedService.get("Santa"));
+        Assert.assertFalse(
+                Files.exists(recordFile));
+
+        Mockito.verify(configManager, Mockito.never())
+                .unsetConfiguration(
+                        Constants.CONFIG_GROUP,
+                        "localPlayerRecordsV1");
+
+        malformedService.shutdown();
     }
 
     @Test
     public void shutdownPreventsFurtherPersistence()
+            throws Exception
     {
         recordService.shutdown();
 
@@ -1063,16 +1036,9 @@ public class LocalPlayerRecordServiceTest
                 true);
 
         Assert.assertTrue(
-                recordService.isFavorite(
-                        "Santa"));
-
-        Mockito.verify(
-                        configManager,
-                        Mockito.never())
-                .setConfiguration(
-                        Mockito.anyString(),
-                        Mockito.anyString(),
-                        Mockito.anyString());
+                recordService.isFavorite("Santa"));
+        Assert.assertFalse(
+                Files.exists(recordFile));
     }
 
     /*
@@ -1094,6 +1060,24 @@ public class LocalPlayerRecordServiceTest
         return (Map<String, LocalPlayerRecord>)
                 field.get(
                         service);
+    }
+
+    private static void waitForFile(
+            Path file)
+            throws Exception
+    {
+        for (int attempt = 0; attempt < 100; ++attempt)
+        {
+            if (Files.isRegularFile(file)
+                    && Files.size(file) > 0)
+            {
+                return;
+            }
+
+            Thread.sleep(10L);
+        }
+
+        Assert.fail("Timed out waiting for persisted file: " + file);
     }
 
     /*

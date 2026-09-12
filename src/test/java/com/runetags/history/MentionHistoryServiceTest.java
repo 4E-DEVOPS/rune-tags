@@ -7,6 +7,9 @@ import com.runetags.mention.MatchReason;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Deque;
 import java.util.List;
@@ -25,6 +28,7 @@ public class MentionHistoryServiceTest
     private ConfigManager configManager;
     private Gson gson;
     private MentionHistoryService historyService;
+    private Path historyFile;
 
     @Before
     public void setUp()
@@ -46,11 +50,18 @@ public class MentionHistoryServiceTest
         gson =
                 new Gson();
 
+        historyFile =
+                Files.createTempDirectory(
+                                "runetags-history-test")
+                        .resolve(
+                                "history.json");
+
         historyService =
                 new MentionHistoryService(
                         config,
                         gson,
-                        configManager);
+                        configManager,
+                        historyFile);
 
         entries().clear();
     }
@@ -504,199 +515,109 @@ public class MentionHistoryServiceTest
     }
 
     @Test
-    public void savePersistsVersionedHistoryToConfigManager()
+    public void savePersistsVersionedHistoryToFile()
             throws Exception
     {
-        entries().addLast(
-                entry(
-                        2L,
-                        "Zezima"));
-
-        entries().addLast(
-                entry(
-                        1L,
-                        "Santa"));
+        entries().addLast(entry(2L, "Zezima"));
+        entries().addLast(entry(1L, "Santa"));
 
         invokeSave();
 
-        final org.mockito.ArgumentCaptor<String> jsonCaptor =
-                org.mockito.ArgumentCaptor.forClass(
-                        String.class);
-
-        Mockito.verify(
-                        configManager)
-                .setConfiguration(
-                        Mockito.eq(
-                                Constants.CONFIG_GROUP),
-                        Mockito.eq(
-                                "mentionHistoryV1"),
-                        jsonCaptor.capture());
-
         final String json =
-                jsonCaptor.getValue();
+                new String(
+                        Files.readAllBytes(historyFile),
+                        StandardCharsets.UTF_8);
 
-        Assert.assertTrue(
-                json.contains(
-                        "\"version\":1"));
-
-        Assert.assertTrue(
-                json.contains(
-                        "\"messageId\":2"));
-
-        Assert.assertTrue(
-                json.contains(
-                        "\"messageId\":1"));
+        Assert.assertTrue(json.contains("\"version\":1"));
+        Assert.assertTrue(json.contains("\"messageId\":2"));
+        Assert.assertTrue(json.contains("\"messageId\":1"));
     }
 
     @Test
-    public void persistedHistoryReloadsAcrossServiceInstances()
+    public void legacyConfigMigratesToFileAndIsRemoved()
             throws Exception
     {
-        final MentionHistoryEntry newest =
-                new MentionHistoryEntry(
-                        2L,
-                        "Zezima",
-                        "Newest",
-                        ChatMessageType.PUBLICCHAT,
-                        null,
-                        302,
-                        "Varrock",
-                        "Clan",
-                        Instant.ofEpochMilli(
-                                2_000L));
+        entries().addLast(entry(2L, "Zezima"));
+        entries().addLast(entry(1L, "Santa"));
 
-        final MentionHistoryEntry oldest =
-                new MentionHistoryEntry(
-                        1L,
-                        "Santa",
-                        "Oldest",
-                        ChatMessageType.PUBLICCHAT,
-                        null,
-                        301,
-                        "Lumbridge",
-                        "Party Hat",
-                        Instant.ofEpochMilli(
-                                1_000L));
+        final Method toPersisted =
+                MentionHistoryService.class.getDeclaredMethod(
+                        "toPersisted",
+                        MentionHistoryEntry.class);
+        toPersisted.setAccessible(true);
 
-        entries().addLast(
-                newest);
+        final Object first = toPersisted.invoke(null, entries().peekFirst());
+        final Object last = toPersisted.invoke(null, entries().peekLast());
 
-        entries().addLast(
-                oldest);
-
-        invokeSave();
-
-        final org.mockito.ArgumentCaptor<String> jsonCaptor =
-                org.mockito.ArgumentCaptor.forClass(
-                        String.class);
-
-        Mockito.verify(
-                        configManager)
-                .setConfiguration(
-                        Mockito.eq(
-                                Constants.CONFIG_GROUP),
-                        Mockito.eq(
-                                "mentionHistoryV1"),
-                        jsonCaptor.capture());
-
-        final ConfigManager reloadedConfigManager =
-                Mockito.mock(
-                        ConfigManager.class);
+        final java.util.Map<String, Object> store =
+                new java.util.LinkedHashMap<>();
+        store.put("version", 1);
+        store.put("entries", java.util.Arrays.asList(first, last));
 
         Mockito.when(
-                        reloadedConfigManager.getConfiguration(
+                        configManager.getConfiguration(
                                 Constants.CONFIG_GROUP,
                                 "mentionHistoryV1"))
-                .thenReturn(
-                        jsonCaptor.getValue());
+                .thenReturn(gson.toJson(store));
 
-        final MentionHistoryService reloaded =
+        final MentionHistoryService migrated =
                 new MentionHistoryService(
                         config,
                         gson,
-                        reloadedConfigManager);
+                        configManager,
+                        historyFile);
 
-        final List<MentionHistoryEntry> snapshot =
-                reloaded.snapshot();
+        Assert.assertEquals(2, migrated.size());
+        Assert.assertTrue(Files.isRegularFile(historyFile));
 
-        Assert.assertEquals(
-                2,
-                snapshot.size());
-
-        Assert.assertEquals(
-                newest,
-                snapshot.get(
-                        0));
-
-        Assert.assertEquals(
-                oldest,
-                snapshot.get(
-                        1));
+        Mockito.verify(configManager)
+                .unsetConfiguration(
+                        Constants.CONFIG_GROUP,
+                        "mentionHistoryV1");
     }
 
     @Test
-    public void malformedPersistedHistoryIsIgnored()
+    public void malformedLegacyHistoryIsIgnoredAndPreserved()
     {
-        final ConfigManager malformedConfigManager =
-                Mockito.mock(
-                        ConfigManager.class);
-
         Mockito.when(
-                        malformedConfigManager.getConfiguration(
+                        configManager.getConfiguration(
                                 Constants.CONFIG_GROUP,
                                 "mentionHistoryV1"))
-                .thenReturn(
-                        "{not-valid-json");
+                .thenReturn("{not-valid-json");
 
         final MentionHistoryService malformedService =
                 new MentionHistoryService(
                         config,
                         gson,
-                        malformedConfigManager);
+                        configManager,
+                        historyFile);
 
-        Assert.assertTrue(
-                malformedService.snapshot()
-                        .isEmpty());
+        Assert.assertTrue(malformedService.snapshot().isEmpty());
+        Assert.assertFalse(Files.exists(historyFile));
+
+        Mockito.verify(configManager, Mockito.never())
+                .unsetConfiguration(
+                        Constants.CONFIG_GROUP,
+                        "mentionHistoryV1");
     }
 
     @Test
     public void clearPersistsEmptyHistory()
             throws Exception
     {
-        entries().addLast(
-                entry(
-                        1L,
-                        "Santa"));
+        entries().addLast(entry(1L, "Santa"));
 
         historyService.clear();
 
-        Assert.assertTrue(
-                historyService.snapshot()
-                        .isEmpty());
-
-        final org.mockito.ArgumentCaptor<String> jsonCaptor =
-                org.mockito.ArgumentCaptor.forClass(
-                        String.class);
-
-        Mockito.verify(
-                        configManager)
-                .setConfiguration(
-                        Mockito.eq(
-                                Constants.CONFIG_GROUP),
-                        Mockito.eq(
-                                "mentionHistoryV1"),
-                        jsonCaptor.capture());
+        Assert.assertTrue(historyService.snapshot().isEmpty());
 
         final String json =
-                jsonCaptor.getValue();
+                new String(
+                        Files.readAllBytes(historyFile),
+                        StandardCharsets.UTF_8);
 
-        Assert.assertTrue(
-                json.contains(
-                        "\"version\":1"));
-
-        Assert.assertTrue(
-                json.contains(
-                        "\"entries\":[]"));
+        Assert.assertTrue(json.contains("\"version\":1"));
+        Assert.assertTrue(json.contains("\"entries\":[]"));
     }
 
     /*

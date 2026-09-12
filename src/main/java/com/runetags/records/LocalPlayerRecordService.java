@@ -1,20 +1,30 @@
 package com.runetags.records;
 
 import com.google.gson.Gson;
+import com.google.gson.stream.JsonWriter;
 import com.runetags.Constants;
 import com.runetags.mention.NameNormalizer;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import lombok.extern.slf4j.Slf4j;
 
+import net.runelite.client.RuneLite;
 import net.runelite.client.config.ConfigManager;
-
 
 /**
  * Persistent RuneTags metadata keyed by the player's current normalized RSN.
@@ -29,19 +39,45 @@ public class LocalPlayerRecordService
 
     private static final int STORE_VERSION = 1;
 
-    /*
-     * v1 launch storage. Keep this key stable so a later file-backed release can
-     * migrate existing user records without losing data.
-     */
-    private static final String CONFIG_KEY =
+    private static final String LEGACY_CONFIG_KEY =
             "localPlayerRecordsV1";
+
+    private static final Path DEFAULT_RECORD_DIRECTORY =
+            RuneLite.RUNELITE_DIR
+                    .toPath()
+                    .resolve("RuneTags")
+                    .resolve("records");
+
+    private static final Path DEFAULT_RECORD_FILE =
+            DEFAULT_RECORD_DIRECTORY.resolve(
+                    "players.json");
+
+    private static final Path DEFAULT_RECORD_TEMP_FILE =
+            DEFAULT_RECORD_DIRECTORY.resolve(
+                    "players.json.tmp");
 
     private final Gson gson;
     private final NameNormalizer normalizer;
     private final ConfigManager configManager;
+    private final Path recordDirectory;
+    private final Path recordFile;
+    private final Path recordTempFile;
 
     private final Map<String, LocalPlayerRecord> records =
             new LinkedHashMap<>();
+
+    private final ExecutorService ioExecutor =
+            Executors.newSingleThreadExecutor(
+                    runnable ->
+                    {
+                        final Thread thread =
+                                new Thread(
+                                        runnable,
+                                        "RuneTags-LocalRecords");
+
+                        thread.setDaemon(true);
+                        return thread;
+                    });
 
     private boolean closed;
 
@@ -56,22 +92,39 @@ public class LocalPlayerRecordService
             NameNormalizer normalizer,
             ConfigManager configManager)
     {
-        this.gson = gson;
-        this.normalizer = normalizer;
-        this.configManager = configManager;
-
-        load();
+        this(
+                gson,
+                normalizer,
+                configManager,
+                DEFAULT_RECORD_FILE);
     }
 
-    /*
-     * Test-only convenience constructor. Production should provide RuneLite's
-     * ConfigManager so records remain persistent across client restarts.
-     */
     LocalPlayerRecordService(
             Gson gson,
             NameNormalizer normalizer)
     {
-        this(gson, normalizer, null);
+        this(
+                gson,
+                normalizer,
+                null,
+                DEFAULT_RECORD_FILE);
+    }
+
+    LocalPlayerRecordService(
+            Gson gson,
+            NameNormalizer normalizer,
+            ConfigManager configManager,
+            Path recordFile)
+    {
+        this.gson = gson;
+        this.normalizer = normalizer;
+        this.configManager = configManager;
+        this.recordFile = recordFile;
+        this.recordDirectory = recordFile.getParent();
+        this.recordTempFile = recordFile.resolveSibling(
+                recordFile.getFileName().toString() + ".tmp");
+
+        load();
     }
 
     public synchronized LocalPlayerRecord get(
@@ -165,7 +218,7 @@ public class LocalPlayerRecordService
             records.remove(currentKey);
         }
 
-        save();
+        saveAsync();
 
     }
 
@@ -244,7 +297,7 @@ public class LocalPlayerRecordService
                     currentKey);
         }
 
-        save();
+        saveAsync();
 
     }
 
@@ -297,7 +350,7 @@ public class LocalPlayerRecordService
 
         ++favoriteRevision;
 
-        save();
+        saveAsync();
 
 
         return favorite;
@@ -352,7 +405,7 @@ public class LocalPlayerRecordService
 
         ++favoriteRevision;
 
-        save();
+        saveAsync();
     }
 
     public synchronized List<String> getPreviousRsns(
@@ -387,7 +440,7 @@ public class LocalPlayerRecordService
                 currentName,
                 previousName))
         {
-            save();
+            saveAsync();
         }
     }
 
@@ -417,7 +470,7 @@ public class LocalPlayerRecordService
 
         if (changed)
         {
-            save();
+            saveAsync();
         }
     }
 
@@ -495,11 +548,14 @@ public class LocalPlayerRecordService
     }
 
     /**
-     * Stop persistence without clearing the stored records.
+     * Stop background persistence without blocking plugin shutdown.
+     *
+     * No persistent records are cleared; players.json remains the durable store.
      */
     public synchronized void shutdown()
     {
         closed = true;
+        ioExecutor.shutdown();
     }
 
     private LocalPlayerRecord mergeRename(
@@ -762,103 +818,267 @@ public class LocalPlayerRecordService
         {
             records.clear();
 
-            if (configManager == null)
+            if (Files.isRegularFile(recordFile))
             {
+                if (loadFile())
+                {
+                    removeLegacyConfig();
+                }
                 return;
             }
 
-            final String json =
-                    configManager.getConfiguration(
-                            Constants.CONFIG_GROUP,
-                            CONFIG_KEY);
-
-            if (json == null
-                    || json.trim().isEmpty())
-            {
-                return;
-            }
-
-            try
-            {
-                final PersistedStore store =
-                        gson.fromJson(
-                                json,
-                                PersistedStore.class);
-
-                if (store == null
-                        || store.players == null)
-                {
-                    return;
-                }
-
-                for (Map.Entry<String, LocalPlayerRecord> entry
-                        : store.players.entrySet())
-                {
-                    final LocalPlayerRecord sanitized =
-                            sanitize(
-                                    entry.getValue());
-
-                    if (sanitized == null
-                            || isBlank(
-                            sanitized.getCurrentRsn()))
-                    {
-                        continue;
-                    }
-
-                    final String currentKey =
-                            key(
-                                    sanitized.getCurrentRsn());
-
-                    if (currentKey.isEmpty()
-                            || !shouldRetain(sanitized))
-                    {
-                        continue;
-                    }
-
-                    records.put(
-                            currentKey,
-                            sanitized);
-                }
-            }
-            catch (RuntimeException exception)
-            {
-                log.warn(
-                        "[RuneTags][Records] Unable to Load Local Player Records",
-                        exception);
-            }
+            migrateLegacyConfig();
         }
     }
 
-    private synchronized void save()
+    private boolean loadFile()
     {
-        if (closed
-                || configManager == null)
+        try (BufferedReader reader =
+                     Files.newBufferedReader(
+                             recordFile,
+                             StandardCharsets.UTF_8))
+        {
+            final PersistedStore store =
+                    gson.fromJson(
+                            reader,
+                            PersistedStore.class);
+
+            if (!isValidStore(store))
+            {
+                log.warn(
+                        "[RuneTags][Records] Ignoring Invalid Store '{}'",
+                        recordFile);
+                return false;
+            }
+
+            loadStore(store);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            log.warn(
+                    "[RuneTags][Records] Unable to Load Local Player Records from '{}'",
+                    recordFile,
+                    exception);
+            return false;
+        }
+    }
+
+    private void migrateLegacyConfig()
+    {
+        if (configManager == null)
+        {
+            return;
+        }
+
+        final String json =
+                configManager.getConfiguration(
+                        Constants.CONFIG_GROUP,
+                        LEGACY_CONFIG_KEY);
+
+        if (json == null
+                || json.trim().isEmpty())
+        {
+            return;
+        }
+
+        try
+        {
+            final PersistedStore store =
+                    gson.fromJson(
+                            json,
+                            PersistedStore.class);
+
+            if (!isValidStore(store))
+            {
+                log.warn(
+                        "[RuneTags][Records] Legacy Config Store is Invalid; Leaving it Untouched");
+                return;
+            }
+
+            records.clear();
+            loadStore(store);
+
+            final PersistedStore snapshot =
+                    snapshot();
+
+            writeSnapshot(snapshot);
+
+            records.clear();
+            if (!loadFile())
+            {
+                log.warn(
+                        "[RuneTags][Records] Migration Verification Failed; Legacy Config Preserved");
+                records.clear();
+                loadStore(store);
+                return;
+            }
+
+            removeLegacyConfig();
+            log.info(
+                    "[RuneTags][Records] Migrated Legacy ConfigManager Records to '{}'",
+                    recordFile);
+        }
+        catch (RuntimeException exception)
+        {
+            log.warn(
+                    "[RuneTags][Records] Unable to Migrate Legacy ConfigManager Records | ERROR: {}",
+                    exception.getMessage());
+        }
+    }
+
+    private void loadStore(
+            PersistedStore store)
+    {
+        if (store == null
+                || store.players == null)
+        {
+            return;
+        }
+
+        for (Map.Entry<String, LocalPlayerRecord> entry
+                : store.players.entrySet())
+        {
+            final LocalPlayerRecord sanitized =
+                    sanitize(entry.getValue());
+
+            if (sanitized == null
+                    || isBlank(sanitized.getCurrentRsn()))
+            {
+                continue;
+            }
+
+            final String currentKey =
+                    key(sanitized.getCurrentRsn());
+
+            if (currentKey.isEmpty()
+                    || !shouldRetain(sanitized))
+            {
+                continue;
+            }
+
+            records.put(
+                    currentKey,
+                    sanitized);
+        }
+    }
+
+    private static boolean isValidStore(
+            PersistedStore store)
+    {
+        return store != null
+                && store.version == STORE_VERSION
+                && store.players != null;
+    }
+
+    private PersistedStore snapshot()
+    {
+        final PersistedStore snapshot =
+                new PersistedStore();
+
+        snapshot.version = STORE_VERSION;
+        snapshot.players =
+                new LinkedHashMap<>(records);
+
+        return snapshot;
+    }
+
+    private void removeLegacyConfig()
+    {
+        if (configManager == null)
+        {
+            return;
+        }
+
+        final String json =
+                configManager.getConfiguration(
+                        Constants.CONFIG_GROUP,
+                        LEGACY_CONFIG_KEY);
+
+        if (json == null
+                || json.trim().isEmpty())
+        {
+            return;
+        }
+
+        try
+        {
+            configManager.unsetConfiguration(
+                    Constants.CONFIG_GROUP,
+                    LEGACY_CONFIG_KEY);
+        }
+        catch (RuntimeException exception)
+        {
+            log.warn(
+                    "[RuneTags][Records] Unable to Remove Migrated Legacy Config",
+                    exception);
+        }
+    }
+
+    private synchronized void saveAsync()
+    {
+        if (closed)
         {
             return;
         }
 
         final PersistedStore snapshot =
-                new PersistedStore();
+                snapshot();
 
-        snapshot.version =
-                STORE_VERSION;
+        ioExecutor.execute(() ->
+                writeSnapshot(
+                        snapshot));
+    }
 
-        snapshot.players =
-                new LinkedHashMap<>(
-                        records);
+    private void writeSnapshot(
+            PersistedStore snapshot)
+    {
+        if (snapshot == null)
+        {
+            return;
+        }
 
         try
         {
-            configManager.setConfiguration(
-                    Constants.CONFIG_GROUP,
-                    CONFIG_KEY,
-                    gson.toJson(snapshot));
+            Files.createDirectories(
+                    recordDirectory);
+
+            try (BufferedWriter writer =
+                         Files.newBufferedWriter(
+                                 recordTempFile,
+                                 StandardCharsets.UTF_8);
+                 JsonWriter jsonWriter =
+                         new JsonWriter(
+                                 writer))
+            {
+                jsonWriter.setIndent(
+                        "    ");
+
+                gson.toJson(
+                        snapshot,
+                        PersistedStore.class,
+                        jsonWriter);
+            }
+
+            try
+            {
+                Files.move(
+                        recordTempFile,
+                        recordFile,
+                        StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.ATOMIC_MOVE);
+            }
+            catch (IOException atomicMoveFailure)
+            {
+                Files.move(
+                        recordTempFile,
+                        recordFile,
+                        StandardCopyOption.REPLACE_EXISTING);
+            }
         }
-        catch (RuntimeException exception)
+        catch (IOException exception)
         {
-            log.warn(
-                    "[RuneTags][Records] Unable to Save Local Player Records",
-                    exception);
+            log.warn("[RuneTags][Records] Unable to Save Local Player Records to '{}'", recordFile, exception);
         }
     }
 
