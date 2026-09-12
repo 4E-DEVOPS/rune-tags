@@ -1,0 +1,453 @@
+plugins {
+	id 'java'
+}
+
+repositories {
+	mavenLocal()
+	maven {
+		url = 'https://repo.runelite.net'
+		content {
+			includeGroupByRegex("net\\.runelite.*")
+		}
+	}
+	mavenCentral()
+}
+
+def runeLiteVersion = 'latest.release'
+def pluginMainClass = 'com.runetags.RuneTagsLauncher'
+
+dependencies {
+	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion
+
+	compileOnly 'org.projectlombok:lombok:1.18.30'
+	annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+	testImplementation 'junit:junit:4.12'
+	testImplementation 'org.mockito:mockito-core:4.11.0'
+	testImplementation group: 'net.runelite', name:'client', version: runeLiteVersion
+	testImplementation group: 'net.runelite', name:'jshell', version: runeLiteVersion
+}
+
+group = 'com.runetags'
+version = '1.0.0'
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
+	options.release.set(11)
+}
+
+/*
+ * RUN RUNETAGS
+ */
+
+tasks.register('run', JavaExec) {
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = pluginMainClass
+
+	jvmArgs "-ea"
+	args "--developer-mode", "--debug"
+}
+
+tasks.register('shadowJar', Jar) {
+	dependsOn configurations.testRuntimeClasspath
+	manifest {
+		attributes('Main-Class': pluginMainClass, 'Multi-Release': true)
+	}
+
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from sourceSets.main.output
+	from sourceSets.test.output
+	from {
+		configurations.testRuntimeClasspath.collect { file ->
+			file.isDirectory() ? file : zipTree(file)
+		}
+	}
+
+	exclude 'META-INF/INDEX.LIST'
+	exclude 'META-INF/*.SF'
+	exclude 'META-INF/*.DSA'
+	exclude 'META-INF/*.RSA'
+	exclude '**/module-info.class'
+
+	group = BasePlugin.BUILD_GROUP
+	archiveClassifier.set('shadow')
+	archiveFileName.set("${rootProject.name}-${project.version}-all.jar")
+}
+
+/*
+ * TEST TASKS
+ */
+
+tasks.withType(Test).configureEach {
+	testLogging {
+		showStandardStreams = true
+	}
+}
+
+tasks.register('testAll') {
+	group = 'verification'
+	description = 'Runs all RuneTags deterministic test suites.'
+
+	dependsOn(
+			'testChat',
+			'testConfig',
+			'testContext',
+			'testHiscores',
+			'testHistory',
+			'testInput',
+			'testLocation',
+			'testMention',
+			'testNotification',
+			'testPlayer',
+			'testQuickProfile',
+			'testRecords',
+			'testReports',
+			'testSuggestion',
+			'testTarget'
+	)
+}
+
+tasks.register('testChat', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags chat processing, formatting, layout, interaction, bootstrap, and message retention.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.chat.TaggedMessageRepositoryTest'
+		includeTestsMatching 'com.runetags.chat.MessageMarkupMapTest'
+		includeTestsMatching 'com.runetags.chat.ChatTextTest'
+		includeTestsMatching 'com.runetags.chat.ChatProcessorTest'
+		includeTestsMatching 'com.runetags.chat.ChatInteractionPolicyTest'
+		includeTestsMatching 'com.runetags.chat.ChatHitboxRegistryTest'
+		includeTestsMatching 'com.runetags.chat.MessageFormatterTest'
+		includeTestsMatching 'com.runetags.chat.NativeBootstrapServiceTest'
+		includeTestsMatching 'com.runetags.chat.ReferenceLayoutServiceTest'
+		includeTestsMatching 'com.runetags.chat.FontLayoutServiceTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testConfig', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags configuration enum behavior, display values, durations, sizes, and mode capabilities.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.config.ConfigEnumsTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testContext', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags player context resolution, contextual metrics, encounter overrides, and Party context state.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.context.PlayerContextTest'
+		includeTestsMatching 'com.runetags.context.ProfileMetricResolverTest'
+		includeTestsMatching 'com.runetags.context.PlayerContextServiceTest'
+		includeTestsMatching 'com.runetags.context.PartyContextServiceTest'
+		includeTestsMatching 'com.runetags.context.ProfileMetricCatalogTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testHiscores', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags HiScore caching, expiration, enrichment, and in-flight request behavior.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.hiscores.EfficiencyMetricServiceTest'
+		includeTestsMatching 'com.runetags.hiscores.HiscoreEnrichmentCacheTest'
+		includeTestsMatching 'com.runetags.hiscores.HiscoreEnrichmentServiceTest'
+		includeTestsMatching 'com.runetags.hiscores.HiscoreProfileDataTest'
+		includeTestsMatching 'com.runetags.hiscores.PlayerLookupServiceTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testHistory', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags mention history entries, persistence, limits, and panel behavior.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.history.MentionHistoryEntryTest'
+		includeTestsMatching 'com.runetags.history.MentionHistoryPanelTest'
+		includeTestsMatching 'com.runetags.history.MentionHistoryServiceTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testInput', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags input handling, note editing and layout, tag selection, and interaction routing.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.input.InputListenerTest'
+		includeTestsMatching 'com.runetags.input.NoteChatboxInputTest'
+		includeTestsMatching 'com.runetags.input.NoteTextLayoutTest'
+		includeTestsMatching 'com.runetags.input.TagChatboxInputTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testLocation', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags location indexing, player location state, and location resolution.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.location.LocationIndexTest'
+		includeTestsMatching 'com.runetags.location.PlayerLocationTest'
+		includeTestsMatching 'com.runetags.location.PlayerLocationServiceTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testMention', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags mention parsing, local matching, name normalization, and explicit tags.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.mention.KnownPlayerMentionParserTest'
+		includeTestsMatching 'com.runetags.mention.LocalMentionMatcherTest'
+		includeTestsMatching 'com.runetags.mention.NameNormalizerTest'
+		includeTestsMatching 'com.runetags.mention.TagParserTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testNotification', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags notification filtering, configuration, text, and sound behavior.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.notification.MentionNotificationServiceTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testOverlay', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags scene, minimap, chat-reference, and Quick Profile overlays.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.overlay.ChatReferenceOverlayTest'
+		includeTestsMatching 'com.runetags.overlay.FavoriteOverlayTest'
+		includeTestsMatching 'com.runetags.overlay.QuickProfileOverlayTest'
+		includeTestsMatching 'com.runetags.overlay.TargetMinimapOverlayTest'
+		includeTestsMatching 'com.runetags.overlay.TargetOverlayTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testPlayer', Test) {
+	group = 'verification'
+	description = 'Tests RuneTags player identity, source, state, account classification, and directory behavior.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.player.AccountTypeTest'
+		includeTestsMatching 'com.runetags.player.OnlineStateTest'
+		includeTestsMatching 'com.runetags.player.PlayerDirectoryTest'
+		includeTestsMatching 'com.runetags.player.PlayerIdentityTest'
+		includeTestsMatching 'com.runetags.player.PlayerSourceTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testQuickProfile', Test) {
+	group = 'verification'
+	description = 'Tests Quick Profile live-context refresh and separation from stable enriched profile data.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.quickprofile.QuickProfileControllerTest'
+		includeTestsMatching 'com.runetags.quickprofile.QuickProfileModelTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testRecords', Test) {
+	group = 'verification'
+	description = 'Runs RuneTags records tests.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.records.LocalPlayerRecordTest'
+		includeTestsMatching 'com.runetags.records.LocalPlayerRecordServiceTest'
+		includeTestsMatching 'com.runetags.records.PlayerTagCatalogTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testReports', Test) {
+	group = 'verification'
+	description = 'Runs RuneTags tests for RuneWatch and We Do Raids reports.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.reports.ReportSummaryTest'
+		includeTestsMatching 'com.runetags.reports.ReportCaseServiceTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testSuggestion', Test) {
+	group = 'verification'
+	description = 'Tests username suggestion matching, separator normalization, minimum query length, and overlay.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.suggestion.SuggestionOverlayTest'
+		includeTestsMatching 'com.runetags.suggestion.SuggestionServiceTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}
+
+tasks.register('testTarget', Test) {
+	group = 'verification'
+	description = 'Tests targeting and visibility of player renderables.'
+
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+
+	useJUnit()
+
+	filter {
+		includeTestsMatching 'com.runetags.target.PlayerVisibilityServiceTest'
+		includeTestsMatching 'com.runetags.target.TargetControllerTest'
+	}
+
+	testLogging {
+		events 'passed', 'skipped', 'failed'
+		exceptionFormat 'full'
+	}
+}

@@ -1,0 +1,11 @@
+Location region data in Locations.json is derived from:
+
+Location Display
+Copyright (c) 2025, trinhc2
+https://github.com/trinhc2/Location-Display
+
+Licensed under the BSD 2-Clause License.
+See /LICENSES/LICENSE-LOCATION_DISPLAY.
+
+RuneTags contains modifications and additions to the original location data.
+RuneTags should retain this attribution and the applicable license notice when distributed.
