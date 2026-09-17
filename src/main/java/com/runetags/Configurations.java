@@ -138,7 +138,7 @@ public interface Configurations extends Config {
             position = 4
     )
     default boolean showReports() {
-        return true;
+        return false;
     }
 
     /*
@@ -237,7 +237,7 @@ public interface Configurations extends Config {
     )
     default boolean wiseOldManMetrics()
     {
-        return true;
+        return false;
     }
 
     @ConfigItem(

@@ -1,6 +1,8 @@
 package com.runetags.history;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
 import com.runetags.Configurations;
 import com.runetags.Constants;
 import com.runetags.mention.MatchReason;
@@ -528,9 +530,43 @@ public class MentionHistoryServiceTest
                         Files.readAllBytes(historyFile),
                         StandardCharsets.UTF_8);
 
-        Assert.assertTrue(json.contains("\"version\":1"));
-        Assert.assertTrue(json.contains("\"messageId\":2"));
-        Assert.assertTrue(json.contains("\"messageId\":1"));
+        final JsonObject root =
+                gson.fromJson(
+                        json,
+                        JsonObject.class);
+
+        Assert.assertEquals(
+                1,
+                root.get("version")
+                        .getAsInt());
+
+        Assert.assertTrue(
+                root.has("entries"));
+
+        Assert.assertTrue(
+                root.get("entries")
+                        .isJsonArray());
+
+        Assert.assertEquals(
+                2,
+                root.getAsJsonArray("entries")
+                        .size());
+
+        Assert.assertEquals(
+                2L,
+                root.getAsJsonArray("entries")
+                        .get(0)
+                        .getAsJsonObject()
+                        .get("messageId")
+                        .getAsLong());
+
+        Assert.assertEquals(
+                1L,
+                root.getAsJsonArray("entries")
+                        .get(1)
+                        .getAsJsonObject()
+                        .get("messageId")
+                        .getAsLong());
     }
 
     @Test
@@ -616,8 +652,27 @@ public class MentionHistoryServiceTest
                         Files.readAllBytes(historyFile),
                         StandardCharsets.UTF_8);
 
-        Assert.assertTrue(json.contains("\"version\":1"));
-        Assert.assertTrue(json.contains("\"entries\":[]"));
+        final JsonObject root =
+                gson.fromJson(
+                        json,
+                        JsonObject.class);
+
+        Assert.assertEquals(
+                1,
+                root.get("version")
+                        .getAsInt());
+
+        Assert.assertTrue(
+                root.has("entries"));
+
+        Assert.assertTrue(
+                root.get("entries")
+                        .isJsonArray());
+
+        Assert.assertEquals(
+                0,
+                root.getAsJsonArray("entries")
+                        .size());
     }
 
     /*

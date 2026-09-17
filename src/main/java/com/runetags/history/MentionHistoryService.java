@@ -148,12 +148,25 @@ public class MentionHistoryService
     public synchronized void enforceLimit()
     {
         final int before = entries.size();
+
         trim();
 
         if (entries.size() != before)
         {
             save();
         }
+    }
+
+    /**
+     * Reload persistent mention history from disk.
+     *
+     * MentionHistoryService is owned by RuneLite/Guice and may remain alive
+     * across RuneTags disable/enable cycles. Reloading here ensures each
+     * plugin startup reflects the current contents of history.json.
+     */
+    public synchronized void reload()
+    {
+        load();
     }
 
     private void load()
@@ -166,6 +179,7 @@ public class MentionHistoryService
             {
                 removeLegacyConfig();
             }
+
             return;
         }
 

@@ -452,6 +452,8 @@ public class RuneTags extends Plugin {
                         config,
                         notifier);
 
+        mentionHistoryService.reload();
+
         mentionHistoryPanel =
                 new MentionHistoryPanel(
                         client,
@@ -846,7 +848,6 @@ public class RuneTags extends Plugin {
         nativeBootstrapService = null;
         messageRepository = null;
 
-        mentionHistoryService = null;
         mentionNotificationService = null;
 
         chatProcessor = null;
@@ -884,7 +885,6 @@ public class RuneTags extends Plugin {
         playerContextService = null;
 
         profileMetricResolver = null;
-        locationIndex = null;
 
         /*
          * Identity root.
