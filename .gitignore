@@ -9,3 +9,4 @@ nb-configuration.xml
 nbproject/
 # Project exclude paths
 /src/main/java/com/runetags/debug/
+/src/test/java/com/runetags/*/
