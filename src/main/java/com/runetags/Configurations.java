@@ -133,7 +133,11 @@ public interface Configurations extends Config {
             name = "RuneWatch Reports",
             description = "Display report records for players with a valid RuneWatch or We Do Raids case.<br>"
                     + "NOTE: Connects to RuneWatch report feed and caches the public report list.",
-            warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers.",
+            warning = "<html><b>WARNING</b>: To retrieve report data from <u>RuneWatch/WeDoRaids</u>,<br>"
+                    + "RuneTags must make outgoing connections to the third-party server.<br>"
+                    + "As a result, this feature would expose your IP address to RuneWatch,<br>"
+                    + "which is not controlled or verified by the RuneLite developers.<br>"
+                    + "<b>Do you want to enable this feature?</b></html>",
             section = recordDetailsSection,
             position = 4
     )
@@ -231,7 +235,11 @@ public interface Configurations extends Config {
             keyName = "wiseOldManMetrics",
             name = "Wise Old Man Metrics",
             description = "Allow RuneTags to retrieve data from the Wise Old Man server.",
-            warning = "This feature submits your IP address to a 3rd-party server not controlled or verified by RuneLite developers",
+            warning = "<html><b>WARNING</b>: To retrieve player metrics from <u>Wise Old Man</u>,<br>"
+                    + "RuneTags must make outgoing connections to the third-party server.<br>"
+                    + "As a result, this feature would expose your IP address to Wise Old Man,<br>"
+                    + "which is not controlled or verified by the RuneLite developers.<br>"
+                    + "<b>Do you want to enable this feature?</b></html>",
             section = metricDetailsSection,
             position = 1
     )
