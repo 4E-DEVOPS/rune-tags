@@ -247,11 +247,6 @@ public class TargetController
             return false;
         }
 
-        if (mode.isPersistent())
-        {
-            return true;
-        }
-
         if (!mode.isTimed()
                 || hideOthersStartedNanos <= 0L)
         {

@@ -6,8 +6,8 @@ public enum HideOthersMode
     TEN("10 Seconds", 10),
     FIFTEEN("15 Seconds", 15),
     THIRTY("30 Seconds", 30),
-    SIXTY("60 Seconds", 60),
-    ON("On", -1);
+    FORTY_FIVE("45 Seconds", 45),
+    SIXTY("60 Seconds", 60);
 
     private final String displayName;
     private final int durationSeconds;
@@ -28,11 +28,6 @@ public enum HideOthersMode
     public boolean isTimed()
     {
         return durationSeconds > 0;
-    }
-
-    public boolean isPersistent()
-    {
-        return this == ON;
     }
 
     public int getDurationSeconds()
