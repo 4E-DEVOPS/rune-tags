@@ -465,7 +465,7 @@ public class RuneTags extends Plugin {
         final BufferedImage historyIcon =
                 ImageUtil.loadImageResource(
                         RuneTags.class,
-                        "runetags_history_icon.png");
+                        "sidebar_icon.png");
 
         mentionHistoryNavigation =
                 NavigationButton.builder()
