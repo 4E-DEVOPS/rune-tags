@@ -929,27 +929,23 @@ public class FontLayoutService
         }
     }
 
-    private int fontIdFor(
-            MentionFont font)
-    {
-        if (font == null)
-        {
-            return FontID.PLAIN_12;
-        }
+	private int fontIdFor(
+			MentionFont font)
+	{
+		if (font == null)
+		{
+			return FontID.PLAIN_12;
+		}
 
-        switch (font)
-        {
-            case BOLD:
-                return FontID.BOLD_12;
-
-            case VERDANA:
-                return FontID.VERDANA_13_BOLD;
-
-            case NORMAL:
-            default:
-                return FontID.PLAIN_12;
-        }
-    }
+		switch (font)
+		{
+			case BOLD:
+				return FontID.BOLD_12;
+			case NORMAL:
+			default:
+				return FontID.PLAIN_12;
+		}
+	}
 
     private int ceilDiv(
             int numerator,

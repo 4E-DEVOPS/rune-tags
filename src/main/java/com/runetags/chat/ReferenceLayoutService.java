@@ -1614,16 +1614,9 @@ public class ReferenceLayoutService
             case BOLD:
                 fontId = FontID.BOLD_12;
                 break;
-
-            case VERDANA:
-                fontId = FontID.VERDANA_13_BOLD;
-                break;
-
             case NORMAL:
             default:
-                restoreOriginalFont(
-                        messageWidget);
-
+                restoreOriginalFont(messageWidget);
                 return;
         }
 
@@ -3428,11 +3421,11 @@ public class ReferenceLayoutService
             return output;
         }
 
-        final int physicalLineHeight =
-                Math.max(
-                        1,
-                        widgetBounds.height
-                                / wrappedLines.size());
+		final int physicalLineHeight =
+				resolvePhysicalLineHeight(
+						widget,
+						widgetBounds,
+						wrappedLines.size());
 
         for (int lineIndex = 0;
              lineIndex < wrappedLines.size();
@@ -3549,23 +3542,19 @@ public class ReferenceLayoutService
             return;
         }
 
-        /*
-         * RuneScape expands the physical widget as lines are added.
-         *
-         * Widget Inspector testing showed:
-         *
-         * 1 line  -> approximately 14 px
-         * 2 lines -> approximately 28 px
-         *
-         * Deriving the row height from the actual widget height gives us the
-         * physical space RuneScape allocated rather than assuming Font baseline
-         * or hardcoding 14/16 px.
-         */
-        final int physicalLineHeight =
-                Math.max(
-                        1,
-                        widgetBounds.height
-                                / wrappedLines.size());
+		/*
+		 * Prefer the Widget's live line height when one is available.
+		 *
+		 * Plugins may legitimately change the native chat FontId and LineHeight
+		 * while leaving the Widget's overall bounds unsuitable for deriving one
+		 * visual row. Falling back to bounds preserves native RuneScape behavior
+		 * for Widgets which do not expose a useful line height.
+		 */
+		final int physicalLineHeight =
+				resolvePhysicalLineHeight(
+						widget,
+						widgetBounds,
+						wrappedLines.size());
 
         for (int lineIndex = 0;
              lineIndex < wrappedLines.size();
@@ -3903,7 +3892,38 @@ public class ReferenceLayoutService
         return lines;
     }
 
-    /**
+	/**
+	 * Resolve the physical height of one rendered text line.
+	 *
+	 * Prefer the Widget's live line height when available so RuneTags follows
+	 * font/layout changes made by RuneScape or other plugins. Fall back to the
+	 * Widget's allocated bounds when no useful line height is exposed.
+	 */
+	private static int resolvePhysicalLineHeight(
+			Widget widget,
+			Rectangle widgetBounds,
+			int lineCount)
+	{
+		if (widget != null)
+		{
+			final int lineHeight =
+					widget.getLineHeight();
+
+			if (lineHeight > 0)
+			{
+				return lineHeight;
+			}
+		}
+
+		return Math.max(
+				1,
+				widgetBounds.height
+						/ Math.max(
+						1,
+						lineCount));
+	}
+
+	/**
      * Measure one semantic range using the actual raw RuneScape markup and the
      * widget's own font.
      */

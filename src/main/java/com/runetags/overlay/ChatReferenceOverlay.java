@@ -76,19 +76,14 @@ public class ChatReferenceOverlay extends Overlay
          * Native chat text is clipped to the chatbox, but ABOVE_WIDGETS overlays are
          * not. Use the visible chat area to constrain RuneTags rendering and input.
          */
-        final Widget chatbox =
-                client.getWidget(InterfaceID.Chatbox.SCROLLAREA);
+        final Widget chatScrollArea = client.getWidget(InterfaceID.Chatbox.SCROLLAREA);
+		final Widget chatboxArea = client.getWidget(InterfaceID.Chatbox.CHATAREA);
 
-        final Rectangle chatboxBounds =
-                chatbox != null
-                        && !chatbox.isHidden()
-                        ? chatbox.getBounds()
-                        : null;
+        final Rectangle chatScrollBounds = chatScrollArea != null && !chatScrollArea.isHidden()
+					? chatScrollArea.getBounds()
+					: null;
 
-        final boolean hasVisibleChatbox =
-                chatboxBounds != null
-                        && chatboxBounds.width > 0
-                        && chatboxBounds.height > 0;
+        final boolean hasVisibleChatbox = chatScrollBounds != null && chatScrollBounds.width > 0 && chatScrollBounds.height > 0;
 
         /*
          * Calculate semantic/reference hitboxes from the rendered chat.
@@ -119,11 +114,11 @@ public class ChatReferenceOverlay extends Overlay
                         hitboxes,
                         localHighlights);
 
-        final List<Rectangle> blockingBounds =
-                collectBlockingWidgetBounds(
-                        chatbox,
-                        splitPrivateRoot,
-                        interactionBounds);
+		final List<Rectangle> blockingBounds =
+				collectBlockingWidgetBounds(
+						chatboxArea,
+						splitPrivateRoot,
+						interactionBounds);
 
         final List<ReferenceHitbox> visibleHitboxes =
                 new ArrayList<>();
@@ -144,14 +139,14 @@ public class ChatReferenceOverlay extends Overlay
             {
                 case CHATBOX:
                     if (!hasVisibleChatbox
-                            || !chatboxBounds.intersects(
+                            || !chatScrollBounds.intersects(
                             visibleBounds))
                     {
                         continue;
                     }
 
                     visibleBounds =
-                            chatboxBounds.intersection(
+                            chatScrollBounds.intersection(
                                     visibleBounds);
                     break;
 
@@ -221,7 +216,7 @@ public class ChatReferenceOverlay extends Overlay
             drawLocalHighlights(
                     graphics,
                     localHighlights,
-                    chatboxBounds,
+                    chatScrollBounds,
                     hasVisibleChatbox,
                     unobscuredClip);
 
@@ -251,7 +246,7 @@ public class ChatReferenceOverlay extends Overlay
                      * Clip CHATBOX decorations so ABOVE_WIDGETS rendering
                      * cannot escape the visible chat history.
                      */
-                    graphics.clip(chatboxBounds);
+                    graphics.clip(chatScrollBounds);
                 }
 
                 /*
@@ -359,10 +354,10 @@ public class ChatReferenceOverlay extends Overlay
      * Find visible native widgets that prevent interaction with widgets beneath
      * them, excluding the chat surfaces RuneTags deliberately decorates.
      */
-    private List<Rectangle> collectBlockingWidgetBounds(
-            Widget chatbox,
-            Widget splitPrivateRoot,
-            Rectangle interactionBounds)
+	private List<Rectangle> collectBlockingWidgetBounds(
+			Widget chatboxArea,
+			Widget splitPrivateRoot,
+			Rectangle interactionBounds)
     {
         if (interactionBounds == null
                 || interactionBounds.isEmpty())
@@ -390,7 +385,7 @@ public class ChatReferenceOverlay extends Overlay
         {
             collectBlockingWidgetBounds(
                     root,
-                    chatbox,
+					chatboxArea,
                     splitPrivateRoot,
                     interactionBounds,
                     blockingBounds,
@@ -403,7 +398,7 @@ public class ChatReferenceOverlay extends Overlay
 
     private void collectBlockingWidgetBounds(
             Widget widget,
-            Widget chatbox,
+            Widget chatboxArea,
             Widget splitPrivateRoot,
             Rectangle interactionBounds,
             List<Rectangle> blockingBounds,
@@ -442,7 +437,7 @@ public class ChatReferenceOverlay extends Overlay
                 && widget.getNoClickThrough()
                 && !belongsToChatPresentation(
                 widget,
-                chatbox,
+				chatboxArea,
                 splitPrivateRoot))
         {
             blockingBounds.add(
@@ -454,7 +449,7 @@ public class ChatReferenceOverlay extends Overlay
 
         collectBlockingWidgetChildren(
                 widget.getChildren(),
-                chatbox,
+				chatboxArea,
                 splitPrivateRoot,
                 interactionBounds,
                 blockingBounds,
@@ -463,7 +458,7 @@ public class ChatReferenceOverlay extends Overlay
 
         collectBlockingWidgetChildren(
                 widget.getStaticChildren(),
-                chatbox,
+				chatboxArea,
                 splitPrivateRoot,
                 interactionBounds,
                 blockingBounds,
@@ -472,7 +467,7 @@ public class ChatReferenceOverlay extends Overlay
 
         collectBlockingWidgetChildren(
                 widget.getNestedChildren(),
-                chatbox,
+				chatboxArea,
                 splitPrivateRoot,
                 interactionBounds,
                 blockingBounds,
@@ -482,7 +477,7 @@ public class ChatReferenceOverlay extends Overlay
 
     private void collectBlockingWidgetChildren(
             Widget[] children,
-            Widget chatbox,
+            Widget chatboxArea,
             Widget splitPrivateRoot,
             Rectangle interactionBounds,
             List<Rectangle> blockingBounds,
@@ -498,7 +493,7 @@ public class ChatReferenceOverlay extends Overlay
         {
             collectBlockingWidgetBounds(
                     child,
-                    chatbox,
+					chatboxArea,
                     splitPrivateRoot,
                     interactionBounds,
                     blockingBounds,
@@ -511,18 +506,18 @@ public class ChatReferenceOverlay extends Overlay
      * A no-click-through Widget belonging to either native chat presentation must
      * not hide RuneTags from the very chat surface it is decorating.
      */
-    private static boolean belongsToChatPresentation(
-            Widget widget,
-            Widget chatbox,
-            Widget splitPrivateRoot)
-    {
-        return sharesWidgetBranch(
-                widget,
-                chatbox)
-                || sharesWidgetBranch(
-                widget,
-                splitPrivateRoot);
-    }
+	private static boolean belongsToChatPresentation(
+			Widget widget,
+			Widget chatboxArea,
+			Widget splitPrivateRoot)
+	{
+		return sharesWidgetBranch(
+				widget,
+				chatboxArea)
+				|| sharesWidgetBranch(
+				widget,
+				splitPrivateRoot);
+	}
 
     private static boolean sharesWidgetBranch(
             Widget first,
@@ -752,7 +747,7 @@ public class ChatReferenceOverlay extends Overlay
     private void drawLocalHighlights(
             Graphics2D graphics,
             List<LocalHighlight> highlights,
-            Rectangle chatboxBounds,
+            Rectangle chatScrollBounds,
             boolean hasVisibleChatbox,
             Shape unobscuredClip)
     {
@@ -793,17 +788,17 @@ public class ChatReferenceOverlay extends Overlay
             {
                 case CHATBOX:
                     if (!hasVisibleChatbox
-                            || !chatboxBounds.intersects(
+                            || !chatScrollBounds.intersects(
                             visibleBounds))
                     {
                         continue;
                     }
 
                     graphics.clip(
-                            chatboxBounds);
+                            chatScrollBounds);
 
                     visibleBounds =
-                            chatboxBounds.intersection(
+                            chatScrollBounds.intersection(
                                     visibleBounds);
 
                     if (visibleBounds.isEmpty())

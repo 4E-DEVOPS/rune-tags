@@ -3,8 +3,7 @@ package com.runetags.config;
 public enum MentionFont
 {
     NORMAL("Normal"),
-    BOLD("Bold"),
-    VERDANA("Verdana");
+    BOLD("Bold");
 
     private final String displayName;
 
