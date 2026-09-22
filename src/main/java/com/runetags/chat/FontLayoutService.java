@@ -65,29 +65,28 @@ import net.runelite.api.widgets.Widget;
  * HEIGHT MODEL
  * ---------------------------------------------------------------------
  *
- * RuneScape first wraps using its native Plain-12 font.
- *
- * RuneTags may subsequently replace that font with Bold or Verdana.
+ * RuneTags treats the live Widget font as the base font and resolves the
+ * configured Normal/Bold companion from that font family.
  *
  * We calculate:
  *
- *     nativeLines
- *         number of lines Font 495 requires
+ *     baseLines
+ *         number of lines the active base font requires
  *
- *     customLines
- *         number of lines the configured RuneTags font requires
+ *     selectedLines
+ *         number of lines the resolved RuneTags font requires
  *
  *     nativeLineHeight
  *         the value RuneScape itself supplied at PRE construction
  *
  *     desiredHeight
- *         customLines * nativeLineHeight
+ *         selectedLines * nativeLineHeight
  *
  * Because the construction script itself multiplies its supplied vertical
  * value by its native wrapped-line count:
  *
  *     injectedValue =
- *         ceil(desiredHeight / nativeLines)
+ *         ceil(desiredHeight / baseLines)
  *
  * This preserves RuneScape's native cadence automatically:
  *
@@ -260,20 +259,12 @@ public class FontLayoutService
             return;
         }
 
-        final MentionFont mentionFont =
-                config.fontMentions();
+		final MentionFont mentionFont =
+				config.fontMentions();
 
-        /*
-         * NORMAL requires no compensation.
-         *
-         * RuneScape is already constructing the row with its native font and
-         * native height.
-         */
-        if (mentionFont == null
-                || mentionFont == MentionFont.NORMAL)
-        {
-            return;
-        }
+		if (mentionFont == null) {
+			return;
+		}
 
         final int[] intStack =
                 client.getIntStack();
@@ -328,37 +319,41 @@ public class FontLayoutService
             return;
         }
 
-        final FontTypeFace nativeFont =
-                resolveFont(
-                        FontID.PLAIN_12);
+		final int currentFontId = lineWidget.getFontId();
 
-        final int selectedFontId =
-                fontIdFor(
-                        mentionFont);
+		final int baseFontId = currentFontId > 0
+				? currentFontId
+				: FontID.PLAIN_12;
 
-        final FontTypeFace selectedFont =
-                resolveFont(
-                        selectedFontId);
+		final int selectedFontId =
+				MentionFontResolver.fontIdFor(
+						mentionFont,
+						baseFontId);
 
-        if (nativeFont == null
-                || selectedFont == null)
-        {
-            return;
-        }
+		if (selectedFontId == baseFontId) {
+			return;
+		}
+
+		final FontTypeFace baseFont = resolveFont(baseFontId);
+		final FontTypeFace selectedFont = resolveFont(selectedFontId);
+
+		if (baseFont == null || selectedFont == null) {
+			return;
+		}
 
         /*
          * Determine how much horizontal space RuneScape has actually left for
          * the message body.
          */
-        final PrefixMeasurement prefix =
-                measurePrefix(
-                        event.getScriptId(),
-                        nativeFont,
-                        objectStack,
-                        objectStackSize,
-                        semanticBody,
-                        intStack,
-                        intStackSize);
+		final PrefixMeasurement prefix =
+				measurePrefix(
+						event.getScriptId(),
+						baseFont,
+						objectStack,
+						objectStackSize,
+						semanticBody,
+						intStack,
+						intStackSize);
 
         if (prefix == null)
         {
@@ -384,32 +379,31 @@ public class FontLayoutService
          *
          * Do not maintain a second approximation here.
          */
-        final int nativeLines =
-                referenceLayoutService.measureWrappedLineCount(
-                        rawBody,
-                        nativeFont,
-                        bodyWidth);
+		final int baseLines =
+				referenceLayoutService.measureWrappedLineCount(
+						rawBody,
+						baseFont,
+						bodyWidth);
 
-        final int customLines =
-                referenceLayoutService.measureWrappedLineCount(
-                        rawBody,
-                        selectedFont,
-                        bodyWidth);
+		final int selectedLines =
+				referenceLayoutService.measureWrappedLineCount(
+						rawBody,
+						selectedFont,
+						bodyWidth);
 
-        if (nativeLines <= 0
-                || customLines <= 0)
-        {
-            return;
-        }
+		if (baseLines <= 0
+				|| selectedLines <= 0) {
+			return;
+		}
 
-        final int desiredHeight =
-                customLines
-                        * nativeLineHeight;
+		final int desiredHeight =
+				selectedLines
+						* nativeLineHeight;
 
-        final int injectedValue =
-                ceilDiv(
-                        desiredHeight,
-                        nativeLines);
+		final int injectedValue =
+				ceilDiv(
+						desiredHeight,
+						baseLines);
 
         if (injectedValue <= 0)
         {
@@ -709,15 +703,14 @@ public class FontLayoutService
      * plus the small account/channel decoration represented by its leading
      * dimensions.
      */
-    private PrefixMeasurement measurePrefix(
-            int scriptId,
-            FontTypeFace nativeFont,
-            Object[] objectStack,
-            int objectStackSize,
-            String semanticBody,
-            int[] intStack,
-            int intStackSize)
-    {
+	private PrefixMeasurement measurePrefix(
+			int scriptId,
+			FontTypeFace baseFont,
+			Object[] objectStack,
+			int objectStackSize,
+			String semanticBody,
+			int[] intStack,
+			int intStackSize) {
         final List<String> components =
                 findPrefixComponents(
                         objectStack,
@@ -743,9 +736,9 @@ public class FontLayoutService
                             components.get(
                                     components.size() - 1));
 
-            return new PrefixMeasurement(
-                    nativeFont.getTextWidth(
-                            rawPrefix));
+			return new PrefixMeasurement(
+					baseFont.getTextWidth(
+							rawPrefix));
         }
 
         if (scriptId == CLAN_BODY_SCRIPT)
@@ -772,9 +765,9 @@ public class FontLayoutService
                                         i)));
             }
 
-            final int textWidth =
-                    nativeFont.getTextWidth(
-                            prefixText.toString());
+			final int textWidth =
+					baseFont.getTextWidth(
+							prefixText.toString());
 
             int decorationWidth =
                     0;
@@ -928,24 +921,6 @@ public class FontLayoutService
                     originalFontId);
         }
     }
-
-	private int fontIdFor(
-			MentionFont font)
-	{
-		if (font == null)
-		{
-			return FontID.PLAIN_12;
-		}
-
-		switch (font)
-		{
-			case BOLD:
-				return FontID.BOLD_12;
-			case NORMAL:
-			default:
-				return FontID.PLAIN_12;
-		}
-	}
 
     private int ceilDiv(
             int numerator,

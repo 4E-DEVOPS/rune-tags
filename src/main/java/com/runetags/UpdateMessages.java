@@ -22,7 +22,7 @@ public final class UpdateMessages {
 			+ " Report any issues you find to Github.";
 	private static final String UNINSTALL_MESSAGE = "Thank you for using RuneTags!"
 			+ " Please submit a review/issue report on Github of your experience.";
-	private static final String UPDATE_MESSAGE = "Added a plugin logo, support for an opaque chatbox, and fixed the hitbox+highlighting issue with ChatXL.";
+	private static final String UPDATE_MESSAGE = "Added a plugin logo, opaque chatbox support, and improved mention hitbox and highlight compatibility with the <shad=ffffff>ChatXL</shad> plugin's custom fonts.";
 
 	private final Client client;
 	private final ClientThread clientThread;

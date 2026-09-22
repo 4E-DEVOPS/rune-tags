@@ -24,7 +24,6 @@ import java.util.regex.Pattern;
 
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
-import net.runelite.api.FontID;
 import net.runelite.api.FontTypeFace;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
@@ -226,6 +225,23 @@ public class ReferenceLayoutService
         }
     }
 
+	/**
+	 * Font ownership for one physical Widget modified by RuneTags.
+	 *
+	 * Restoration is permitted only while the Widget still contains the exact
+	 * FontId RuneTags applied. A different current FontId means another owner has
+	 * replaced the presentation and the stale original must not be restored.
+	 */
+	private static final class MentionFontState {
+		private final int originalFontId;
+		private final int appliedFontId;
+
+		private MentionFontState(int originalFontId, int appliedFontId) {
+			this.originalFontId = originalFontId;
+			this.appliedFontId = appliedFontId;
+		}
+	}
+
     /**
      * This deliberately indexes semantic text only. Widget geometry, hidden state,
      * and FontTypeFace remain live reads so transient RuneScape reconstruction
@@ -398,10 +414,8 @@ public class ReferenceLayoutService
     private final TaggedMessageRepository repository;
     private final LocalPlayerRecordService localPlayerRecordService;
 
-    private final Map<Widget, Integer> originalFontIds = new IdentityHashMap<>();
-
-    private final Map<Widget, FavoriteSenderTextState> favoriteSenderTextStates =
-            new IdentityHashMap<>();
+	private final Map<Widget, MentionFontState> mentionFontStates = new IdentityHashMap<>();
+	private final Map<Widget, FavoriteSenderTextState> favoriteSenderTextStates = new IdentityHashMap<>();
 
     /**
      * A reconstructed CHATBOX body can briefly expose a recycled horizontal
@@ -1543,166 +1557,127 @@ public class ReferenceLayoutService
         }
     }
 
-    /**
-     * Apply the configured font to a physical message body containing a RuneTags
-     * mention.
-     *
-     * Jagex font selection belongs to the complete Widget, unlike color,
-     * underline, and shadow markup which can be applied to individual spans.
-     *
-     * The original font ID is retained before RuneTags changes it so NORMAL can
-     * restore the widget exactly instead of assuming every chat surface uses the
-     * same default font.
-     */
-    private void applyMentionFont(
-            Widget messageWidget,
-            TaggedMessage message)
-    {
-        if (messageWidget == null
-                || message == null)
-        {
-            return;
-        }
+	/**
+	 * Apply the configured mention font to one owned physical message Widget.
+	 *
+	 * The selected appearance is resolved relative to the live base font. Known
+	 * normal/bold companions are substituted while unrelated font families remain
+	 * unchanged.
+	 */
+	private void applyMentionFont(
+			Widget messageWidget,
+			TaggedMessage message) {
+		if (messageWidget == null || message == null) {
+			return;
+		}
 
-        /*
-         * Font treatment belongs only to messages RuneTags actually recognizes
-         * as containing a mention/highlight. Sender-only interaction must not
-         * change an otherwise ordinary chat message.
-         */
-        final boolean hasPlayerReference =
-                message.getReferences() != null
-                        && !message.getReferences().isEmpty();
+		final boolean hasPlayerReference =
+				message.getReferences() != null
+						&& !message.getReferences().isEmpty();
 
-        final boolean hasLocalMention =
-                message.getLocalMentionMatch() != null
-                        && message.getLocalMentionMatch()
-                        .isMatchesLocalPlayer();
+		final boolean hasLocalMention =
+				message.getLocalMentionMatch() != null
+						&& message.getLocalMentionMatch().isMatchesLocalPlayer();
 
-        if (!hasPlayerReference
-                && !hasLocalMention)
-        {
-            restoreOriginalFont(
-                    messageWidget);
+		if (!hasPlayerReference && !hasLocalMention) {
+			restoreOriginalFont(messageWidget);
+			return;
+		}
 
-            return;
-        }
+		final MentionFont mentionFont = config.fontMentions();
+		if (mentionFont == null) {
+			restoreOriginalFont(messageWidget);
+			return;
+		}
 
-        final MentionFont mentionFont =
-                config.fontMentions();
+		final int currentFontId = messageWidget.getFontId();
+		final MentionFontState state = mentionFontStates.get(messageWidget);
 
-        if (mentionFont == null
-                || mentionFont == MentionFont.NORMAL)
-        {
-            restoreOriginalFont(
-                    messageWidget);
+		final int baseFontId;
 
-            return;
-        }
+		if (state != null && currentFontId == state.appliedFontId) {
+			baseFontId = state.originalFontId;
+		} else {
+			/*
+			 * A different current FontId means RuneScape or another plugin replaced
+			 * our previous presentation. Abandon stale ownership and treat the new
+			 * live FontId as the active base.
+			 */
+			mentionFontStates.remove(messageWidget);
+			baseFontId = currentFontId;
+		}
 
-        /*
-         * Remember RuneScape's actual font before RuneTags mutates this widget.
-         * IdentityHashMap ensures the physical Widget instance itself is the key.
-         */
-        originalFontIds.putIfAbsent(
-                messageWidget,
-                messageWidget.getFontId());
+		final int fontId =
+				MentionFontResolver.fontIdFor(
+						mentionFont,
+						baseFontId);
 
-        final int fontId;
+		if (fontId == baseFontId) {
+			return;
+		}
 
-        switch (mentionFont)
-        {
-            case BOLD:
-                fontId = FontID.BOLD_12;
-                break;
-            case NORMAL:
-            default:
-                restoreOriginalFont(messageWidget);
-                return;
-        }
+		if (currentFontId != fontId) {
+			messageWidget.setFontId(fontId);
+		}
 
-        if (messageWidget.getFontId() != fontId)
-        {
-            messageWidget.setFontId(
-                    fontId);
-        }
-    }
+		mentionFontStates.put(
+				messageWidget,
+				new MentionFontState(
+						baseFontId,
+						fontId));
+	}
 
-    /**
-     * Restore the font a physical RuneScape widget had before RuneTags changed
-     * it.
-     */
-    private void restoreOriginalFont(
-            Widget widget)
-    {
-        if (widget == null)
-        {
-            return;
-        }
+	/**
+	 * Restore one font still owned by RuneTags.
+	 *
+	 * If another owner has already changed the Widget's FontId,
+	 * discard our stale ownership without writing the old value back.
+	 */
+	private void restoreOriginalFont(Widget widget) {
+		if (widget == null) {
+			return;
+		}
 
-        final Integer originalFontId =
-                originalFontIds.remove(
-                        widget);
+		final MentionFontState state = mentionFontStates.remove(widget);
+		if (state == null || widget.getFontId() != state.appliedFontId) {
+			return;
+		}
 
-        if (originalFontId == null)
-        {
-            return;
-        }
+		if (state.originalFontId != state.appliedFontId) {
+			widget.setFontId(state.originalFontId);
+		}
+	}
 
-        if (widget.getFontId()
-                != originalFontId)
-        {
-            widget.setFontId(
-                    originalFontId);
-        }
-    }
+	/**
+	 * Restore every physical Widget whose current font is still owned by RuneTags.
+	 *
+	 * Widgets changed by RuneScape or another plugin are deliberately left alone.
+	 */
+	private void restoreAllOriginalFonts() {
+		if (mentionFontStates.isEmpty()) {
+			return;
+		}
 
-    /**
-     * Restore every physical Widget previously modified by RuneTags.
-     *
-     * RuneScape recycles chat widgets as messages shift and chat surfaces are
-     * reconstructed. A Widget which represented a mention during the previous
-     * pass may represent an unrelated message during the current pass.
-     *
-     * Resetting all tracked widgets before current semantic ownership is resolved
-     * prevents mention fonts from following the physical row instead of the
-     * TaggedMessage.
-     */
-    private void restoreAllOriginalFonts()
-    {
-        if (originalFontIds.isEmpty())
-        {
-            return;
-        }
+		final Map<Widget, MentionFontState> fontsToRestore =
+				new IdentityHashMap<>(mentionFontStates);
 
-        final Map<Widget, Integer> fontsToRestore =
-                new IdentityHashMap<>(
-                        originalFontIds);
+		mentionFontStates.clear();
 
-        originalFontIds.clear();
+		for (Map.Entry<Widget, MentionFontState> entry : fontsToRestore.entrySet()) {
+			final Widget widget = entry.getKey();
+			final MentionFontState state = entry.getValue();
 
-        for (Map.Entry<Widget, Integer> entry
-                : fontsToRestore.entrySet())
-        {
-            final Widget widget =
-                    entry.getKey();
+			if (widget == null
+					|| state == null
+					|| widget.getFontId() != state.appliedFontId) {
+				continue;
+			}
 
-            final Integer originalFontId =
-                    entry.getValue();
-
-            if (widget == null
-                    || originalFontId == null)
-            {
-                continue;
-            }
-
-            if (widget.getFontId()
-                    != originalFontId)
-            {
-                widget.setFontId(
-                        originalFontId);
-            }
-        }
-    }
+			if (state.originalFontId != state.appliedFontId) {
+				widget.setFontId(state.originalFontId);
+			}
+		}
+	}
 
     private RenderedTextWidget findRenderedWidgetForMessage(
             TaggedMessage message,
