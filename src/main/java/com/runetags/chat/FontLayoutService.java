@@ -16,84 +16,18 @@ import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 
 /**
- * Coordinates native chat construction for RuneTags mention fonts.
+ * Coordinates native row allocation and post-construction mention-font synchronization.
  *
- * Responsibilities:
+ * Scripts 203 and 4483 share a trailing eleven-value construction payload:
  *
- * PRE-CONSTRUCTION:
- *
- * - identify RuneTags messages which require a custom font;
- * - measure native/custom wrapping;
- * - adjust RuneScape's native row allocation before construction.
- *
- * END OF CLIENT TICK:
- *
- * - coalesce every row reconstruction into one final font synchronization;
- * - apply FontId only after RuneScape has completed clientscript execution.
- *
- * ReferenceLayoutService remains authoritative for semantic
- * message -> physical-widget ownership and actual FontId mutation.
- *
- * ---------------------------------------------------------------------
- * CONSTRUCTION PATHS
- * ---------------------------------------------------------------------
- *
- * Script 203:
- *
- * - Public chat
- * - Friends Chat
- * - normal-chatbox private messages
- * - Split Private messages
- *
- * Script 4483:
- *
- * - Clan Chat
- * - Guest Clan Chat
- *
- * Both expose the same trailing eleven-value row-construction payload.
- * 4483 simply has three additional leading values.
- *
- * Relevant values are therefore addressed relative to intStackSize:
- *
- * size - 10 -> LINE widget ID
- * size - 9  -> parent widget ID
+ * size - 10 -> line Widget ID
+ * size - 9  -> parent Widget ID
  * size - 8  -> right boundary
  * size - 7  -> left boundary
- * size - 6  -> native vertical/line-height input
+ * size - 6  -> native vertical value
  *
- * ---------------------------------------------------------------------
- * HEIGHT MODEL
- * ---------------------------------------------------------------------
- *
- * RuneTags treats the live Widget font as the base font and resolves the
- * configured Normal/Bold companion from that font family.
- *
- * We calculate:
- *
- * baseLines
- * number of lines the active base font requires
- *
- * selectedLines
- * number of lines the resolved RuneTags font requires
- *
- * nativeLineHeight
- * the value RuneScape itself supplied at PRE construction
- *
- * desiredHeight
- * selectedLines * nativeLineHeight
- *
- * Because the construction script itself multiplies its supplied vertical
- * value by its native wrapped-line count:
- *
- * injectedValue =
- * ceil(desiredHeight / baseLines)
- *
- * This preserves RuneScape's native cadence automatically:
- *
- * normal chatbox currently supplies 14
- * Split Private currently supplies 13
- *
- * No surface-specific height is hardcoded.
+ * RuneTags measures base and selected wrapping, adjusts only the native vertical
+ * allocation, then applies FontId after clientscript reconstruction.
  */
 public class FontLayoutService {
 	private static final int CHAT_BODY_SCRIPT = 203;
@@ -107,18 +41,12 @@ public class FontLayoutService {
 	private final ReferenceLayoutService referenceLayoutService;
 
 	/*
-	 * Multiple 203 / 4483 constructors may execute during one client tick.
-	 *
-	 * They all collapse into one final semantic -> physical font synchronization
-	 * at PostClientTick.
+	 * Coalesce supported row reconstructions into one PostClientTick font synchronization.
 	 */
 	private boolean fontsDirty;
 
 	/*
-	 * RuneTags only measures a very small fixed set of fonts.
-	 *
-	 * Resolve each FontTypeFace once rather than temporarily changing
-	 * CHATBOX_INPUT for every reconstructed row.
+	 * Cache resolved FontTypeFace values by FontId.
 	 */
 	private final Map<Integer, FontTypeFace> fontCache = new HashMap<>();
 
@@ -133,24 +61,17 @@ public class FontLayoutService {
 		this.referenceLayoutService = referenceLayoutService;
 	}
 
-	/**
-	 * Request one final font synchronization at the end of the current client tick.
-	 *
-	 * Repeated requests are intentionally coalesced into one boolean state.
+	/*
+	 * Marks font synchronization pending for the current client tick.
 	 */
 	public void markFontsDirty() {
 		fontsDirty = true;
 	}
 
-	/**
-	 * Synchronize fonts only when native chat construction or semantic chat state
-	 * changed during this client tick.
+	/*
+	 * Runs one pending font synchronization after clientscript reconstruction.
 	 *
-	 * PostClientTick occurs after clientscript execution, so physical chat widgets
-	 * have reached their final ownership positions before RuneTags mutates them.
-	 *
-	 * @return true when this call performed an actual font synchronization;
-	 * false when the font state was already clean
+	 * @return true when synchronization ran; otherwise false
 	 */
 	public boolean onPostClientTick() {
 		if (!fontsDirty) {
@@ -158,8 +79,7 @@ public class FontLayoutService {
 		}
 
 		/*
-		 * Clear first so any future construction creates a new request rather than
-		 * being swallowed by the current synchronization.
+		 * Clear before synchronization so later reconstruction can mark the next pass dirty.
 		 */
 		fontsDirty = false;
 
@@ -168,7 +88,7 @@ public class FontLayoutService {
 		return true;
 	}
 
-	/**
+	/*
 	 * Intercept only the native row-construction scripts supported by RuneTags.
 	 */
 	public void onScriptPreFired(ScriptPreFired event) {
@@ -177,13 +97,8 @@ public class FontLayoutService {
 		}
 
 		/*
-		 * Any native chat-row reconstruction can recycle a physical Widget which
-		 * previously carried RuneTags presentation.
-		 *
-		 * Mark both font ownership and Favorite sender-color ownership dirty even
-		 * when this particular row is ordinary. One PostClientTick synchronization
-		 * will resolve all rows after the entire reconstruction sequence has
-		 * completed.
+		 * Supported row reconstruction invalidates RuneTags font ownership and Favorite
+		 * sender presentation.
 		 */
 		markFontsDirty();
 		referenceLayoutService.markFavoriteSenderRowsDirty();
@@ -211,10 +126,8 @@ public class FontLayoutService {
 		}
 
 		/*
-		 * Do not alter unrelated RuneScape messages.
-		 *
-		 * Only a TaggedMessage which RuneTags itself recognized as containing
-		 * a reference/local mention qualifies for mention-font treatment.
+		 * Apply mention-font treatment only to TaggedMessages containing a reference
+		 * or local-player match.
 		 */
 		final TaggedMessage taggedMessage = findTaggedMessage(semanticBody, objectStack, objectStackSize, messages);
 		if (taggedMessage == null || !hasMentionFontTreatment(taggedMessage)) {
@@ -273,10 +186,6 @@ public class FontLayoutService {
 			return;
 		}
 
-		/*
-		 * Determine how much horizontal space RuneScape has actually left for
-		 * the message body.
-		 */
 		final PrefixMeasurement prefix = measurePrefix(event.getScriptId(), baseFont, objectStack, objectStackSize,
 				semanticBody, intStack, intStackSize);
 		if (prefix == null) {
@@ -290,9 +199,7 @@ public class FontLayoutService {
 		}
 
 		/*
-		 * Reuse ReferenceLayoutService's existing wrapping engine.
-		 *
-		 * Do not maintain a second approximation here.
+		 * Use ReferenceLayoutService's wrapping model for construction compensation.
 		 */
 		final int baseLines = referenceLayoutService.measureWrappedLineCount(rawBody, baseFont, bodyWidth);
 		final int selectedLines = referenceLayoutService.measureWrappedLineCount(rawBody, selectedFont, bodyWidth);
@@ -307,17 +214,8 @@ public class FontLayoutService {
 		}
 
 		/*
-		 * Mutate only the native construction argument.
-		 *
-		 * Do NOT:
-		 *
-		 * - resize the created Widget afterward;
-		 * - move rows manually;
-		 * - change Y coordinates;
-		 * - call revalidate here.
-		 *
-		 * RuneScape receives the correct native allocation before it constructs
-		 * and positions the row.
+		 * Mutate only the pre-construction vertical argument;
+		 * RuneScape owns final Widget geometry and positioning.
 		 */
 		if (intStack[verticalValueIndex] != injectedValue) {
 			intStack[verticalValueIndex] = injectedValue;
@@ -328,7 +226,7 @@ public class FontLayoutService {
 		return scriptId == CHAT_BODY_SCRIPT || scriptId == CLAN_BODY_SCRIPT;
 	}
 
-	/**
+	/*
 	 * Font treatment belongs only to a message which contains a RuneTags
 	 * PlayerReference or matched the local player.
 	 *
@@ -346,7 +244,7 @@ public class FontLayoutService {
 		return hasPlayerReference || hasLocalMention;
 	}
 
-	/**
+	/*
 	 * Resolve the TaggedMessage represented by this construction call.
 	 *
 	 * Newest messages are preferred because chat reconstruction is
@@ -375,9 +273,6 @@ public class FontLayoutService {
 				continue;
 			}
 
-			/*
-			 * Preserve the newest semantic body match as a fallback.
-			 */
 			if (bodyFallback == null) {
 				bodyFallback = message;
 			}
@@ -424,7 +319,7 @@ public class FontLayoutService {
 		return false;
 	}
 
-	/**
+	/*
 	 * Locate the rendered body argument on the current script object stack.
 	 *
 	 * We identify it semantically by matching against RuneTags' retained
@@ -464,7 +359,7 @@ public class FontLayoutService {
 		return null;
 	}
 
-	/**
+	/*
 	 * Determine the rendered prefix width immediately preceding the body.
 	 *
 	 * Script 203 supplies one complete prefix String:
@@ -491,20 +386,14 @@ public class FontLayoutService {
 
 		if (scriptId == CHAT_BODY_SCRIPT) {
 			/*
-			 * All observed 203 calls provide the complete rendered prefix as
-			 * one String immediately before the body.
-			 *
-			 * Preserve markup so <img=...>, colors, timestamps, etc. can
-			 * contribute their real FontTypeFace width.
+			 * Script 203 supplies one complete rendered prefix String immediately before
+			 * the body. Preserve markup during width measurement.
 			 */
 			final String rawPrefix = normalizeRawForMeasurement(components.get(components.size() - 1));
 			return new PrefixMeasurement(baseFont.getTextWidth(rawPrefix));
 		}
 
 		if (scriptId == CLAN_BODY_SCRIPT) {
-			/*
-			 * 4483 gives us multiple textual prefix components.
-			 */
 			final StringBuilder prefixText = new StringBuilder();
 			for (int i = 0; i < components.size(); i++) {
 				if (i > 0) {
@@ -518,10 +407,7 @@ public class FontLayoutService {
 			int decorationWidth = 0;
 
 			/*
-			 * Script 4483 exposes a 13 x 13 decoration whose rendered horizontal
-			 * contribution is 12px.
-			 *
-			 * Keep that channel-specific adjustment isolated here.
+			 * Script 4483's 13 x 13 decoration contributes 12px of rendered horizontal width.
 			 */
 			final int commonPayloadStart = intStackSize - 11;
 			if (commonPayloadStart >= 3) {
@@ -538,9 +424,6 @@ public class FontLayoutService {
 		return null;
 	}
 
-	/**
-	 * Collect every String preceding the semantic body.
-	 */
 	private List<String> findPrefixComponents(Object[] stack, int size, String semanticBody) {
 		final List<String> output = new ArrayList<>();
 
@@ -570,7 +453,7 @@ public class FontLayoutService {
 		return output;
 	}
 
-	/**
+	/*
 	 * Resolve an actual Jagex FontTypeFace for an arbitrary FontID.
 	 *
 	 * The chat-input widget is used only as a temporary font probe.

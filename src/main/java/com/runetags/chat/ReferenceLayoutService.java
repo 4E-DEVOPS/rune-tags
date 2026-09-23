@@ -30,26 +30,10 @@ import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetTextAlignment;
 
 /**
- * Maps semantic PlayerReference spans onto the actual rendered chat widgets.
+ * Maps semantic chat references and local-highlight spans onto rendered chat Widgets.
  *
- * RuneScape can render chat references on two physically separate surfaces:
- *
- * CHATBOX
- * - normal chat
- * - private chat when Split Private Chat is disabled
- * - private-chat history while the Private chat tab is selected
- *
- * SPLIT_PRIVATE
- * - the floating private-chat rows rendered through the separate PmChat
- * interface when Split Private Chat is enabled
- *
- * A single TaggedMessage may legitimately be rendered on both surfaces at
- * the same time. RuneTags therefore treats each surface independently and
- * creates hitboxes for every currently rendered physical representation.
- *
- * The service uses each widget's own Jagex FontTypeFace for width
- * measurements so markup and chat-font widths remain aligned with the
- * game renderer.
+ * CHATBOX and SPLIT_PRIVATE are independent physical surfaces, and one TaggedMessage
+ * may resolve on both. Width and wrapping use each Widget's live Jagex FontTypeFace.
  */
 public class ReferenceLayoutService {
 	/**
@@ -92,9 +76,8 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
-	 * One non-clickable physical background rectangle belonging to a local alias
-	 * or normalized-self match.
+	/*
+	 * One non-clickable physical overlay rectangle for a local alias or normalized-self match.
 	 */
 	public static final class LocalHighlight {
 		private final long messageId;
@@ -122,7 +105,7 @@ public class ReferenceLayoutService {
 
 	private static final int MAX_WIDGET_DEPTH = 4;
 
-	/**
+	/*
 	 * One physical line produced by RuneScape's wrapped text widget.
 	 *
 	 * start/end are semantic plain-text offsets into the complete
@@ -141,13 +124,10 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
-	 * Pass-local semantic view of one rendered text Widget.
+	/*
+	 * Pass-local semantic text snapshot for one rendered Widget.
 	 *
-	 * RuneTags captures only the text state which is expensive and unsafe to
-	 * repeatedly normalize while RuneScape is reconstructing chat rows. Bounds
-	 * and FontTypeFace deliberately remain live reads during geometry so this
-	 * optimization cannot freeze transient SPLIT_PRIVATE coordinates.
+	 * Bounds and FontTypeFace remain live reads during geometry.
 	 */
 	private static final class RenderedTextWidget {
 		private final Widget widget;
@@ -161,7 +141,7 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
+	/*
 	 * Exact physical CHATBOX sender widget and the sender's semantic start
 	 * offset inside that widget.
 	 */
@@ -175,7 +155,7 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
+	/*
 	 * Native sender text ownership for one Widget currently colored by
 	 * RuneTags. Both original and applied strings are retained so a recycled
 	 * Widget is never restored over newer RuneScape content.
@@ -190,7 +170,7 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
+	/*
 	 * Font ownership for one physical Widget modified by RuneTags.
 	 *
 	 * Restoration is permitted only while the Widget still contains the exact
@@ -207,14 +187,10 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
-	 * This deliberately indexes semantic text only. Widget geometry, hidden state,
-	 * and FontTypeFace remain live reads so transient RuneScape reconstruction
-	 * coordinates cannot become authoritative cached state.
+	/*
+	 * Indexes semantic text while preserving native candidate order.
 	 *
-	 * Candidate lists preserve the collector's native order. The existing
-	 * sender-confirmed-first/body-fallback ownership rule therefore remains
-	 * deterministic for duplicate and short messages.
+	 * Geometry, visibility, and FontTypeFace remain live reads.
 	 */
 	private static final class RenderedBodyIndex {
 		private final Map<String, List<RenderedTextWidget>> bodyIndex = new HashMap<>();
@@ -274,14 +250,13 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
+	/*
 	 * Every indexed candidate is revalidated against live bounds before it can confirm message ownership.
 	 */
 	private static final class RenderedRowIndex {
 		private final Map<Integer, List<RenderedTextWidget>> rowIndex = new HashMap<>();
 
-		private RenderedRowIndex(
-				List<RenderedTextWidget> widgets) {
+		private RenderedRowIndex(List<RenderedTextWidget> widgets) {
 			if (widgets == null) {
 				return;
 			}
@@ -316,7 +291,7 @@ public class ReferenceLayoutService {
 	private final Map<Widget, MentionFontState> mentionFontStates = new IdentityHashMap<>();
 	private final Map<Widget, FavoriteSenderTextState> favoriteSenderTextStates = new IdentityHashMap<>();
 
-	/**
+	/*
 	 * A reconstructed CHATBOX body can briefly expose a recycled horizontal
 	 * position before RuneScape finishes positioning the row.
 	 *
@@ -342,23 +317,11 @@ public class ReferenceLayoutService {
 		this.localPlayerRecordService = localPlayerRecordService;
 	}
 
-	/**
-	 * Synchronize RuneTags mention fonts against the final physical chat widgets
-	 * after RuneScape has completed its clientscript reconstruction for the
-	 * current client tick.
+	/*
+	 * Synchronizes configured mention fonts against final post-construction chat Widgets.
 	 *
-	 * Font mutation deliberately does not occur from the render overlays.
-	 *
-	 * One synchronization pass:
-	 *
-	 * - restores any physical Widget RuneTags previously modified;
-	 * - resolves current semantic-message -> physical-widget ownership;
-	 * - reapplies the configured font only to messages which currently own those
-	 * final rendered Widgets.
-	 *
-	 * Because restoration and reapplication occur synchronously in one
-	 * PostClientTick callback, RuneScape cannot render the temporary native-font
-	 * state between those operations.
+	 * RuneTags-owned font state is restored before current message ownership is resolved
+	 * and reapplied.
 	 */
 	public void syncMentionFonts() {
 		/*
@@ -368,12 +331,7 @@ public class ReferenceLayoutService {
 		restoreAllOriginalFonts();
 
 		/*
-		 * Always resolve the final physical rows on a dirty synchronization.
-		 *
-		 * Even when the configured font is NORMAL, RuneScape may have expanded a
-		 * recognized player-name macro after MessageFormatter ran. Those expanded
-		 * spans carry native foreground/underline markup which must be reconciled
-		 * with RuneTags' independent appearance controls.
+		 * Dirty synchronization also repairs native expanded-name styling, including NORMAL mode.
 		 */
 		final List<TaggedMessage> messages = new ArrayList<>(repository.snapshot());
 		Collections.reverse(messages);
@@ -382,7 +340,7 @@ public class ReferenceLayoutService {
 		syncSurfaceFonts(client.getWidget(InterfaceID.Chatbox.SCROLLAREA), Surface.CHATBOX, messages);
 	}
 
-	/**
+	/*
 	 * Mark normal-chatbox sender presentation dirty after native row
 	 * reconstruction. FontLayoutService calls this alongside font dirtiness
 	 * so Favorite color ownership follows the same settled PostClientTick cadence.
@@ -391,7 +349,7 @@ public class ReferenceLayoutService {
 		favoriteSenderRowsDirty = true;
 	}
 
-	/**
+	/*
 	 * Synchronize Favorite sender-name colors only when either native rows,
 	 * Favorite state, or the Favorites config changed.
 	 *
@@ -422,7 +380,7 @@ public class ReferenceLayoutService {
 		lastFavoriteColorRgb = favoriteColorRgb;
 	}
 
-	/**
+	/*
 	 * Restore every native sender Widget currently owned by Favorite styling.
 	 *
 	 * The applied text is compared before restoration. RuneScape can recycle a
@@ -475,17 +433,14 @@ public class ReferenceLayoutService {
 		final Set<Widget> usedBodyWidgets = Collections.newSetFromMap(new IdentityHashMap<>());
 
 		for (TaggedMessage message : messages) {
-			if (message == null || message.getCanonicalSender() == null || message.getCanonicalSender().trim() .isEmpty()) {
+			if (message == null || message.getCanonicalSender() == null
+					|| message.getCanonicalSender().trim().isEmpty()) {
 				continue;
 			}
 
 			/*
-			 * Resolve and reserve body ownership for EVERY retained message, not
-			 * only Favorites. Duplicate/short message bodies can otherwise let a
-			 * Favorite fall back onto a row that semantically belongs to an
-			 * earlier non-Favorite message. This keeps Favorite presentation on
-			 * exactly the same deterministic ownership path as normal chat
-			 * reference geometry.
+			 * Reserve body ownership for every retained message before applying Favorite styling.
+			 * This prevents duplicate bodies from being claimed by the wrong message.
 			 */
 			final RenderedTextWidget messageWidget = findRenderedWidgetForMessageIndexedForFont(
 					message, textWidgets, bodyIndex, rowIndex, usedBodyWidgets);
@@ -581,22 +536,10 @@ public class ReferenceLayoutService {
 		favoriteSenderTextStates.clear();
 	}
 
-	/**
-	 * Reconcile RuneScape's post-construction player-name macro styling with
-	 * RuneTags' independent appearance controls.
+	/*
+	 * Reconciles RuneScape's expanded player-name wrapper with RuneTags mention styling.
 	 *
-	 * MessageFormatter runs on the ChatMessage/MessageNode before native chat-row
-	 * reconstruction. RuneScape can subsequently canonicalize a recognized player
-	 * name and inject an inner span such as:
-	 *
-	 * <col=ffffff><u>Santa</u><col=ff0000>
-	 *
-	 * That inner native color wins over RuneTags' outer Self/Others Mention color.
-	 * It can also reintroduce an underline even when Underline Mentions is disabled.
-	 *
-	 * This repair runs only after native construction has settled at PostClientTick.
-	 * Visible characters are never changed; only the native macro's effective color
-	 * and underline wrapper are reconciled.
+	 * Only wrapper markup is changed; visible text and the native restore color are preserved.
 	 */
 	private void repairExpandedReferenceStyles(Widget messageWidget, TaggedMessage message) {
 		if (messageWidget == null || message == null
@@ -658,10 +601,7 @@ public class ReferenceLayoutService {
 					: config.otherMentionColor();
 
 			/*
-			 * RuneScape's expanded player-name wrapper is deliberately targeted
-			 * rather than stripping arbitrary markup from the complete message.
-			 *
-			 * The third color is the native restore color and must be preserved.
+			 * Rewrite only the expanded player-name wrapper and preserve its native restore color.
 			 */
 			final Pattern expandedNamePattern = Pattern.compile(
 					"<col=([0-9a-fA-F]{6})><u>(" + Pattern.quote(renderedToken) + ")</u><col=([0-9a-fA-F]{6})>",
@@ -708,7 +648,7 @@ public class ReferenceLayoutService {
 				.replace('_', ' ').trim().toLowerCase(Locale.ROOT);
 	}
 
-	/**
+	/*
 	 * Restore every physical chat font currently owned by RuneTags.
 	 *
 	 * Used when the plugin is shutting down so RuneScape is never left displaying
@@ -718,14 +658,9 @@ public class ReferenceLayoutService {
 		restoreAllOriginalFonts();
 	}
 
-	/**
-	 * Resolve semantic message ownership for one physical surface and synchronize
-	 * post-reconstruction presentation.
-	 *
-	 * RuneScape may expand recognized player names after MessageFormatter runs.
-	 * Reconcile that native expansion first, then apply the configured Widget font.
-	 * This intentionally does not calculate reference hitboxes or sender geometry;
-	 * those remain render-time responsibilities.
+	/*
+	 * Resolves message ownership for one surface, repairs expanded reference styling,
+	 * and applies the configured mention font.
 	 */
 	private void syncSurfaceFonts(Widget surfaceWidget, Surface surface, List<TaggedMessage> messages) {
 		if (surfaceWidget == null || surfaceWidget.isHidden() || messages == null || messages.isEmpty()) {
@@ -764,15 +699,11 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
-	 * Resolve font ownership from the pass-local semantic body index.
+	/*
+	 * Resolves font ownership from the pass-local body index.
 	 *
-	 * Sender confirmation uses the advisory row index. Exact whole-body matching
-	 * remains primary; private chat receives a case-insensitive whole-body retry
-	 * only when exact ownership produces no candidate.
-	 *
-	 * Candidate geometry is always re-read live, and failed indexed sender
-	 * confirmation falls back to the complete semantic Widget list.
+	 * Exact body matching is primary. Sender confirmation and private case-folded fallback
+	 * disambiguate candidates. Candidate geometry is always revalidated live.
 	 */
 	private RenderedTextWidget findRenderedWidgetForMessageIndexedForFont(
 			TaggedMessage message, List<RenderedTextWidget> widgets, RenderedBodyIndex bodyIndex,
@@ -796,13 +727,9 @@ public class ReferenceLayoutService {
 				message, bodyIndex.candidatesIgnoreCase(needle), rowIndex, widgets, usedWidgets);
 	}
 
-	/**
-	 * Select one unused indexed body candidate using sender-confirmed-first,
+	/*
+	 * Selects one unused body candidate using sender-confirmed-first,
 	 * body-fallback ownership.
-	 *
-	 * Candidate lists preserve native collector order so duplicate bodies remain
-	 * deterministic. The advisory row index narrows sender confirmation while
-	 * live geometry and the complete Widget list remain the correctness fallback.
 	 */
 	private RenderedTextWidget selectRenderedFontBodyCandidate(
 			TaggedMessage message, List<RenderedTextWidget> candidates,
@@ -831,24 +758,12 @@ public class ReferenceLayoutService {
 		return bodyFallback;
 	}
 
-	/**
-	 * Rebuild all currently rendered reference hitboxes.
+	/*
+	 * Rebuilds reference and local-highlight geometry for both physical chat surfaces.
 	 *
-	 * RuneTags does not need to query RuneScape's Split Private Chat setting
-	 * directly. Instead, the actual populated widget surfaces are the source
-	 * of truth.
-	 *
-	 * SPLIT_PRIVATE is checked first because it represents the immediately
-	 * visible floating private-chat presentation. CHATBOX is then processed
-	 * independently so the same private message may also remain interactive
-	 * in the selected Private chat tab.
+	 * A TaggedMessage may resolve independently on CHATBOX and SPLIT_PRIVATE.
 	 */
 	public LayoutResult layout() {
-		/*
-		 * Font ownership is synchronized once after native chat reconstruction.
-		 *
-		 * Render-time layout is read-only with respect to FontId.
-		 */
 		final List<TaggedMessage> messages = new ArrayList<>(repository.snapshot());
 		pruneChatboxBodyXState(messages);
 
@@ -865,10 +780,6 @@ public class ReferenceLayoutService {
 		 */
 		Collections.reverse(messages);
 
-		/*
-		 * Local alias/normalized-self geometry is calculated only when it can
-		 * actually be painted.
-		 */
 		final boolean includeLocalHighlights = shouldLayoutLocalHighlights();
 
 		/*
@@ -884,7 +795,7 @@ public class ReferenceLayoutService {
 		return new LayoutResult(hitboxes, localHighlights);
 	}
 
-	/**
+	/*
 	 * Layout semantic messages against one physical RuneScape chat surface.
 	 *
 	 * Widget ownership is unique only within this surface pass. The same
@@ -903,14 +814,8 @@ public class ReferenceLayoutService {
 		Rectangle visibleBounds = null;
 
 		/*
-		 * Render-time CHATBOX layout only needs physical rows which
-		 * intersect CHATBOX_MESSAGE_LINES. Cull fully off-screen history rows
-		 * before semantic normalization/indexing.
-		 *
-		 * SPLIT_PRIVATE is intentionally left unculled here because RuneScape
-		 * already exposes only the populated floating PM rows. Font synchronization
-		 * also remains unchanged and continues to inspect the complete CHATBOX
-		 * surface so scrolling can reveal retained rows without reconstruction.
+		 * Cull fully off-screen CHATBOX rows before semantic indexing.
+		 * SPLIT_PRIVATE and font synchronization continue to inspect their complete surfaces.
 		 */
 		if (surface == Surface.CHATBOX) {
 			visibleBounds = surfaceWidget.getBounds();
@@ -929,12 +834,8 @@ public class ReferenceLayoutService {
 		final RenderedBodyIndex bodyIndex = new RenderedBodyIndex(textWidgets);
 
 		/*
-		 * Reuse the advisory Y-row index for both:
-		 * - sender confirmation during body ownership; and
-		 * - actual sender hitbox candidate selection.
-		 *
-		 * Geometry remains live and every indexed lookup retains the complete
-		 * semantic Widget list as a correctness fallback.
+		 * Reuse the advisory row index for body sender confirmation and sender-hitbox lookup.
+		 * Indexed candidates are always revalidated against live geometry.
 		 */
 		final RenderedRowIndex rowIndex = new RenderedRowIndex(textWidgets);
 
@@ -953,11 +854,7 @@ public class ReferenceLayoutService {
 			}
 
 			/*
-			 * PmChat is specifically the floating split-private interface.
-			 *
-			 * Restrict semantic matching on this surface to actual private
-			 * message types so identical public/clan/etc. text cannot claim a
-			 * PmChat widget.
+			 * Restrict SPLIT_PRIVATE ownership to private-message semantic records.
 			 */
 			if (surface == Surface.SPLIT_PRIVATE && !isPrivateMessage(message)) {
 				continue;
@@ -972,11 +869,8 @@ public class ReferenceLayoutService {
 			usedWidgets.add(messageWidget.widget);
 
 			/*
-			 * RuneScape may recycle a CHATBOX body Widget and update its text before
-			 * completing that row's horizontal positioning.
-			 *
-			 * Do not publish geometry from a new X position until RuneScape exposes
-			 * that same X on two consecutive layout passes.
+			 * Require a new CHATBOX body X coordinate on two consecutive layout passes
+			 * before publishing it.
 			 */
 			if (surface == Surface.CHATBOX && !isChatboxBodyGeometryStable(message, messageWidget)) {
 				continue;
@@ -1002,7 +896,7 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
+	/*
 	 * Apply the configured mention font to one owned physical message Widget.
 	 *
 	 * The selected appearance is resolved relative to the live base font. Known
@@ -1055,7 +949,7 @@ public class ReferenceLayoutService {
 		mentionFontStates.put(messageWidget, new MentionFontState(baseFontId, fontId));
 	}
 
-	/**
+	/*
 	 * Restore one font still owned by RuneTags.
 	 *
 	 * If another owner has already changed the Widget's FontId,
@@ -1076,7 +970,7 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
+	/*
 	 * Restore every physical Widget whose current font is still owned by RuneTags.
 	 *
 	 * Widgets changed by RuneScape or another plugin are deliberately left alone.
@@ -1131,7 +1025,7 @@ public class ReferenceLayoutService {
 				message, bodyIndex.candidatesIgnoreCase(needle), rowIndex, widgets, usedWidgets);
 	}
 
-	/**
+	/*
 	 * Select one unused exact-body candidate while preserving RuneTags'
 	 * sender-confirmed-first and deterministic body-only fallback behavior.
 	 */
@@ -1161,7 +1055,7 @@ public class ReferenceLayoutService {
 		return bodyFallback;
 	}
 
-	/**
+	/*
 	 * Confirm sender ownership using same-row candidates when possible.
 	 *
 	 * Candidate bounds are re-read live. If the advisory row index cannot confirm
@@ -1228,7 +1122,7 @@ public class ReferenceLayoutService {
 		return false;
 	}
 
-	/**
+	/*
 	 * Resolve the physical message-body widget for one semantic TaggedMessage.
 	 *
 	 * This exposes the same sender-aware association used by clickable reference
@@ -1246,7 +1140,7 @@ public class ReferenceLayoutService {
 		return findWidgetForMessage(message, widgets, usedWidgets);
 	}
 
-	/**
+	/*
 	 * Find the rendered widget containing the semantic message body.
 	 *
 	 * The known-good live matcher remains authoritative. Private chat gets one
@@ -1318,7 +1212,7 @@ public class ReferenceLayoutService {
 		return bodyFallback;
 	}
 
-	/**
+	/*
 	 * Verify that a candidate message body shares its rendered row with the
 	 * expected TaggedMessage sender.
 	 *
@@ -1374,7 +1268,7 @@ public class ReferenceLayoutService {
 		return false;
 	}
 
-	/**
+	/*
 	 * Layout explicit @tags and recognized ordinary-name mentions inside the
 	 * semantic message body.
 	 *
@@ -1445,25 +1339,11 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
-	 * Layout the author/player shown beside a rendered chat message.
+	/*
+	 * Lays out the rendered sender as an interaction-only SENDER reference.
 	 *
-	 * The synthesized reference deliberately uses ReferenceType.SENDER.
-	 *
-	 * Existing ChatInteractionPolicy behavior then gives us:
-	 *
-	 * ALL
-	 * - sender clickable
-	 *
-	 * MENTIONS
-	 * - sender not clickable
-	 *
-	 * TAGGED_ONLY
-	 * - sender not clickable
-	 *
-	 * Sender references are synthesized only for interaction and are not
-	 * inserted into TaggedMessage.references, preventing them from affecting
-	 * mention matching, notifications, or history.
+	 * SENDER references are not added to TaggedMessage.references and do not affect
+	 * mention processing.
 	 */
 	private void layoutSender(RenderedTextWidget messageWidget, TaggedMessage message, Surface surface,
 			List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex, List<ReferenceHitbox> output) {
@@ -1482,19 +1362,12 @@ public class ReferenceLayoutService {
 		switch (surface) {
 			case CHATBOX:
 				/*
-				 * The normal chatbox renders the sender and message body as
-				 * separate text widgets.
-				 *
-				 * Find the sender dynamically from the other text widgets on
-				 * the same rendered chat row.
+				 * Locates the normal-chatbox sender Widget on the body's rendered row and creates
+				 * a hitbox for the account name.
 				 */
 				layoutChatboxSender(messageWidget, message, senderReference, surface, textWidgets, rowIndex, output);
 				break;
 			case SPLIT_PRIVATE:
-				/*
-				 * Split private chat renders sender/prefix and message body as
-				 * separate PmChat dynamic children.
-				 */
 				layoutSplitPrivateSender(
 						messageWidget, message, senderReference, surface, textWidgets, rowIndex, output);
 				break;
@@ -1503,23 +1376,6 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
-	 * The normal chatbox renders the sender and message body as separate
-	 * text widgets.
-	 *
-	 * Locate the sender from another visible text widget occupying the
-	 * same rendered chat row as the body.
-	 *
-	 * The sender widget is selected dynamically rather than relying on:
-	 *
-	 * - a fixed child index,
-	 * - a fixed X offset,
-	 * - sender length,
-	 * - channel-specific prefixes,
-	 * - or the sender being embedded inside the message body widget.
-	 *
-	 * Only the actual account-name span is converted into a hitbox.
-	 */
 	private void layoutChatboxSender(
 			RenderedTextWidget messageWidget, TaggedMessage message, PlayerReference senderReference, Surface surface,
 			List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex, List<ReferenceHitbox> output) {
@@ -1538,12 +1394,9 @@ public class ReferenceLayoutService {
 				senderMatch.semanticStart, senderEnd, message.getId(), senderReference, surface, output);
 	}
 
-	/**
-	 * Resolve the exact physical sender Widget for one normal CHATBOX body.
-	 *
-	 * This is shared by clickable SENDER geometry and Favorite sender-name
-	 * coloring so both features use the same nearest-left, same-row ownership
-	 * rule. Mention/tag body styling is intentionally unrelated.
+	/*
+	 * Resolves the normal-chatbox sender Widget shared by sender interaction
+	 * and Favorite sender coloring.
 	 */
 	private RenderedSenderMatch findChatboxSender(RenderedTextWidget messageWidget, String sender,
 			List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex) {
@@ -1611,21 +1464,12 @@ public class ReferenceLayoutService {
 				: null;
 	}
 
-	/**
-	 * Split private chat renders the sender/prefix and message body as
-	 * separate dynamic children beneath PmChat.CONTAINER.
+	/*
+	 * Locates the split-private sender/prefix Widget on the same rendered row
+	 * and to the left of the message body.
 	 *
-	 * Widget Inspector testing established that the sender and body widgets
-	 * share the same rendered Y coordinate while the message body's X offset
-	 * varies with the sender/prefix width.
-	 *
-	 * We therefore locate the sender dynamically instead of depending on:
-	 *
-	 * - child indices such as [0]/[1], [4]/[5], ...
-	 * - PmChat.PM1 through PM5,
-	 * - a fixed message X position,
-	 * - a fixed account-name length,
-	 * - a fixed "To " / "From " prefix width.
+	 * Matching does not depend on fixed child indices, account-name length,
+	 * or message X position.
 	 */
 	private void layoutSplitPrivateSender(
 			RenderedTextWidget messageWidget, TaggedMessage message, PlayerReference senderReference, Surface surface,
@@ -1737,13 +1581,9 @@ public class ReferenceLayoutService {
 		return false;
 	}
 
-	/**
-	 * Remove horizontal stabilization state only for semantic messages which are
-	 * no longer retained by RuneTags.
-	 *
-	 * Physical visibility is deliberately irrelevant here. A retained message may
-	 * be above or below the current CHATBOX viewport and must remain immediately
-	 * usable if the player scrolls back to it.
+	/*
+	 * Prunes horizontal stabilization state only for messages no longer retained
+	 * by RuneTags.
 	 */
 	private void pruneChatboxBodyXState(List<TaggedMessage> messages) {
 		if (acceptedChatboxBodyX.isEmpty() && pendingChatboxBodyX.isEmpty()) {
@@ -1766,21 +1606,14 @@ public class ReferenceLayoutService {
 		pendingChatboxBodyX.keySet().removeIf(messageId -> !retainedMessageIds.contains(messageId));
 	}
 
-	/*
-	 * Clear all transient CHATBOX horizontal stabilization ownership.
-	 */
 	public void clearChatboxBodyXState() {
 		acceptedChatboxBodyX.clear();
 		pendingChatboxBodyX.clear();
 	}
 
-	/**
-	 * Convert a semantic plain-text span inside one rendered widget into one
-	 * or more exact physical hitboxes.
-	 *
-	 * Most sender widgets are one line, but using the same wrapping engine here
-	 * keeps sender and body geometry consistent and prevents a future multiline
-	 * widget from creating an oversized interaction target.
+	/*
+	 * Converts one semantic span into physical hitbox fragments across its wrapped
+	 * visual lines.
 	 */
 	private void addSemanticHitbox(
 			Widget widget, String rawWidgetText, String semanticWidgetText, int semanticStart, int semanticEnd,
@@ -1811,13 +1644,11 @@ public class ReferenceLayoutService {
 				semanticStart, semanticEnd, messageId, reference, surface, output);
 	}
 
-	/**
-	 * Measure how many visual rows a raw RuneScape text body will occupy when
-	 * rendered with the supplied Jagex font and available body width.
+	/*
+	 * Measures the visual line count for raw RuneScape text using the supplied font
+	 * and body width.
 	 *
-	 * FontLayoutService uses this before RuneScape creates a body widget so native
-	 * row allocation and the configured FontId use the same wrapping model as
-	 * clickable references and background highlights.
+	 * FontLayoutService uses the same wrapping model before native row construction.
 	 */
 	public int measureWrappedLineCount(String rawWidgetText, FontTypeFace font, int availableWidth) {
 		if (rawWidgetText == null || rawWidgetText.isEmpty() || font == null || availableWidth <= 0) {
@@ -1835,10 +1666,8 @@ public class ReferenceLayoutService {
 		}
 
 		/*
-		 * wrapSemanticLines only needs the available width from the Rectangle.
-		 *
-		 * No physical Widget exists yet during PRE construction, so null is
-		 * deliberately supplied for the unused Widget parameter.
+		 * PRE construction has no physical Widget; wrapSemanticLines() uses only
+		 * the supplied bounds width.
 		 */
 		final Rectangle measurementBounds = new Rectangle(0, 0, availableWidth, 1);
 		final List<WrappedLine> lines = wrapSemanticLines(
@@ -1846,7 +1675,7 @@ public class ReferenceLayoutService {
 		return Math.max(1, lines.size());
 	}
 
-	/**
+	/*
 	 * Whether non-clickable local-token geometry can contribute an overlay
 	 * decoration to the current frame.
 	 */
@@ -1862,7 +1691,7 @@ public class ReferenceLayoutService {
 		return config.selfBackgroundColor() != null && config.selfBackgroundColor().getAlpha() > 0;
 	}
 
-	/**
+	/*
 	 * Layout Unique Highlight / normalized-account-name local matches which are
 	 * not already represented by normal PlayerReference objects.
 	 *
@@ -1937,9 +1766,8 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
-	 * Only local matches without a normal PlayerReference require this additional
-	 * background geometry.
+	/*
+	 * Only local matches without a PlayerReference require additional overlay geometry.
 	 */
 	private static boolean shouldDrawLocalToken(LocalMentionMatch localMatch) {
 		if (localMatch == null || !localMatch.isMatchesLocalPlayer() || localMatch.getReason() == null) {
@@ -1977,14 +1805,9 @@ public class ReferenceLayoutService {
 		return Character.isLetterOrDigit(c) || c == '_' || c == '-';
 	}
 
-	/**
-	 * Resolve one arbitrary semantic span inside a rendered text widget into its
-	 * physical multiline rectangles.
-	 *
-	 * This is the general geometry form of the PlayerReference layout used by
-	 * RuneTags. It allows non-clickable presentation features, such as Unique
-	 * Highlight backgrounds, to use exactly the same wrapping calculations as
-	 * clickable mention/tag hitboxes.
+	/*
+	 * Resolves one semantic span into physical rectangles across the Widget's
+	 * wrapped visual lines.
 	 */
 	public List<Rectangle> layoutSemanticSpan(Widget widget, int semanticStart, int semanticEnd) {
 		final List<Rectangle> output = new ArrayList<>();
@@ -2001,7 +1824,7 @@ public class ReferenceLayoutService {
 		return layoutSemanticSpan(widget, rawWidgetText, semanticWidgetText, semanticStart, semanticEnd);
 	}
 
-	/**
+	/*
 	 * Cached-text form used by the render pass. Bounds and FontTypeFace remain
 	 * live reads so no reconstruction geometry is frozen in the semantic cache.
 	 */
@@ -2044,10 +1867,8 @@ public class ReferenceLayoutService {
 			}
 
 			/*
-			 * Preserve rendered leading markup on the first physical line.
-			 *
-			 * In particular, <img=...> tags occupy horizontal space even though they
-			 * do not exist in semantic plain text.
+			 * Include leading raw markup on the first visual line so rendered images
+			 * contribute their physical width.
 			 */
 			final int rawLineStart = line.start == 0
 					? 0
@@ -2069,7 +1890,7 @@ public class ReferenceLayoutService {
 		return output;
 	}
 
-	/**
+	/*
 	 * Add the physical pieces of one semantic span.
 	 *
 	 * The span is intersected independently with every visual line occupied by
@@ -2085,12 +1906,8 @@ public class ReferenceLayoutService {
 		}
 
 		/*
-		 * Prefer the Widget's live line height when one is available.
-		 *
-		 * Plugins may legitimately change the native chat FontId and LineHeight
-		 * while leaving the Widget's overall bounds unsuitable for deriving one
-		 * visual row. Falling back to bounds preserves native RuneScape behavior
-		 * for Widgets which do not expose a useful line height.
+		 * Prefer the live Widget line height and fall back to allocated bounds when
+		 * no usable line height is exposed.
 		 */
 		final int physicalLineHeight = resolvePhysicalLineHeight(widget, widgetBounds, wrappedLines.size());
 		for (int lineIndex = 0; lineIndex < wrappedLines.size(); lineIndex++) {
@@ -2102,19 +1919,8 @@ public class ReferenceLayoutService {
 			}
 
 			/*
-			 * The first semantic character may be preceded by rendered markup such as:
-			 *
-			 *     <img=...>
-			 *
-			 * MessageMarkupMap correctly maps semantic offset 0 to the first visible
-			 * text character, which is appropriate for formatting insertion.
-			 *
-			 * Geometry is different: leading image markup occupies real horizontal
-			 * space inside the Widget. For the first visual line, measure from the
-			 * beginning of the raw Widget text so FontTypeFace includes that rendered
-			 * prefix width.
-			 *
-			 * Wrapped continuation lines still begin at their semantic raw boundary.
+			 * Semantic offset zero excludes leading markup, but geometry must include rendered
+			 * prefixes such as <img=...>. Continuation lines begin at their semantic raw boundary.
 			 */
 			final int rawLineStart = line.start == 0
 					? 0
@@ -2133,11 +1939,7 @@ public class ReferenceLayoutService {
 					rawWidgetText.substring(rawSegmentStart, rawSegmentEnd)));
 
 			/*
-			 * Alignment is resolved independently for every visual line.
-			 *
-			 * CHATBOX is normally LEFT aligned, but handling CENTER/RIGHT here
-			 * costs very little and keeps this routine correct for any future
-			 * RuneScape presentation using the same service.
+			 * Resolve horizontal alignment independently for each visual line.
 			 */
 			final int lineOriginX = alignedLineX(widget, widgetBounds, line.width);
 			final int lineY = widgetBounds.y + (lineIndex * physicalLineHeight);
@@ -2146,7 +1948,7 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
+	/*
 	 * Reproduce the visual line ranges used by a RuneScape text widget.
 	 *
 	 * RuneScape exposes the final widget width and total expanded height but does
@@ -2267,7 +2069,7 @@ public class ReferenceLayoutService {
 		return lines;
 	}
 
-	/**
+	/*
 	 * Resolve the physical height of one rendered text line.
 	 *
 	 * Prefer the Widget's live line height when available so RuneTags follows
@@ -2284,7 +2086,7 @@ public class ReferenceLayoutService {
 		return Math.max(1, widgetBounds.height / Math.max(1, lineCount));
 	}
 
-	/**
+	/*
 	 * Measure one semantic range using the actual raw RuneScape markup and the
 	 * widget's own font.
 	 */
@@ -2302,7 +2104,7 @@ public class ReferenceLayoutService {
 		return font.getTextWidth(rawWidgetText.substring(rawStart, rawEnd));
 	}
 
-	/**
+	/*
 	 * Resolve horizontal alignment for one visual line rather than the complete
 	 * multiline widget.
 	 */
@@ -2318,7 +2120,7 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
+	/*
 	 * Semantic line-break characters which should terminate the current visual
 	 * row immediately.
 	 */
@@ -2326,7 +2128,7 @@ public class ReferenceLayoutService {
 		return value == '\n' || value == '\r';
 	}
 
-	/**
+	/*
 	 * Find an account name without depending on capitalization or
 	 * RuneScape's alternate space characters.
 	 *
@@ -2372,7 +2174,7 @@ public class ReferenceLayoutService {
 		return value.replace('\u00A0', ' ').replace('\u202F', ' ');
 	}
 
-	/**
+	/*
 	 * The split-private PmChat surface must only match private-message
 	 * semantic records.
 	 */
@@ -2387,15 +2189,11 @@ public class ReferenceLayoutService {
 				|| type == ChatMessageType.PRIVATECHATOUT;
 	}
 
-	/**
-	 * Render collector.
+	/*
+	 * Collects pass-local semantic text for eligible rendered Widgets.
 	 *
-	 * Read/normalize each eligible Widget's text only once for this layout
-	 * invocation. Applies the CHATBOX viewport only to candidate
-	 * inclusion; child traversal itself is never pruned. This preserves native
-	 * Widget order while ensuring partially visible rows remain eligible.
-	 * SPLIT_PRIVATE passes a null viewport and keeps its complete populated
-	 * surface. Bounds and fonts are checked live and are deliberately not stored.
+	 * CHATBOX candidate inclusion is viewport-aware without pruning child traversal.
+	 * SPLIT_PRIVATE collects its complete populated surface. Bounds and fonts remain live.
 	 */
 	private void collectRenderedTextWidgets(Widget widget, Surface surface, Rectangle visibleBounds,
 			List<RenderedTextWidget> output, Set<Widget> visited, int depth) {
@@ -2404,11 +2202,7 @@ public class ReferenceLayoutService {
 		}
 
 		/*
-		 * Snapshot only the state needed for semantic ownership. FontTypeFace remains
-		 * a live read and is resolved later when physical geometry is required.
-		 *
-		 * getFontId() is sufficient for font eligibility here and avoids resolving a
-		 * FontTypeFace for every candidate in the recursive surface walk.
+		 * Cache semantic ownership state only; resolve FontTypeFace later from the live Widget.
 		 */
 		if (!widget.isHidden()) {
 			final String rawText = widget.getText();
@@ -2442,14 +2236,8 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	/**
-	 * Recursively collect actual rendered text widgets beneath a physical chat
-	 * surface.
-	 *
-	 * Hidden/empty PmChat slots naturally fail these checks, so RuneTags does
-	 * not need to know that RuneScape currently exposes only five floating PM
-	 * rows or that populated dynamic children commonly follow a
-	 * [0]/[1], [4]/[5], ... pattern.
+	/*
+	 * Recursively collects rendered text Widgets beneath one physical chat surface.
 	 */
 	private void collectTextWidgets(Widget widget, List<Widget> output, Set<Widget> visited, int depth) {
 		if (widget == null || depth > MAX_WIDGET_DEPTH || !visited.add(widget)) {

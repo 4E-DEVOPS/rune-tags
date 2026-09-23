@@ -16,23 +16,10 @@ import net.runelite.api.MessageNode;
 import net.runelite.client.util.Text;
 
 /**
- * Reconstructs RuneTags' runtime semantic chat state from RuneScape's existing
- * native chat buffers.
+ * Rebuilds RuneTags semantic chat state from RuneScape's existing native buffers.
  *
- * This is used when RuneTags is enabled or re-enabled while RuneScape already
- * has chat history in memory.
- *
- * Bootstrap deliberately does NOT:
- *
- * - replay ChatMessage events;
- * - send mention notifications;
- * - add duplicate persistent Mention History entries;
- * - rewrite native chat formatting;
- * - reconstruct physical hitboxes directly.
- *
- * It restores only the semantic TaggedMessage repository and authoritative
- * native account observations. Existing overlays then derive physical
- * rendering/hitboxes from the restored semantic state normally.
+ * Bootstrap restores TaggedMessage state and authoritative account observations
+ * without replaying events, sending notifications, rewriting chat, or creating hitboxes.
  */
 public class NativeBootstrapService {
 	private final Client client;
@@ -71,11 +58,7 @@ public class NativeBootstrapService {
 		}
 
 		/*
-		 * A MessageNode may be reachable through more than one native
-		 * representation.
-		 *
-		 * MessageNode IDs are the client's native message identity, so retain
-		 * only one copy of each currently-live native message.
+		 * Deduplicate native messages by MessageNode ID before rebuilding semantic state.
 		 */
 		final Map<Integer, MessageNode> uniqueNodes = new LinkedHashMap<>();
 
@@ -118,11 +101,8 @@ public class NativeBootstrapService {
 			final String rawName = node.getName();
 
 			/*
-			 * Match the live ChatMessage path:
-			 *
-			 * PRIVATECHATOUT names the recipient rather than an authoritative
-			 * sender observation. Absence of an icon there must not overwrite
-			 * account knowledge learned from that player's own messages.
+			 * PRIVATECHATOUT identifies the recipient and does not update authoritative
+			 * sender-account observations.
 			 */
 			if (playerDirectory != null && rawName != null && !rawName.trim().isEmpty()
 					&& type != ChatMessageType.PRIVATECHATOUT) {
@@ -130,11 +110,8 @@ public class NativeBootstrapService {
 			}
 
 			/*
-			 * getValue() is the native/current body represented by this node.
-			 *
-			 * If a node lacks a value, RuneLite's separately retained formatted
-			 * representation is still usable as a semantic fallback because
-			 * ChatText removes markup before parsing.
+			 * Prefer the native message value and fall back to retained formatted text
+			 * when no current value exists.
 			 */
 			String rawMessage = node.getValue();
 			if (rawMessage == null) {

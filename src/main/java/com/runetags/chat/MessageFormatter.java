@@ -17,18 +17,9 @@ import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.util.ColorUtil;
 
 /**
- * Applies RuneTags semantic foreground styling while preserving the sender's
- * original text and existing RuneLite/Jagex markup.
+ * Applies RuneTags foreground, underline, and shadow markup to semantic message spans.
  *
- * Foreground styling:
- *
- * - local account references        -> Self Mention Color
- * - Unique Highlights               -> Self Mention Color
- * - normalized self-name matches    -> Self Mention Color
- * - other player references         -> Other Mention Color
- *
- * Whole-message background highlighting is NOT performed here. That is handled
- * independently by ChatReferenceOverlay as a translucent background.
+ * Existing RuneLite/Jagex markup is preserved. Backgrounds are rendered by ChatReferenceOverlay.
  */
 public class MessageFormatter {
 	private final Configurations config;
@@ -47,21 +38,14 @@ public class MessageFormatter {
 		final MessageMarkupMap markupMap = MessageMarkupMap.create(rawMessage);
 		if (!markupMap.matchesPlain(message.getOriginalMessage())) {
 			/*
-			 * Never risk corrupting a message whose semantic/plain mapping no
-			 * longer matches the raw RuneLite message.
+			 * Skip formatting when raw and semantic offsets no longer map safely.
 			 */
 			return rawMessage;
 		}
 
 		/*
-		 * A local match can come from:
-		 *
-		 * - the local player's account name
-		 * - a normalized account-name form
-		 * - a Unique Mention
-		 *
-		 * If Mention Whole Message is enabled, the entire message foreground
-		 * uses Self Mention Color.
+		 * Local matches include account-name variants and Unique Highlights.
+		 * Mention Whole Message applies Self Mention Color to the complete body.
 		 */
 		final boolean mentionWholeMessage = config.mentionWholeMessage()
 				&& config.mentionSelf() && message.getLocalMentionMatch().isMatchesLocalPlayer();
@@ -73,15 +57,8 @@ public class MessageFormatter {
 		final List<StyleSpan> spans = new ArrayList<>();
 
 		/*
-		 * Player references.
-		 *
-		 * These remain independently styled even when the whole message has a
-		 * self color. This is important for messages such as:
-		 *
-		 * "test says @Mielu is here"
-		 *
-		 * where the whole message may be red, but @Mielu should still use the
-		 * Others Mention Color and then restore back to red afterward.
+		 * PlayerReference spans retain their own mention styling when the complete message
+		 * uses Self Mention Color.
 		 */
 		for (PlayerReference reference : message.getReferences()) {
 			final LocalMentionMatch localMatch = localMentionMatcher.match(reference, localPlayerName);
@@ -97,11 +74,8 @@ public class MessageFormatter {
 					: config.mentionOthers();
 
 			/*
-			 * Resolved references use RuneScape's native solid <u> underline.
-			 *
-			 * Unresolved TAG references deliberately do not receive the native underline.
-			 * ChatReferenceOverlay owns their dotted underline instead, preventing an
-			 * unresolved tag from displaying both a solid and dotted line.
+			 * Resolved references keep native <u> markup.
+			 * Unresolved tags omit native <u> because their underline is rendered as a dotted overlay.
 			 */
 			final boolean unresolvedTag = reference.getType() == ReferenceType.TAG && !reference.isLocallyResolved();
 			final boolean underline = config.underlineMentions() && !unresolvedTag;
@@ -120,23 +94,8 @@ public class MessageFormatter {
 		}
 
 		/*
-		 * Add message-level local spans.
-		 *
-		 * This handles Unique Mentions and normalized local-account-name matches
-		 * which may not exist as PlayerReference objects.
-		 *
-		 * Example:
-		 *
-		 * Unique Mentions = test
-		 *
-		 * "I'm gonna test this"
-		 *
-		 * Mention Whole Message ON:
-		 *     entire message = Self Mention Color
-		 *     "test" may still receive mention decoration such as underline
-		 *
-		 * Mention Whole Message OFF:
-		 *     only "test" = Self Mention Color
+		 * Add local-token spans not represented by PlayerReference objects.
+		 * Whole-message coloring and token decoration remain independent.
 		 */
 		addLocalMessageHighlightSpans(message, spans);
 
@@ -206,12 +165,9 @@ public class MessageFormatter {
 		return formatted;
 	}
 
-	/**
-	 * Add non-player local-highlight spans.
-	 *
-	 * These spans affect foreground presentation only. They deliberately do
-	 * not create PlayerReference objects, click targets, profile identities,
-	 * or alias associations.
+	/*
+	 * Adds styling spans for local matches that do not create PlayerReference identity
+	 * or interaction.
 	 */
 	private void addLocalMessageHighlightSpans(TaggedMessage message, List<StyleSpan> spans) {
 		final boolean shouldColor = config.mentionSelf();
@@ -220,10 +176,6 @@ public class MessageFormatter {
 				? config.shadowMentionColor()
 				: null;
 
-		/*
-		 * Local-token appearance controls are independent too.
-		 * If every text-decoration control is disabled there is nothing to add.
-		 */
 		if (!shouldColor && !underline && shadowColor == null) {
 			return;
 		}
@@ -234,11 +186,8 @@ public class MessageFormatter {
 		}
 
 		/*
-		 * ACCOUNT_NAME normally came from an existing PlayerReference and is
-		 * already represented above.
-		 *
-		 * Message-level spans are needed for normalized account variants and
-		 * Unique Highlights.
+		 * Skip ACCOUNT_NAME matches already represented by PlayerReference.
+		 * Normalized account variants and Unique Highlights remain eligible.
 		 */
 		if (localMatch.getReason() != MatchReason.NORMALIZED_ACCOUNT_NAME
 				&& localMatch.getReason() != MatchReason.UNIQUE_HIGHLIGHT) {
@@ -296,7 +245,7 @@ public class MessageFormatter {
 		return Character.isLetterOrDigit(c) || c == '_' || c == '-';
 	}
 
-	/**
+	/*
 	 * Determine which chat color was active before RuneTags temporarily
 	 * changed the foreground of a span.
 	 */
@@ -326,10 +275,8 @@ public class MessageFormatter {
 		return "<col" + ChatColorType.NORMAL + ">";
 	}
 
-	/**
-	 * Internal formatting span only.
-	 *
-	 * This is deliberately NOT a PlayerReference.
+	/*
+	 * Formatting span with no PlayerReference identity or interaction.
 	 */
 	private static final class StyleSpan {
 		private final int startOffset;
