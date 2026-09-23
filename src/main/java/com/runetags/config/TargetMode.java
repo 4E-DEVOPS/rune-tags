@@ -1,32 +1,27 @@
 package com.runetags.config;
 
-public enum TargetMode
-{
-    OFF("Off"),
-    OUTLINE("Outline"),
-    TILE("Tile"),
-    BOTH("Both");
+public enum TargetMode {
+	OFF("Off"),
+	OUTLINE("Outline"),
+	TILE("Tile"),
+	BOTH("Both");
 
-    private final String displayName;
+	private final String displayName;
 
-    TargetMode(String displayName)
-    {
-        this.displayName = displayName;
-    }
+	TargetMode(String displayName) {
+		this.displayName = displayName;
+	}
 
-    @Override
-    public String toString()
-    {
-        return displayName;
-    }
+	@Override
+	public String toString() {
+		return displayName;
+	}
 
-    public boolean showsOutline()
-    {
-        return this == OUTLINE || this == BOTH;
-    }
+	public boolean showsOutline() {
+		return this == OUTLINE || this == BOTH;
+	}
 
-    public boolean showsTile()
-    {
-        return this == TILE || this == BOTH;
-    }
+	public boolean showsTile() {
+		return this == TILE || this == BOTH;
+	}
 }
