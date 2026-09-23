@@ -3,14 +3,10 @@ package com.runetags.context;
 import lombok.Value;
 
 /**
- * One context-relevant Hiscore value.
- *
- * Contextual values may represent killcounts, activity scores, ranks, or
- * skills, so the metric model remains generic.
+ * Describes one context-relevant hiscore metric by display label and hiscore skill name.
  */
 @Value
-public class ProfileMetric
-{
-    String label;
-    String hiscoreSkillName;
+public class ProfileMetric {
+	String label;
+	String hiscoreSkillName;
 }

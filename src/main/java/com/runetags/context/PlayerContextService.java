@@ -8,125 +8,77 @@ import net.runelite.api.NPC;
 import net.runelite.api.WorldView;
 
 /**
- * Client-thread snapshot of the local world's coarse and encounter context.
- *
- * The local player's coarse location is resolved first, then a loaded
- * high-confidence NPC may refine that context to the active encounter.
- * ProfileMetricResolver remains the authority for the contextual hiscores
- * associated with either source.
+ * Maintains the local player's current location-derived or NPC-overridden profile context.
  */
-public class PlayerContextService
-{
-    private final Client client;
-    private final PlayerLocationService playerLocationService;
-    private final ProfileMetricResolver profileMetricResolver;
+public class PlayerContextService {
+	private final Client client;
+	private final PlayerLocationService playerLocationService;
+	private final ProfileMetricResolver profileMetricResolver;
 
-    private volatile PlayerContext current =
-            PlayerContext.unknown();
+	private volatile PlayerContext current = PlayerContext.unknown();
 
-    public PlayerContextService(
-            Client client,
-            PlayerLocationService playerLocationService,
-            ProfileMetricResolver profileMetricResolver)
-    {
-        this.client =
-                client;
+	public PlayerContextService(
+			Client client,
+			PlayerLocationService playerLocationService,
+			ProfileMetricResolver profileMetricResolver) {
+		this.client = client;
+		this.playerLocationService = playerLocationService;
+		this.profileMetricResolver = profileMetricResolver;
+	}
 
-        this.playerLocationService =
-                playerLocationService;
+	public PlayerContext getCurrent() {
+		return current;
+	}
 
-        this.profileMetricResolver =
-                profileMetricResolver;
-    }
+	public void clear() {
+		current = PlayerContext.unknown();
+	}
 
-    public PlayerContext getCurrent()
-    {
-        return current;
-    }
+	/*
+	 * Refreshes coarse location context, preferring the first loaded NPC override.
+	 * Must run on RuneLite's client thread.
+	 */
+	public void refresh() {
+		final PlayerLocation location = playerLocationService.getCurrent();
+		if (location == null || !location.hasRegion()) {
+			clear();
+			return;
+		}
 
-    public void clear()
-    {
-        current = PlayerContext.unknown();
-    }
+		final PlayerContext npcContext = findNpcContext(location);
+		if (npcContext != null) {
+			current = npcContext;
+			return;
+		}
 
-    /**
-     * Refresh the local world context.
-     *
-     * Must run on RuneLite's client thread.
-     */
-    public void refresh()
-    {
-        final PlayerLocation location =
-                playerLocationService.getCurrent();
+		current = profileMetricResolver.resolveLocation(location);
+	}
 
-        if (location == null
-                || !location.hasRegion())
-        {
-            clear();
-            return;
-        }
+	/*
+	 * Returns the first loaded NPC with a contextual catalog override.
+	 */
+	private PlayerContext findNpcContext(PlayerLocation location) {
+		final WorldView worldView = client.getTopLevelWorldView();
+		if (worldView == null) {
+			return null;
+		}
 
-        final PlayerContext npcContext =
-                findNpcContext(
-                        location);
+		for (NPC npc : worldView.npcs()) {
+			if (npc == null) {
+				continue;
+			}
 
-        if (npcContext != null)
-        {
-            current =
-                    npcContext;
+			final String npcName = npc.getName();
+			if (npcName == null || npcName.isEmpty()) {
+				continue;
+			}
 
-            return;
-        }
+			final PlayerContext context = profileMetricResolver.resolveNpc(npcName, location);
+			if (context != null) {
+				return context;
+			}
+		}
 
-        current =
-                profileMetricResolver.resolveLocation(
-                        location);
-    }
-
-    /**
-     * Find the first loaded NPC with a contextual override.
-     *
-     * Overrides are deliberately sparse so ordinary NPCs
-     * cannot alter the coarse location context.
-     */
-    private PlayerContext findNpcContext(
-            PlayerLocation location)
-    {
-        final WorldView worldView =
-                client.getTopLevelWorldView();
-
-        if (worldView == null)
-        {
-            return null;
-        }
-
-        for (NPC npc : worldView.npcs())
-        {
-            if (npc == null)
-            {
-                continue;
-            }
-
-            final String npcName =
-                    npc.getName();
-
-            if (npcName == null
-                    || npcName.isEmpty())
-            {
-                continue;
-            }
-
-            final PlayerContext context =
-                    profileMetricResolver.resolveNpc(
-                            npcName,
-                            location);
-
-            if (context != null)
-            {
-                return context;
-            }
-        }
-
-        return null;
-    }
+		return null;
+	}
 }
