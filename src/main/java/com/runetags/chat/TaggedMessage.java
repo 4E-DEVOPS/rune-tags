@@ -13,20 +13,19 @@ import net.runelite.api.ChatMessageType;
 
 @Value
 @Builder
-public class TaggedMessage
-{
-    long id;
-    ChatMessageType type;
+public class TaggedMessage {
+	long id;
+	ChatMessageType type;
 
-    String originalSender;
-    String canonicalSender;
-    String originalMessage;
+	String originalSender;
+	String canonicalSender;
+	String originalMessage;
 
-    Instant timestamp;
+	Instant timestamp;
 
-    @Builder.Default
-    List<PlayerReference> references = Collections.emptyList();
+	@Builder.Default
+	List<PlayerReference> references = Collections.emptyList();
 
-    @Builder.Default
-    LocalMentionMatch localMentionMatch = LocalMentionMatch.none();
+	@Builder.Default
+	LocalMentionMatch localMentionMatch = LocalMentionMatch.none();
 }

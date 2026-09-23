@@ -22,157 +22,92 @@ import net.runelite.api.ChatMessageType;
  * The master deque remains globally chronological so snapshot() exposes one
  * ordered semantic stream.
  */
-public class TaggedMessageRepository
-{
-    private final int capacityPerType;
+public class TaggedMessageRepository {
+	private final int capacityPerType;
 
-    private final Deque<TaggedMessage> messages =
-            new ArrayDeque<>();
+	private final Deque<TaggedMessage> messages = new ArrayDeque<>();
 
-    private final Map<ChatMessageType, Integer> countsByType =
-            new EnumMap<>(
-                    ChatMessageType.class);
+	private final Map<ChatMessageType, Integer> countsByType = new EnumMap<>(ChatMessageType.class);
 
-    public TaggedMessageRepository(
-            int capacityPerType)
-    {
-        if (capacityPerType < 1)
-        {
-            throw new IllegalArgumentException(
-                    "capacityPerType must be >= 1");
-        }
+	public TaggedMessageRepository(int capacityPerType) {
+		if (capacityPerType < 1) {
+			throw new IllegalArgumentException("capacityPerType must be >= 1");
+		}
+		this.capacityPerType = capacityPerType;
+	}
 
-        this.capacityPerType =
-                capacityPerType;
-    }
+	public synchronized void add(TaggedMessage message) {
+		if (message == null) {
+			return;
+		}
 
-    public synchronized void add(
-            TaggedMessage message)
-    {
-        if (message == null)
-        {
-            return;
-        }
+		final ChatMessageType retentionType = retentionType(message);
+		messages.addLast(message);
+		countsByType.put(retentionType, countsByType.getOrDefault(retentionType, 0) + 1);
 
-        final ChatMessageType retentionType =
-                retentionType(
-                        message);
+		/*
+		 * Evict only the oldest semantic record belonging to this same chat
+		 * type.
+		 *
+		 * Traffic in another channel must never consume this type's retention
+		 * allowance.
+		 */
+		while (countsByType.getOrDefault(retentionType, 0) > capacityPerType) {
+			if (!removeOldestOfType(retentionType)) {
+				/*
+				 * Defensive consistency fallback.
+				 *
+				 * This should never occur because the count was incremented
+				 * together with insertion.
+				 */
+				countsByType.remove(retentionType);
+				break;
+			}
+		}
+	}
 
-        messages.addLast(
-                message);
+	public synchronized Optional<TaggedMessage> get(long id) {
+		return messages.stream().filter(message -> message.getId() == id).findFirst();
+	}
 
-        countsByType.put(
-                retentionType,
-                countsByType.getOrDefault(
-                        retentionType,
-                        0) + 1);
+	public synchronized List<TaggedMessage> snapshot() {
+		return Collections.unmodifiableList(new ArrayList<>(messages));
+	}
 
-        /*
-         * Evict only the oldest semantic record belonging to this same chat
-         * type.
-         *
-         * Traffic in another channel must never consume this type's retention
-         * allowance.
-         */
-        while (countsByType.getOrDefault(
-                retentionType,
-                0) > capacityPerType)
-        {
-            if (!removeOldestOfType(
-                    retentionType))
-            {
-                /*
-                 * Defensive consistency fallback.
-                 *
-                 * This should never occur because the count was incremented
-                 * together with insertion.
-                 */
-                countsByType.remove(
-                        retentionType);
+	public synchronized int size() {
+		return messages.size();
+	}
 
-                break;
-            }
-        }
-    }
+	public synchronized void clear() {
+		messages.clear();
+		countsByType.clear();
+	}
 
-    public synchronized Optional<TaggedMessage> get(
-            long id)
-    {
-        return messages.stream()
-                .filter(message ->
-                        message.getId() == id)
-                .findFirst();
-    }
+	private boolean removeOldestOfType(ChatMessageType type) {
+		final Iterator<TaggedMessage> iterator = messages.iterator();
+		while (iterator.hasNext()) {
+			final TaggedMessage candidate = iterator.next();
 
-    public synchronized List<TaggedMessage> snapshot()
-    {
-        return Collections.unmodifiableList(
-                new ArrayList<>(
-                        messages));
-    }
+			if (retentionType(candidate) != type) {
+				continue;
+			}
+			iterator.remove();
 
-    public synchronized int size()
-    {
-        return messages.size();
-    }
+			final int remaining = countsByType.getOrDefault(type, 0) - 1;
+			if (remaining > 0) {
+				countsByType.put(type, remaining);
+			} else {
+				countsByType.remove(type);
+			}
+			return true;
+		}
+		return false;
+	}
 
-    public synchronized void clear()
-    {
-        messages.clear();
-        countsByType.clear();
-    }
-
-    private boolean removeOldestOfType(
-            ChatMessageType type)
-    {
-        final Iterator<TaggedMessage> iterator =
-                messages.iterator();
-
-        while (iterator.hasNext())
-        {
-            final TaggedMessage candidate =
-                    iterator.next();
-
-            if (retentionType(candidate)
-                    != type)
-            {
-                continue;
-            }
-
-            iterator.remove();
-
-            final int remaining =
-                    countsByType.getOrDefault(
-                            type,
-                            0) - 1;
-
-            if (remaining > 0)
-            {
-                countsByType.put(
-                        type,
-                        remaining);
-            }
-            else
-            {
-                countsByType.remove(
-                        type);
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
-    private static ChatMessageType retentionType(
-            TaggedMessage message)
-    {
-        if (message == null
-                || message.getType() == null)
-        {
-            return ChatMessageType.UNKNOWN;
-        }
-
-        return message.getType();
-    }
+	private static ChatMessageType retentionType(TaggedMessage message) {
+		if (message == null || message.getType() == null) {
+			return ChatMessageType.UNKNOWN;
+		}
+		return message.getType();
+	}
 }

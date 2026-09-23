@@ -34,186 +34,129 @@ import net.runelite.client.util.Text;
  * native account observations. Existing overlays then derive physical
  * rendering/hitboxes from the restored semantic state normally.
  */
-public class NativeBootstrapService
-{
-    private final Client client;
-    private final PlayerDirectory playerDirectory;
-    private final ChatProcessor chatProcessor;
-    private final TaggedMessageRepository repository;
+public class NativeBootstrapService {
+	private final Client client;
+	private final PlayerDirectory playerDirectory;
+	private final ChatProcessor chatProcessor;
+	private final TaggedMessageRepository repository;
 
-    public NativeBootstrapService(
-            Client client,
-            PlayerDirectory playerDirectory,
-            ChatProcessor chatProcessor,
-            TaggedMessageRepository repository)
-    {
-        this.client = client;
-        this.playerDirectory = playerDirectory;
-        this.chatProcessor = chatProcessor;
-        this.repository = repository;
-    }
+	public NativeBootstrapService(
+			Client client,
+			PlayerDirectory playerDirectory,
+			ChatProcessor chatProcessor,
+			TaggedMessageRepository repository) {
+		this.client = client;
+		this.playerDirectory = playerDirectory;
+		this.chatProcessor = chatProcessor;
+		this.repository = repository;
+	}
 
-    /**
-     * Rebuild RuneTags semantic chat state from the current native buffers.
-     *
-     * @param startingMessageId current RuneTags message ID
-     * @param localPlayerName current local player's display name
-     * @param supportedTypePredicate RuneTags supported-chat-type predicate
-     *
-     * @return the newest RuneTags message ID assigned by this bootstrap
-     */
-    public long bootstrap(
-            long startingMessageId,
-            String localPlayerName,
-            Predicate<ChatMessageType> supportedTypePredicate)
-    {
-        if (supportedTypePredicate == null)
-        {
-            return startingMessageId;
-        }
+	/**
+	 * Rebuild RuneTags semantic chat state from the current native buffers.
+	 *
+	 * @param startingMessageId      current RuneTags message ID
+	 * @param localPlayerName        current local player's display name
+	 * @param supportedTypePredicate RuneTags supported-chat-type predicate
+	 * @return the newest RuneTags message ID assigned by this bootstrap
+	 */
+	public long bootstrap(
+			long startingMessageId, String localPlayerName, Predicate<ChatMessageType> supportedTypePredicate) {
+		if (supportedTypePredicate == null) {
+			return startingMessageId;
+		}
 
-        final Map<Integer, ChatLineBuffer> chatLineMap =
-                client.getChatLineMap();
+		final Map<Integer, ChatLineBuffer> chatLineMap = client.getChatLineMap();
+		if (chatLineMap == null || chatLineMap.isEmpty()) {
+			return startingMessageId;
+		}
 
-        if (chatLineMap == null
-                || chatLineMap.isEmpty())
-        {
-            return startingMessageId;
-        }
+		/*
+		 * A MessageNode may be reachable through more than one native
+		 * representation.
+		 *
+		 * MessageNode IDs are the client's native message identity, so retain
+		 * only one copy of each currently-live native message.
+		 */
+		final Map<Integer, MessageNode> uniqueNodes = new LinkedHashMap<>();
 
-        /*
-         * A MessageNode may be reachable through more than one native
-         * representation.
-         *
-         * MessageNode IDs are the client's native message identity, so retain
-         * only one copy of each currently-live native message.
-         */
-        final Map<Integer, MessageNode> uniqueNodes =
-                new LinkedHashMap<>();
+		for (ChatLineBuffer buffer : chatLineMap.values()) {
+			if (buffer == null || buffer.getLines() == null) {
+				continue;
+			}
 
-        for (ChatLineBuffer buffer
-                : chatLineMap.values())
-        {
-            if (buffer == null
-                    || buffer.getLines() == null)
-            {
-                continue;
-            }
+			for (MessageNode node : buffer.getLines()) {
+				if (node == null || node.getType() == null || !supportedTypePredicate.test(node.getType())) {
+					continue;
+				}
 
-            for (MessageNode node
-                    : buffer.getLines())
-            {
-                if (node == null
-                        || node.getType() == null
-                        || !supportedTypePredicate.test(
-                        node.getType()))
-                {
-                    continue;
-                }
+				uniqueNodes.putIfAbsent(node.getId(), node);
+			}
+		}
 
-                uniqueNodes.putIfAbsent(
-                        node.getId(),
-                        node);
-            }
-        }
+		if (uniqueNodes.isEmpty()) {
+			return startingMessageId;
+		}
 
-        if (uniqueNodes.isEmpty())
-        {
-            return startingMessageId;
-        }
+		final List<MessageNode> nodes = new ArrayList<>(uniqueNodes.values());
 
-        final List<MessageNode> nodes =
-                new ArrayList<>(
-                        uniqueNodes.values());
+		/*
+		 * ChatLineBuffer arrays are newest-first.
+		 *
+		 * RuneTags' repository is chronological oldest -> newest, so recover
+		 * native chronology before processing.
+		 *
+		 * Native timestamps have second-level precision. MessageNode ID gives
+		 * us a deterministic tie-breaker for messages created in the same
+		 * second.
+		 */
+		nodes.sort(Comparator.comparingInt(MessageNode::getTimestamp).thenComparingInt(MessageNode::getId));
 
-        /*
-         * ChatLineBuffer arrays are newest-first.
-         *
-         * RuneTags' repository is chronological oldest -> newest, so recover
-         * native chronology before processing.
-         *
-         * Native timestamps have second-level precision. MessageNode ID gives
-         * us a deterministic tie-breaker for messages created in the same
-         * second.
-         */
-        nodes.sort(
-                Comparator
-                        .comparingInt(
-                                MessageNode::getTimestamp)
-                        .thenComparingInt(
-                                MessageNode::getId));
+		long nextMessageId = startingMessageId;
 
-        long nextMessageId =
-                startingMessageId;
+		for (MessageNode node : nodes) {
+			final ChatMessageType type = node.getType();
+			final String rawName = node.getName();
 
-        for (MessageNode node : nodes)
-        {
-            final ChatMessageType type =
-                    node.getType();
+			/*
+			 * Match the live ChatMessage path:
+			 *
+			 * PRIVATECHATOUT names the recipient rather than an authoritative
+			 * sender observation. Absence of an icon there must not overwrite
+			 * account knowledge learned from that player's own messages.
+			 */
+			if (playerDirectory != null && rawName != null && !rawName.trim().isEmpty()
+					&& type != ChatMessageType.PRIVATECHATOUT) {
+				playerDirectory.observeAccountType(rawName);
+			}
 
-            final String rawName =
-                    node.getName();
+			/*
+			 * getValue() is the native/current body represented by this node.
+			 *
+			 * If a node lacks a value, RuneLite's separately retained formatted
+			 * representation is still usable as a semantic fallback because
+			 * ChatText removes markup before parsing.
+			 */
+			String rawMessage = node.getValue();
+			if (rawMessage == null) {
+				rawMessage = node.getRuneLiteFormatMessage();
+			}
+			if (rawMessage == null) {
+				rawMessage = "";
+			}
 
-            /*
-             * Match the live ChatMessage path:
-             *
-             * PRIVATECHATOUT names the recipient rather than an authoritative
-             * sender observation. Absence of an icon there must not overwrite
-             * account knowledge learned from that player's own messages.
-             */
-            if (playerDirectory != null
-                    && rawName != null
-                    && !rawName.trim().isEmpty()
-                    && type
-                    != ChatMessageType.PRIVATECHATOUT)
-            {
-                playerDirectory.observeAccountType(
-                        rawName);
-            }
+			final String semanticMessage = ChatText.toSemanticPlain(rawMessage);
 
-            /*
-             * getValue() is the native/current body represented by this node.
-             *
-             * If a node lacks a value, RuneLite's separately retained formatted
-             * representation is still usable as a semantic fallback because
-             * ChatText removes markup before parsing.
-             */
-            String rawMessage =
-                    node.getValue();
+			final String canonicalSender = rawName != null
+					? Text.removeTags(rawName)
+					: null;
 
-            if (rawMessage == null)
-            {
-                rawMessage =
-                        node.getRuneLiteFormatMessage();
-            }
+			final TaggedMessage taggedMessage = chatProcessor.process(
+					++nextMessageId, type, canonicalSender,
+					semanticMessage, localPlayerName);
 
-            if (rawMessage == null)
-            {
-                rawMessage = "";
-            }
+			repository.add(taggedMessage);
+		}
 
-            final String semanticMessage =
-                    ChatText.toSemanticPlain(
-                            rawMessage);
-
-            final String canonicalSender =
-                    rawName != null
-                            ? Text.removeTags(
-                            rawName)
-                            : null;
-
-            final TaggedMessage taggedMessage =
-                    chatProcessor.process(
-                            ++nextMessageId,
-                            type,
-                            canonicalSender,
-                            semanticMessage,
-                            localPlayerName);
-
-            repository.add(
-                    taggedMessage);
-        }
-
-        return nextMessageId;
-    }
+		return nextMessageId;
+	}
 }
