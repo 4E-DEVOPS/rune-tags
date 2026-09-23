@@ -38,11 +38,9 @@ public class ChatProcessor {
 		 * ordinary known-player matching.
 		 */
 		final List<PlayerReference> tags = tagParser.parse(message);
-
 		references.addAll(tags);
 
 		final List<PlayerReference> knownReferences = knownPlayerMentionParser.parse(message, tags);
-
 		references.addAll(knownReferences);
 
 		/*
@@ -63,10 +61,8 @@ public class ChatProcessor {
 		 */
 		for (PlayerReference reference : references) {
 			final LocalMentionMatch candidate = localMentionMatcher.match(reference, localPlayerName);
-
 			if (candidate.isMatchesLocalPlayer()) {
 				bestMatch = candidate;
-
 				break;
 			}
 		}
@@ -77,14 +73,20 @@ public class ChatProcessor {
 		 */
 		if (!bestMatch.isMatchesLocalPlayer()) {
 			final LocalMentionMatch messageMatch = localMentionMatcher.matchMessage(message, localPlayerName);
-
 			if (messageMatch.isMatchesLocalPlayer()) {
 				bestMatch = messageMatch;
 			}
 		}
 
 		return TaggedMessage.builder()
-				.id(id).type(type).originalSender(sender).canonicalSender(sender).originalMessage(message)
-				.timestamp(Instant.now()).references(references).localMentionMatch(bestMatch).build();
+				.id(id)
+				.type(type)
+				.originalSender(sender)
+				.canonicalSender(sender)
+				.originalMessage(message)
+				.timestamp(Instant.now())
+				.references(references)
+				.localMentionMatch(bestMatch)
+				.build();
 	}
 }

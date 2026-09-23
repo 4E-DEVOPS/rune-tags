@@ -11,8 +11,8 @@ import java.util.Map;
 import net.runelite.api.Client;
 import net.runelite.api.FontID;
 import net.runelite.api.FontTypeFace;
-import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.events.ScriptPreFired;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 
 /**
@@ -366,9 +366,8 @@ public class FontLayoutService {
 
 		for (int i = messages.size() - 1; i >= 0; i--) {
 			final TaggedMessage message = messages.get(i);
-
 			if (message == null
-					|| message.getOriginalMessage() == null || !message.getOriginalMessage().equals(semanticBody)) {
+				|| message.getOriginalMessage() == null || !message.getOriginalMessage().equals(semanticBody)) {
 				continue;
 			}
 
@@ -406,7 +405,6 @@ public class FontLayoutService {
 		final int safeSize = Math.min(size, stack.length);
 		for (int i = 0; i < safeSize; i++) {
 			final Object value = stack[i];
-
 			if (!(value instanceof String)) {
 				continue;
 			}
@@ -439,10 +437,8 @@ public class FontLayoutService {
 		}
 
 		final int safeSize = Math.min(size, stack.length);
-
 		for (int i = safeSize - 1; i >= 0; i--) {
 			final Object value = stack[i];
-
 			if (!(value instanceof String)) {
 				continue;
 			}
@@ -455,7 +451,6 @@ public class FontLayoutService {
 
 			for (int messageIndex = messages.size() - 1; messageIndex >= 0; messageIndex--) {
 				final TaggedMessage message = messages.get(messageIndex);
-
 				if (message == null || message.getOriginalMessage() == null) {
 					continue;
 				}
@@ -556,7 +551,6 @@ public class FontLayoutService {
 		final int safeSize = Math.min(size, stack.length);
 		for (int i = 0; i < safeSize; i++) {
 			final Object value = stack[i];
-
 			if (!(value instanceof String)) {
 				continue;
 			}
@@ -582,7 +576,7 @@ public class FontLayoutService {
 	 * The chat-input widget is used only as a temporary font probe.
 	 * Its original FontId is immediately restored and no revalidation occurs.
 	 */
-	private FontTypeFace resolveFont( int fontId) {
+	private FontTypeFace resolveFont(int fontId) {
 		final FontTypeFace cached = fontCache.get(fontId);
 		if (cached != null) {
 			return cached;
@@ -598,7 +592,6 @@ public class FontLayoutService {
 			probe.setFontId(fontId);
 
 			final FontTypeFace resolved = probe.getFont();
-
 			if (resolved != null) {
 				fontCache.put(fontId, resolved);
 			}

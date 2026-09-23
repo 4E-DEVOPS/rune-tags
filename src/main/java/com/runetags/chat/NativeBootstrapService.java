@@ -145,14 +145,11 @@ public class NativeBootstrapService {
 			}
 
 			final String semanticMessage = ChatText.toSemanticPlain(rawMessage);
-
 			final String canonicalSender = rawName != null
 					? Text.removeTags(rawName)
 					: null;
-
 			final TaggedMessage taggedMessage = chatProcessor.process(
-					++nextMessageId, type, canonicalSender,
-					semanticMessage, localPlayerName);
+				++nextMessageId, type, canonicalSender, semanticMessage, localPlayerName);
 
 			repository.add(taggedMessage);
 		}

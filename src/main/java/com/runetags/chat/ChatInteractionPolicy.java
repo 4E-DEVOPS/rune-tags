@@ -15,17 +15,13 @@ public final class ChatInteractionPolicy {
 		}
 
 		final ClickablePlayerMode mode = config.clickablePlayers();
-
 		switch (mode) {
 			case ALL:
 				return true;
-
 			case MENTIONS:
 				return reference.getType() == ReferenceType.MENTION || reference.getType() == ReferenceType.TAG;
-
 			case TAGGED_ONLY:
 				return reference.getType() == ReferenceType.TAG;
-
 			default:
 				return false;
 		}

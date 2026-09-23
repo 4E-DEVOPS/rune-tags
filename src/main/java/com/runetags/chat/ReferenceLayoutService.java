@@ -4,9 +4,9 @@ import com.runetags.Configurations;
 import com.runetags.config.MentionFont;
 import com.runetags.mention.LocalMentionMatch;
 import com.runetags.mention.MatchReason;
+import com.runetags.records.LocalPlayerRecordService;
 import com.runetags.reference.PlayerReference;
 import com.runetags.reference.ReferenceType;
-import com.runetags.records.LocalPlayerRecordService;
 
 import java.awt.Color;
 import java.awt.Rectangle;
@@ -332,8 +332,10 @@ public class ReferenceLayoutService {
 	private int lastFavoriteColorRgb = Integer.MIN_VALUE;
 
 	public ReferenceLayoutService(
-			Client client, Configurations config, TaggedMessageRepository repository,
-			LocalPlayerRecordService localPlayerRecordService) {
+		Client client,
+		Configurations config,
+		TaggedMessageRepository repository,
+		LocalPlayerRecordService localPlayerRecordService) {
 		this.client = client;
 		this.config = config;
 		this.repository = repository;
@@ -374,7 +376,6 @@ public class ReferenceLayoutService {
 		 * with RuneTags' independent appearance controls.
 		 */
 		final List<TaggedMessage> messages = new ArrayList<>(repository.snapshot());
-
 		Collections.reverse(messages);
 
 		syncSurfaceFonts(client.getWidget(InterfaceID.PmChat.CONTAINER), Surface.SPLIT_PRIVATE, messages);
@@ -474,8 +475,7 @@ public class ReferenceLayoutService {
 		final Set<Widget> usedBodyWidgets = Collections.newSetFromMap(new IdentityHashMap<>());
 
 		for (TaggedMessage message : messages) {
-			if (message == null || message.getCanonicalSender() == null || message.getCanonicalSender().trim()
-					.isEmpty()) {
+			if (message == null || message.getCanonicalSender() == null || message.getCanonicalSender().trim() .isEmpty()) {
 				continue;
 			}
 
@@ -555,7 +555,6 @@ public class ReferenceLayoutService {
 
 	private Color configuredFavoriteColor() {
 		final Color configured = config.favoriteColor();
-
 		return configured != null
 				? configured
 				: new Color(255, 205, 70);
@@ -851,7 +850,6 @@ public class ReferenceLayoutService {
 		 * Render-time layout is read-only with respect to FontId.
 		 */
 		final List<TaggedMessage> messages = new ArrayList<>(repository.snapshot());
-
 		pruneChatboxBodyXState(messages);
 
 		final List<ReferenceHitbox> hitboxes = new ArrayList<>();
@@ -1094,7 +1092,6 @@ public class ReferenceLayoutService {
 		for (Map.Entry<Widget, MentionFontState> entry : fontsToRestore.entrySet()) {
 			final Widget widget = entry.getKey();
 			final MentionFontState state = entry.getValue();
-
 			if (widget == null || state == null || widget.getFontId() != state.appliedFontId) {
 				continue;
 			}
@@ -1917,7 +1914,6 @@ public class ReferenceLayoutService {
 		int from = 0;
 		while (from <= loweredMessage.length() - loweredToken.length()) {
 			final int start = loweredMessage.indexOf(loweredToken, from);
-
 			if (start < 0) {
 				break;
 			}
@@ -2041,7 +2037,6 @@ public class ReferenceLayoutService {
 		final int physicalLineHeight = resolvePhysicalLineHeight(widget, widgetBounds, wrappedLines.size());
 		for (int lineIndex = 0; lineIndex < wrappedLines.size(); lineIndex++) {
 			final WrappedLine line = wrappedLines.get(lineIndex);
-
 			final int segmentStart = Math.max(semanticStart, line.start);
 			final int segmentEnd = Math.min(semanticEnd, line.end);
 			if (segmentStart >= segmentEnd) {
@@ -2100,7 +2095,6 @@ public class ReferenceLayoutService {
 		final int physicalLineHeight = resolvePhysicalLineHeight(widget, widgetBounds, wrappedLines.size());
 		for (int lineIndex = 0; lineIndex < wrappedLines.size(); lineIndex++) {
 			final WrappedLine line = wrappedLines.get(lineIndex);
-
 			final int segmentStart = Math.max(semanticStart, line.start);
 			final int segmentEnd = Math.min(semanticEnd, line.end);
 			if (segmentStart >= segmentEnd) {
@@ -2426,7 +2420,6 @@ public class ReferenceLayoutService {
 
 					if (visibleForLayout && widget.getFontId() != -1) {
 						final String semanticText = ChatText.toSemanticPlain(rawText);
-
 						output.add(new RenderedTextWidget(widget, rawText, semanticText));
 					}
 				}

@@ -1,8 +1,8 @@
 package com.runetags.chat;
 
 import com.runetags.Configurations;
-import com.runetags.mention.LocalMentionMatcher;
 import com.runetags.mention.LocalMentionMatch;
+import com.runetags.mention.LocalMentionMatcher;
 import com.runetags.mention.MatchReason;
 import com.runetags.reference.PlayerReference;
 import com.runetags.reference.ReferenceType;
@@ -45,7 +45,6 @@ public class MessageFormatter {
 		}
 
 		final MessageMarkupMap markupMap = MessageMarkupMap.create(rawMessage);
-
 		if (!markupMap.matchesPlain(message.getOriginalMessage())) {
 			/*
 			 * Never risk corrupting a message whose semantic/plain mapping no
@@ -86,7 +85,6 @@ public class MessageFormatter {
 		 */
 		for (PlayerReference reference : message.getReferences()) {
 			final LocalMentionMatch localMatch = localMentionMatcher.match(reference, localPlayerName);
-
 			final boolean isSelf = localMatch.isMatchesLocalPlayer();
 
 			/*
@@ -248,7 +246,6 @@ public class MessageFormatter {
 		}
 
 		final String token = localMatch.getMatchedToken();
-
 		if (token == null || token.trim().isEmpty()) {
 			return;
 		}
@@ -269,11 +266,10 @@ public class MessageFormatter {
 				break;
 			}
 			final int end = start + loweredToken.length();
-
 			if (hasBoundaries(loweredMessage, start, end) && !overlapsExistingSpan(start, end, spans)) {
 				spans.add(new StyleSpan(start, end, shouldColor
-						? config.selfMentionColor()
-						: null, underline, shadowColor));
+					? config.selfMentionColor()
+					: null, underline, shadowColor));
 			}
 
 			from = start + 1;
@@ -293,7 +289,6 @@ public class MessageFormatter {
 	private static boolean hasBoundaries(String text, int start, int end) {
 		final boolean leftBoundary = start == 0 || !isNameChar(text.charAt(start - 1));
 		final boolean rightBoundary = end == text.length() || !isNameChar(text.charAt(end));
-
 		return leftBoundary && rightBoundary;
 	}
 
@@ -312,7 +307,6 @@ public class MessageFormatter {
 
 		final int colorStart = text.lastIndexOf("<col=");
 		final int colorEnd = text.lastIndexOf("</col>");
-
 		if (colorEnd > colorStart) {
 			return normalColorTag();
 		}

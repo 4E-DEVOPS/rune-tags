@@ -87,7 +87,6 @@ public class TaggedMessageRepository {
 		final Iterator<TaggedMessage> iterator = messages.iterator();
 		while (iterator.hasNext()) {
 			final TaggedMessage candidate = iterator.next();
-
 			if (retentionType(candidate) != type) {
 				continue;
 			}
