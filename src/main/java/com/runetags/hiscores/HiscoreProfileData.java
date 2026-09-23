@@ -21,20 +21,16 @@ public class HiscoreProfileData {
 			AccountType accountType,
 			Map<String, Integer> contextValues) {
 		this.combatLevel = combatLevel;
-
 		this.totalLevel = totalLevel;
-
 		this.accountType = accountType != null
 				? accountType
 				: AccountType.UNKNOWN;
-
 		this.contextValues = contextValues == null
 				? Collections.emptyMap()
 				: Collections.unmodifiableMap(new LinkedHashMap<>(contextValues));
 	}
 
-	public Integer getContextValue(
-			String hiscoreSkillName) {
+	public Integer getContextValue(String hiscoreSkillName) {
 		if (hiscoreSkillName == null) {
 			return null;
 		}

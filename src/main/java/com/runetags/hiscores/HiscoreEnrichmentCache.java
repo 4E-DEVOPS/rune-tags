@@ -19,8 +19,7 @@ public class HiscoreEnrichmentCache {
 		this(Clock.systemUTC());
 	}
 
-	public HiscoreEnrichmentCache(
-			Clock clock) {
+	public HiscoreEnrichmentCache(Clock clock) {
 		this.clock = clock != null
 				? clock
 				: Clock.systemUTC();
@@ -28,13 +27,11 @@ public class HiscoreEnrichmentCache {
 
 	public Optional<CachedProfileEnrichment> get(String playerName) {
 		final String key = key(playerName);
-
 		if (key.isEmpty()) {
 			return Optional.empty();
 		}
 
 		final CacheEntry entry = entries.get(key);
-
 		if (entry == null) {
 			return Optional.empty();
 		}
@@ -61,7 +58,6 @@ public class HiscoreEnrichmentCache {
 
 	private void put(String playerName, CachedProfileEnrichment value, Duration ttl) {
 		final String key = key(playerName);
-
 		if (key.isEmpty()) {
 			return;
 		}

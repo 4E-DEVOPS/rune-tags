@@ -48,13 +48,11 @@ public class EfficiencyMetricService {
 
 	public CompletableFuture<EfficiencyProfileData> lookup(String playerName) {
 		final String key = key(playerName);
-
 		if (closed || key.isEmpty()) {
 			return CompletableFuture.completedFuture(null);
 		}
 
 		final CacheEntry cached = cache.get(key);
-
 		if (cached != null) {
 			if (Instant.now().isBefore(cached.getExpiresAt())) {
 				return CompletableFuture.completedFuture(cached.getData());
@@ -90,15 +88,14 @@ public class EfficiencyMetricService {
 	private CompletableFuture<EfficiencyProfileData> request(String playerName, String key) {
 		final CompletableFuture<EfficiencyProfileData> future = new CompletableFuture<>();
 		final HttpUrl baseUrl = HttpUrl.parse(PLAYER_API_URL);
-
 		if (baseUrl == null) {
 			future.complete(null);
 			return future;
 		}
 
 		final HttpUrl url = baseUrl.newBuilder().addPathSegment(playerName).build();
-		final Request request = new Request.Builder().url(url).header("Accept", "application/json")
-				.header("User-Agent", "RuneTags RuneLite plugin").build();
+		final Request request = new Request.Builder()
+				.url(url).header("Accept", "application/json").header("User-Agent", "RuneTags RuneLite plugin").build();
 
 		final Call call = httpClient.newCall(request);
 		activeCalls.add(call);
@@ -126,16 +123,13 @@ public class EfficiencyMetricService {
 					}
 
 					final ResponseBody body = closedResponse.body();
-
 					if (body == null) {
 						return;
 					}
 
 					final WiseOldManPlayer responseData = gson.fromJson(body.charStream(), WiseOldManPlayer.class);
-
 					if (responseData != null) {
 						data = new EfficiencyProfileData(valid(responseData.getEhp()), valid(responseData.getEhb()));
-
 						if (data.getEhp() == null && data.getEhb() == null) {
 							data = null;
 						}
@@ -145,10 +139,9 @@ public class EfficiencyMetricService {
 							"[RuneTags][WOM] Unable to Parse Efficiency Response for Player='{}' | ERROR: {}",
 							playerName, exception.getMessage());
 				} finally {
-					complete(
-							key, future, data, data != null
-									? SUCCESS_TTL
-									: NEGATIVE_TTL);
+					complete(key, future, data, data != null
+							? SUCCESS_TTL
+							: NEGATIVE_TTL);
 				}
 			}
 		});

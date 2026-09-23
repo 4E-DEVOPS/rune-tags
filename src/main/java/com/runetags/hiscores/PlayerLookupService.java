@@ -24,7 +24,6 @@ public class PlayerLookupService {
 		}
 
 		final LookupProvider provider = config.lookupProvider();
-
 		switch (provider) {
 			case WISE_OLD_MAN:
 				openWiseOldMan(playerName);
@@ -57,10 +56,7 @@ public class PlayerLookupService {
 	}
 
 	private static String encodePath(String value) {
-		/*
-		 * URLEncoder emits '+' for spaces;
-		 * path segments require percent-encoded spaces.
-		 */
+		// URLEncoder uses '+' for spaces, but path segments require percent-encoded spaces.
 		return URLEncoder.encode(value.trim(), StandardCharsets.UTF_8).replace("+", "%20");
 	}
 
