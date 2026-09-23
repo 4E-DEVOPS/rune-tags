@@ -3034,21 +3034,26 @@ public class ReferenceLayoutService
                 lines.size());
     }
 
-    /**
-     * Whether non-clickable self-token backgrounds can contribute anything to the
-     * current frame.
-     */
-    private boolean shouldLayoutLocalHighlights()
-    {
-        if (!config.highlightBackground())
-        {
-            return false;
-        }
+	/**
+	 * Whether non-clickable local-token geometry can contribute an overlay
+	 * decoration to the current frame.
+	 */
+	private boolean shouldLayoutLocalHighlights()
+	{
+		if (config.underlineMentions())
+		{
+			return true;
+		}
 
-        return config.selfBackgroundColor() != null
-                && config.selfBackgroundColor()
-                .getAlpha() > 0;
-    }
+		if (!config.highlightBackground())
+		{
+			return false;
+		}
+
+		return config.selfBackgroundColor() != null
+				&& config.selfBackgroundColor()
+				.getAlpha() > 0;
+	}
 
     /**
      * Layout Unique Highlight / normalized-account-name local matches which are

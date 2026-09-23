@@ -262,18 +262,41 @@ public class ChatReferenceOverlay extends Overlay
                             localPlayerName);
                 }
 
-                /*
-                 * Unresolved tags retain their dotted underline on either chat surface.
-                 */
-                if (config.underlineMentions()
-                        && reference.getType() == ReferenceType.TAG
-                        && !reference.isLocallyResolved())
-                {
-                    drawDottedUnderline(
-                            graphics,
-                            hitbox.getBounds(),
-                            config.otherMentionColor());
-                }
+				/*
+				 * Mention underlines are rendered over the final chat presentation.
+				 *
+				 * Unresolved tags retain their dotted underline while
+				 * resolved references receive a solid underline.
+				 */
+				if (config.underlineMentions()
+						&& reference.getType() != ReferenceType.SENDER)
+				{
+					final LocalMentionMatch localMatch =
+							localMentionMatcher.match(
+									reference,
+									localPlayerName);
+
+					final Color underlineColor =
+							localMatch.isMatchesLocalPlayer()
+									? config.selfMentionColor()
+									: config.otherMentionColor();
+
+					if (reference.getType() == ReferenceType.TAG
+							&& !reference.isLocallyResolved())
+					{
+						drawDottedUnderline(
+								graphics,
+								hitbox.getBounds(),
+								underlineColor);
+					}
+					else
+					{
+						drawSolidUnderline(
+								graphics,
+								hitbox.getBounds(),
+								underlineColor);
+					}
+				}
             }
         }
         finally
@@ -751,24 +774,28 @@ public class ChatReferenceOverlay extends Overlay
             boolean hasVisibleChatbox,
             Shape unobscuredClip)
     {
-        if (highlights == null
-                || highlights.isEmpty()
-                || !config.highlightBackground())
-        {
-            return;
-        }
+		if (highlights == null
+				|| highlights.isEmpty())
+		{
+			return;
+		}
 
-        final Color backgroundColor =
-                config.selfBackgroundColor();
+		final Color backgroundColor =
+				config.selfBackgroundColor();
 
-        if (backgroundColor == null
-                || backgroundColor.getAlpha() == 0)
-        {
-            return;
-        }
+		final boolean drawBackground =
+				config.highlightBackground()
+						&& backgroundColor != null
+						&& backgroundColor.getAlpha() > 0;
 
-        graphics.setColor(
-                backgroundColor);
+		final boolean drawUnderline =
+				config.underlineMentions();
+
+		if (!drawBackground
+				&& !drawUnderline)
+		{
+			return;
+		}
 
         for (LocalHighlight highlight : highlights)
         {
@@ -815,15 +842,29 @@ public class ChatReferenceOverlay extends Overlay
                     continue;
             }
 
-            graphics.fillRect(
-                    visibleBounds.x
-                            - BACKGROUND_HORIZONTAL_PADDING,
-                    visibleBounds.y
-                            - BACKGROUND_VERTICAL_PADDING,
-                    visibleBounds.width
-                            + (BACKGROUND_HORIZONTAL_PADDING * 2),
-                    visibleBounds.height
-                            + (BACKGROUND_VERTICAL_PADDING * 2));
+			if (drawBackground)
+			{
+				graphics.setColor(
+						backgroundColor);
+
+				graphics.fillRect(
+						visibleBounds.x
+								- BACKGROUND_HORIZONTAL_PADDING,
+						visibleBounds.y
+								- BACKGROUND_VERTICAL_PADDING,
+						visibleBounds.width
+								+ (BACKGROUND_HORIZONTAL_PADDING * 2),
+						visibleBounds.height
+								+ (BACKGROUND_VERTICAL_PADDING * 2));
+			}
+
+			if (drawUnderline)
+			{
+				drawSolidUnderline(
+						graphics,
+						visibleBounds,
+						config.selfMentionColor());
+			}
         }
 
         graphics.setClip(
@@ -891,6 +932,41 @@ public class ChatReferenceOverlay extends Overlay
             graphics.setColor(previousColor);
         }
     }
+
+	private static void drawSolidUnderline(
+			Graphics2D graphics,
+			Rectangle bounds,
+			Color color)
+	{
+		if (bounds == null || bounds.width <= 0)
+		{
+			return;
+		}
+
+		final Color previousColor =
+				graphics.getColor();
+
+		try
+		{
+			if (color != null)
+			{
+				graphics.setColor(color);
+			}
+
+			final int y =
+					bounds.y + bounds.height - 2;
+
+			graphics.drawLine(
+					bounds.x,
+					y,
+					bounds.x + bounds.width - 1,
+					y);
+		}
+		finally
+		{
+			graphics.setColor(previousColor);
+		}
+	}
 
     private static void drawDottedUnderline(
             Graphics2D graphics,

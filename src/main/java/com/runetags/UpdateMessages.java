@@ -129,6 +129,6 @@ public final class UpdateMessages {
 	}
 
 	private static String prefix() {
-		return "<col=ff981f><shad=E1140A>RuneTags:</shad></col> ";
+		return "<col=FF981F><shad=E1140A>RuneTags:</shad></col> ";
 	}
 }
