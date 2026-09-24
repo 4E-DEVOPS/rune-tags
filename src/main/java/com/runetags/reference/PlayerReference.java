@@ -8,8 +8,7 @@ import net.runelite.api.ChatMessageType;
 
 @Value
 @Builder(toBuilder = true)
-public class PlayerReference
-{
+public class PlayerReference {
     String rawText;
     String normalizedToken;
     String lookupName;

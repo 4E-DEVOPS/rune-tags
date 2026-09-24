@@ -1,7 +1,6 @@
 package com.runetags.reference;
 
-public enum ReferenceType
-{
+public enum ReferenceType {
     SENDER,
     MENTION,
     TAG
