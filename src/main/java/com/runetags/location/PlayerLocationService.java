@@ -5,19 +5,9 @@ import net.runelite.api.Player;
 import net.runelite.api.coords.WorldPoint;
 
 /**
- * Client-thread snapshot of the local player's coarse location.
+ * Tracks the local player's coarse client-thread location.
  *
- * This service answers only WHERE the local player is.
- *
- * It deliberately does not:
- *
- * - inspect NPCs;
- * - choose profile metrics;
- * - resolve boss encounters;
- * - perform HiScore lookups;
- * - decide which KC/activity/skill values should be displayed.
- *
- * Those concerns belong to the contextual metric layer.
+ * Contextual metric selection and encounter semantics remain owned by the context layer.
  */
 public class PlayerLocationService {
 	private final Client client;
@@ -27,7 +17,6 @@ public class PlayerLocationService {
 
 	public PlayerLocationService(Client client, LocationIndex locationIndex) {
 		this.client = client;
-
 		this.locationIndex = locationIndex;
 	}
 
@@ -39,30 +28,24 @@ public class PlayerLocationService {
 		current = PlayerLocation.unknown();
 	}
 
-	/**
-	 * Refresh the local player's coarse location.
-	 *
-	 * Must run on RuneLite's client thread.
+	/*
+	 * Refreshes the local player's coarse location on RuneLite's client thread.
 	 */
 	public void refresh() {
 		final Player localPlayer = client.getLocalPlayer();
-
 		if (localPlayer == null) {
 			clear();
 			return;
 		}
 
 		final WorldPoint point = localPlayer.getWorldLocation();
-
 		if (point == null) {
 			clear();
 			return;
 		}
 
 		final int regionId = point.getRegionID();
-
 		final String locationName = locationIndex.findName(regionId);
-
 		current = new PlayerLocation(locationName, regionId);
 	}
 }

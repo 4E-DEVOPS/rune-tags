@@ -3,10 +3,9 @@ package com.runetags.location;
 import lombok.Value;
 
 /**
- * Immutable coarse location snapshot for a player.
+ * Immutable coarse-location snapshot for a player.
  *
- * Represents only where the player is; contextual metrics and encounter
- * semantics belong to the context layer.
+ * Contextual metrics and encounter semantics remain owned by the context layer.
  */
 @Value
 public class PlayerLocation {

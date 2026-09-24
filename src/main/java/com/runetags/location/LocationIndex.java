@@ -39,7 +39,6 @@ public class LocationIndex {
 
 	private static Map<Integer, String> load(Gson gson) {
 		final InputStream stream = LocationIndex.class.getResourceAsStream(RESOURCE);
-
 		if (stream == null) {
 			throw new IllegalStateException("Missing RuneTags location resource: " + RESOURCE);
 		}
@@ -48,7 +47,6 @@ public class LocationIndex {
 
 		final Map<String, List<List<Integer>>> source = gson.fromJson(
 				new InputStreamReader(stream, StandardCharsets.UTF_8), type);
-
 		final Map<Integer, String> result = new LinkedHashMap<>();
 
 		for (Map.Entry<String, List<List<Integer>>> entry : source.entrySet()) {
@@ -60,7 +58,6 @@ public class LocationIndex {
 				final int regionX = pair.get(0);
 				final int regionY = pair.get(1);
 				final int regionId = (regionX << 8) | regionY;
-
 				result.put(regionId, entry.getKey());
 			}
 		}
