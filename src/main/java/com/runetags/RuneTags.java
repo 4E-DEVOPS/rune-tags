@@ -443,6 +443,7 @@ public class RuneTags extends Plugin {
 		playerVisibilityService.start();
 		menuManager.get().addPlayerMenuItem(PLAYER_MENU_OPEN_PROFILE);
 		mouseManager.registerMouseListener(inputListener);
+		mouseManager.registerMouseListener(interfaceInput);
 		keyManager.registerKeyListener(inputListener);
 		log.debug("[RuneTags] Plugin Initiated!");
 	}
@@ -451,6 +452,10 @@ public class RuneTags extends Plugin {
 	protected void shutDown() {
 		final boolean uninstalling = updateMessages.prepareShutdown();
 		// 1. Stop external interaction first
+		if (interfaceInput != null) {
+			mouseManager.unregisterMouseListener(interfaceInput);
+		}
+
 		if (inputListener != null) {
 			keyManager.unregisterKeyListener(inputListener);
 
@@ -1528,4 +1533,5 @@ public class RuneTags extends Plugin {
 		}
 	}
 }
+
 
