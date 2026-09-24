@@ -5,8 +5,6 @@ import com.runetags.quickprofile.QuickProfileController;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
 
-import lombok.extern.slf4j.Slf4j;
-
 import net.runelite.api.Client;
 import net.runelite.api.MenuAction;
 import net.runelite.api.events.MenuEntryAdded;
@@ -20,7 +18,6 @@ import net.runelite.client.util.Text;
 /**
  * Adds RuneTags profile actions to player names exposed through RuneScape interfaces.
  */
-@Slf4j
 public class InterfaceInput extends MouseAdapter {
 	private static final String MENU_OPEN_PROFILE = "Open Profile";
 
@@ -42,16 +39,6 @@ public class InterfaceInput extends MouseAdapter {
 				&& event.getType() != MenuAction.CC_OP_LOW_PRIORITY.getId())) {
 			return;
 		}
-
-		log.debug(
-				"[RuneTags][InterfaceInput] Option='{}' | Target='{}' | Type={} | Identifier={} "
-						+ "| Param0={} | Param1={}",
-				event.getOption(),
-				event.getTarget(),
-				event.getType(),
-				event.getIdentifier(),
-				event.getActionParam0(),
-				event.getActionParam1());
 
 		final String option = event.getOption() != null
 				? Text.removeTags(event.getOption())
