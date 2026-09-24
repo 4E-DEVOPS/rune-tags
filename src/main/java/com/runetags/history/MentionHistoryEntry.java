@@ -8,6 +8,9 @@ import lombok.Value;
 
 import net.runelite.api.ChatMessageType;
 
+/**
+ * Immutable mention-history entry containing message and captured context.
+ */
 @Value
 public class MentionHistoryEntry {
 	long messageId;
@@ -19,10 +22,7 @@ public class MentionHistoryEntry {
 	MatchReason matchReason;
 
 	/*
-	 * Snapshot of contextual information when the mention occurred.
-	 *
-	 * These values remain historical and are not updated later.
-	 * (WORLD, CHANNELS, and LOCATIONS)
+	 * Context captured when the mention occurred. These values remain historical snapshots.
 	 */
 	Integer world;
 	String locationName;

@@ -28,6 +28,9 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.client.RuneLite;
 import net.runelite.client.config.ConfigManager;
 
+/**
+ * Persists bounded mention history and migrates the legacy ConfigManager store.
+ */
 @Slf4j
 public class MentionHistoryService {
 	private static final int STORE_VERSION = 1;
@@ -75,10 +78,15 @@ public class MentionHistoryService {
 		}
 
 		final MentionHistoryEntry entry = new MentionHistoryEntry(
-				taggedMessage.getId(), taggedMessage.getCanonicalSender(), taggedMessage.getOriginalMessage(),
-				taggedMessage.getType(), taggedMessage.getLocalMentionMatch().getReason(), world, locationName,
-				channelName, taggedMessage.getTimestamp());
-
+				taggedMessage.getId(),
+				taggedMessage.getCanonicalSender(),
+				taggedMessage.getOriginalMessage(),
+				taggedMessage.getType(),
+				taggedMessage.getLocalMentionMatch().getReason(),
+				world,
+				locationName,
+				channelName,
+				taggedMessage.getTimestamp());
 		entries.addFirst(entry);
 		trim();
 		save();
@@ -99,21 +107,12 @@ public class MentionHistoryService {
 
 	public synchronized void enforceLimit() {
 		final int before = entries.size();
-
 		trim();
-
 		if (entries.size() != before) {
 			save();
 		}
 	}
 
-	/**
-	 * Reload persistent mention history from disk.
-	 *
-	 * MentionHistoryService is owned by RuneLite/Guice and may remain alive
-	 * across RuneTags disable/enable cycles. Reloading here ensures each
-	 * plugin startup reflects the current contents of history.json.
-	 */
 	public synchronized void reload() {
 		load();
 	}
@@ -133,10 +132,8 @@ public class MentionHistoryService {
 	}
 
 	private boolean loadFile() {
-		try (
-				BufferedReader reader = Files.newBufferedReader(historyFile, StandardCharsets.UTF_8)) {
+		try (BufferedReader reader = Files.newBufferedReader(historyFile, StandardCharsets.UTF_8)) {
 			final PersistedStore store = gson.fromJson(reader, PersistedStore.class);
-
 			if (!isValidStore(store)) {
 				log.warn("[RuneTags][Mention-History] Ignoring Invalid Store '{}'", historyFile);
 				return false;
@@ -156,14 +153,12 @@ public class MentionHistoryService {
 		}
 
 		final String json = configManager.getConfiguration(Constants.CONFIG_GROUP, LEGACY_CONFIG_KEY);
-
 		if (json == null || json.trim().isEmpty()) {
 			return;
 		}
 
 		try {
 			final PersistedStore store = gson.fromJson(json, PersistedStore.class);
-
 			if (!isValidStore(store)) {
 				log.warn("[RuneTags][Mention-History] Legacy Config Store is Invalid; Leaving it Untouched");
 				return;
@@ -190,15 +185,13 @@ public class MentionHistoryService {
 		}
 	}
 
-	private void loadStore(
-			PersistedStore store) {
+	private void loadStore(PersistedStore store) {
 		if (store == null || store.entries == null) {
 			return;
 		}
 
 		for (PersistedEntry persisted : store.entries) {
 			final MentionHistoryEntry entry = fromPersisted(persisted);
-
 			if (entry != null) {
 				entries.addLast(entry);
 			}
@@ -207,14 +200,12 @@ public class MentionHistoryService {
 		trim();
 	}
 
-	private static boolean isValidStore(
-			PersistedStore store) {
+	private static boolean isValidStore(PersistedStore store) {
 		return store != null && store.version == STORE_VERSION && store.entries != null;
 	}
 
 	private void save() {
 		final PersistedStore store = new PersistedStore();
-
 		store.version = STORE_VERSION;
 		store.entries = new ArrayList<>();
 
@@ -225,8 +216,7 @@ public class MentionHistoryService {
 		try {
 			Files.createDirectories(historyDirectory);
 
-			try (
-					BufferedWriter writer = Files.newBufferedWriter(historyTempFile, StandardCharsets.UTF_8)) {
+			try (BufferedWriter writer = Files.newBufferedWriter(historyTempFile, StandardCharsets.UTF_8)) {
 				gson.newBuilder().setPrettyPrinting().create().toJson(store, PersistedStore.class, writer);
 			}
 
@@ -242,7 +232,6 @@ public class MentionHistoryService {
 		}
 
 		final String json = configManager.getConfiguration(Constants.CONFIG_GROUP, LEGACY_CONFIG_KEY);
-
 		if (json == null || json.trim().isEmpty()) {
 			return;
 		}
@@ -264,32 +253,25 @@ public class MentionHistoryService {
 
 	private void trim() {
 		final int maximum = Math.max(1, config.maximumHistory());
-
 		while (entries.size() > maximum) {
 			entries.removeLast();
 		}
 	}
 
-	private static PersistedEntry toPersisted(
-			MentionHistoryEntry entry) {
+	private static PersistedEntry toPersisted(MentionHistoryEntry entry) {
 		final PersistedEntry persisted = new PersistedEntry();
-
 		persisted.messageId = entry.getMessageId();
-
 		persisted.sender = entry.getSender();
 		persisted.message = entry.getMessage();
-
 		persisted.chatType = entry.getChatType() != null
 				? entry.getChatType().name()
 				: null;
 		persisted.matchReason = entry.getMatchReason() != null
 				? entry.getMatchReason().name()
 				: null;
-
 		persisted.world = entry.getWorld();
 		persisted.locationName = entry.getLocationName();
 		persisted.channelName = entry.getChannelName();
-
 		persisted.timestampMillis = entry.getTimestamp() != null
 				? entry.getTimestamp().toEpochMilli()
 				: System.currentTimeMillis();
@@ -297,14 +279,12 @@ public class MentionHistoryService {
 		return persisted;
 	}
 
-	private static MentionHistoryEntry fromPersisted(
-			PersistedEntry persisted) {
+	private static MentionHistoryEntry fromPersisted(PersistedEntry persisted) {
 		if (persisted == null) {
 			return null;
 		}
 
 		final ChatMessageType chatType;
-
 		try {
 			chatType = persisted.chatType != null
 					? ChatMessageType.valueOf(persisted.chatType)
@@ -314,7 +294,6 @@ public class MentionHistoryService {
 		}
 
 		final MatchReason matchReason;
-
 		try {
 			matchReason = persisted.matchReason != null
 					? MatchReason.valueOf(persisted.matchReason)
@@ -324,13 +303,19 @@ public class MentionHistoryService {
 		}
 
 		return new MentionHistoryEntry(
-				persisted.messageId, persisted.sender, persisted.message, chatType, matchReason, persisted.world,
-				persisted.locationName, persisted.channelName, Instant.ofEpochMilli(persisted.timestampMillis));
+				persisted.messageId,
+				persisted.sender,
+				persisted.message,
+				chatType,
+				matchReason,
+				persisted.world,
+				persisted.locationName,
+				persisted.channelName,
+				Instant.ofEpochMilli(persisted.timestampMillis));
 	}
 
 	/*
-	 * Store primitives and enum names instead of RuneLite objects or Instant so
-	 * the persisted format remains simple and tolerant of internal model changes.
+	 * Persist primitive values and enum names instead of RuneLite model objects.
 	 */
 	private static class PersistedEntry {
 		long messageId;
@@ -350,7 +335,6 @@ public class MentionHistoryService {
 
 	private static final class PersistedStore {
 		private int version = STORE_VERSION;
-
 		private List<PersistedEntry> entries = new ArrayList<>();
 	}
 }
