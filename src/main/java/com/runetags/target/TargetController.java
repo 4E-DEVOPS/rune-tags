@@ -29,21 +29,17 @@ public class TargetController {
 	}
 
 	public boolean toggleTarget(QuickProfileModel model) {
-		if (model == null || !model.isNearby() || model.getDisplayName() == null || model.getDisplayName().trim()
-				.isEmpty()) {
+		if (model == null || !model.isNearby() || model.getDisplayName() == null
+				|| model.getDisplayName().trim().isEmpty()) {
 			return isTargeting();
 		}
 
 		return toggleTarget(model.getDisplayName());
 	}
 
-	/**
-	 * Toggle a target selected from RuneLite's native player menu.
-	 *
-	 * The live Player object is deliberately reduced back to the canonical
-	 * player name and re-resolved against the current scene. This keeps native
-	 * player-menu targeting and Quick-Card/chat targeting on the same nearby
-	 * validation path and avoids retaining a stale actor from an open menu.
+	/*
+	 * Resolve native player-menu selections by name so all target entry points share
+	 * the same nearby-player validation without retaining a stale menu actor.
 	 */
 	public boolean toggleTarget(Player player) {
 		if (player == null || player.getName() == null || player.getName().trim().isEmpty()) {
@@ -53,12 +49,8 @@ public class TargetController {
 		return toggleTarget(player.getName());
 	}
 
-	/**
-	 * Toggle a nearby player by name.
-	 *
-	 * This is the shared entry point used when the caller has semantic player
-	 * identity but no guaranteed-live Player object, such as a chat mention/tag
-	 * context-menu action.
+	/*
+	 * Toggle a nearby player by name when no guaranteed-live Player object is available.
 	 */
 	public boolean toggleTarget(String playerName) {
 		if (playerName == null || playerName.trim().isEmpty()) {
@@ -74,14 +66,12 @@ public class TargetController {
 		}
 
 		final String requestedName = playerName.trim();
-
 		if (isTargetingName(requestedName)) {
 			clear("manually untargeted");
 			return false;
 		}
 
 		final Player resolved = findNearbyPlayer(requestedName);
-
 		if (resolved == null || resolved.getName() == null || resolved.getName().trim().isEmpty()) {
 			return isTargeting();
 		}
@@ -100,7 +90,6 @@ public class TargetController {
 
 	public void refresh() {
 		final String currentName = targetName;
-
 		if (currentName == null) {
 			targetPlayer = null;
 			return;
@@ -117,7 +106,6 @@ public class TargetController {
 		}
 
 		final int timeoutSeconds = Math.max(0, config.targetTimeout());
-
 		if (timeoutSeconds > 0
 				&& targetStartedNanos > 0
 				&& System.nanoTime() - targetStartedNanos >= timeoutSeconds * 1_000_000_000L) {
@@ -126,7 +114,6 @@ public class TargetController {
 		}
 
 		final Player resolved = findNearbyPlayer(currentName);
-
 		if (resolved == null) {
 			clear("player left scene");
 			return;
@@ -168,13 +155,11 @@ public class TargetController {
 
 	private Player findNearbyPlayer(String playerName) {
 		final WorldView worldView = client.getTopLevelWorldView();
-
 		if (worldView == null) {
 			return null;
 		}
 
 		final String wanted = normalize(playerName);
-
 		for (Player player : worldView.players()) {
 			if (player == null || player.getName() == null) {
 				continue;
@@ -194,7 +179,6 @@ public class TargetController {
 		}
 
 		final HideOthersMode mode = config.hideAllOthers();
-
 		if (mode == null || !mode.isEnabled()) {
 			return false;
 		}
@@ -204,7 +188,6 @@ public class TargetController {
 		}
 
 		final long elapsedNanos = System.nanoTime() - hideOthersStartedNanos;
-
 		final long durationNanos = mode.getDurationSeconds() * 1_000_000_000L;
 
 		return elapsedNanos < durationNanos;
