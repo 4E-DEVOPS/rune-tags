@@ -9,25 +9,24 @@ import lombok.Value;
 import net.runelite.api.ChatMessageType;
 
 @Value
-public class MentionHistoryEntry
-{
-    long messageId;
+public class MentionHistoryEntry {
+	long messageId;
 
-    String sender;
-    String message;
+	String sender;
+	String message;
 
-    ChatMessageType chatType;
-    MatchReason matchReason;
+	ChatMessageType chatType;
+	MatchReason matchReason;
 
-    /*
-     * Snapshot of contextual information when the mention occurred.
-     *
-     * These values remain historical and are not updated later.
-     * (WORLD, CHANNELS, and LOCATIONS)
-     */
-    Integer world;
-    String locationName;
-    String channelName;
+	/*
+	 * Snapshot of contextual information when the mention occurred.
+	 *
+	 * These values remain historical and are not updated later.
+	 * (WORLD, CHANNELS, and LOCATIONS)
+	 */
+	Integer world;
+	String locationName;
+	String channelName;
 
-    Instant timestamp;
+	Instant timestamp;
 }
