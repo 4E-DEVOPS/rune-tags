@@ -21,6 +21,7 @@ import com.runetags.hiscores.PlayerLookupService;
 import com.runetags.history.MentionHistoryPanel;
 import com.runetags.history.MentionHistoryService;
 import com.runetags.input.InputListener;
+import com.runetags.input.InterfaceInput;
 import com.runetags.location.LocationIndex;
 import com.runetags.location.PlayerLocationService;
 import com.runetags.mention.KnownPlayerMentionParser;
@@ -80,6 +81,7 @@ import net.runelite.api.events.FriendsChatMemberJoined;
 import net.runelite.api.events.FriendsChatMemberLeft;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.NameableNameChanged;
@@ -221,6 +223,7 @@ public class RuneTags extends Plugin {
 	private SuggestionService suggestionService;
 	private SuggestionOverlay suggestionOverlay;
 	private InputListener inputListener;
+	private InterfaceInput interfaceInput;
 
 	/*
 	 * Context / profile enrichment.
@@ -374,6 +377,7 @@ public class RuneTags extends Plugin {
 				chatHitboxRegistry,
 				quickProfileController,
 				suggestionService);
+		interfaceInput = new InterfaceInput(client, quickProfileController);
 
 		// 6. Runtime state
 		nextMessageId = 0;
@@ -546,6 +550,7 @@ public class RuneTags extends Plugin {
 
 		// 5. Release RuneTags objects in reverse dependency order
 		// Input and chat presentation
+		interfaceInput = null;
 		inputListener = null;
 		suggestionOverlay = null;
 		suggestionService = null;
@@ -1276,6 +1281,13 @@ public class RuneTags extends Plugin {
 	 * CHAT INTERACTION
 	 * ================================================================
 	 */
+	@Subscribe
+	public void onMenuEntryAdded(MenuEntryAdded event) {
+		if (interfaceInput != null) {
+			interfaceInput.onMenuEntryAdded(event);
+		}
+	}
+
 	@Subscribe
 	public void onMenuOpened(MenuOpened event) {
 		/*
