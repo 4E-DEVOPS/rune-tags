@@ -9,16 +9,16 @@ import net.runelite.api.ChatMessageType;
 @Value
 @Builder(toBuilder = true)
 public class PlayerReference {
-    String rawText;
-    String normalizedToken;
-    String lookupName;
+	String rawText;
+	String normalizedToken;
+	String lookupName;
 
-    int startOffset;
-    int endOffset;
+	int startOffset;
+	int endOffset;
 
-    ReferenceType type;
-    boolean locallyResolved;
-    PlayerIdentity identity;
+	ReferenceType type;
+	boolean locallyResolved;
+	PlayerIdentity identity;
 
-    ChatMessageType chatType;
+	ChatMessageType chatType;
 }
