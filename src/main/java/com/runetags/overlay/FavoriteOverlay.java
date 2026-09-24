@@ -63,19 +63,14 @@ public class FavoriteOverlay extends Overlay {
 		}
 
 		final WorldView worldView = client.getTopLevelWorldView();
-
 		if (worldView == null) {
 			return null;
 		}
-
 		final TargetMode mode = config.targetMode() != null
 				? config.targetMode()
 				: TargetMode.OFF;
-
 		final Color favoriteColor = configuredFavoriteColor();
-
 		final Color sceneColor = sceneColor(favoriteColor);
-
 		for (Player player : worldView.players()) {
 			if (player == null
 					|| player.getName() == null
@@ -83,14 +78,11 @@ public class FavoriteOverlay extends Overlay {
 					|| !localPlayerRecordService.isFavorite(player.getName())) {
 				continue;
 			}
-
 			if (mode.showsOutline()) {
 				modelOutlineRenderer.drawOutline(player, OUTLINE_WIDTH, sceneColor, OUTLINE_FEATHER);
 			}
-
 			if (mode.showsTile()) {
 				final Polygon tilePoly = player.getCanvasTilePoly();
-
 				if (tilePoly != null) {
 					OverlayUtil.renderPolygon(graphics, tilePoly, sceneColor);
 				}
@@ -121,17 +113,14 @@ public class FavoriteOverlay extends Overlay {
 
 	private static void drawFavoriteName(Graphics2D graphics, Player player, Color favoriteColor) {
 		final String rawName = player.getName();
-
 		if (rawName == null || rawName.isEmpty()) {
 			return;
 		}
 
 		final String name = Text.sanitize(rawName);
-
 		final Point textLocation = player.getCanvasTextLocation(
 				graphics, name,
 				player.getLogicalHeight() + NAME_HEIGHT_OFFSET);
-
 		if (textLocation != null) {
 			OverlayUtil.renderTextLocation(graphics, textLocation, name, favoriteColor);
 		}

@@ -6,8 +6,8 @@ import com.runetags.chat.ReferenceHitbox;
 import com.runetags.chat.ReferenceLayoutService;
 import com.runetags.chat.ReferenceLayoutService.LayoutResult;
 import com.runetags.chat.ReferenceLayoutService.LocalHighlight;
-import com.runetags.mention.LocalMentionMatcher;
 import com.runetags.mention.LocalMentionMatch;
+import com.runetags.mention.LocalMentionMatcher;
 import com.runetags.reference.PlayerReference;
 import com.runetags.reference.ReferenceType;
 
@@ -33,10 +33,11 @@ import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayPriority;
 
 /**
- * Renders chat-reference decorations and publishes their current interaction
- * hitboxes across CHATBOX and SPLIT_PRIVATE surfaces.
+ * Renders chat-reference decorations and publishes interaction hitboxes across
+ * CHATBOX and SPLIT_PRIVATE surfaces.
  *
- * Also renders local-reference backgrounds and unresolved-tag underlines.
+ * Local highlights, reference backgrounds, and mention underlines render above
+ * native chat Widgets.
  */
 public class ChatReferenceOverlay extends Overlay {
 	private static final int BACKGROUND_HORIZONTAL_PADDING = 1;
@@ -70,55 +71,40 @@ public class ChatReferenceOverlay extends Overlay {
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		/*
-		 * Native chat text is clipped to the chatbox, but ABOVE_WIDGETS overlays are
-		 * not. Use the visible chat area to constrain RuneTags rendering and input.
+		 * ABOVE_WIDGETS is not clipped by native chat, so constrain rendering and input
+		 * to the visible chat area.
 		 */
 		final Widget chatScrollArea = client.getWidget(InterfaceID.Chatbox.SCROLLAREA);
 		final Widget chatboxArea = client.getWidget(InterfaceID.Chatbox.CHATAREA);
-
 		final Rectangle chatScrollBounds = chatScrollArea != null && !chatScrollArea.isHidden()
 				? chatScrollArea.getBounds()
 				: null;
-
 		final boolean hasVisibleChatbox = chatScrollBounds != null
 				&& chatScrollBounds.width > 0
 				&& chatScrollBounds.height > 0;
-
-		/*
-		 * Calculate semantic/reference hitboxes from the rendered chat.
-		 */
+		// Calculate semantic/reference hitboxes from the rendered chat.
 		final LayoutResult layoutResult = layoutService.layout();
-
 		final List<ReferenceHitbox> hitboxes = layoutResult.getHitboxes();
-
 		final List<LocalHighlight> localHighlights = layoutResult.getLocalHighlights();
 
 		/*
-		 * CHATBOX references are clipped to the visible chat history, including
-		 * partially scrolled rows. SPLIT_PRIVATE references come from visible PmChat
-		 * widgets outside CHATBOX_MESSAGE_LINES and must not use that clip.
+		 * CHATBOX uses the visible history clip; SPLIT_PRIVATE remains outside it.
 		 */
 		final Widget splitPrivateRoot = client.getWidget(InterfaceID.PmChat.CONTAINER);
 
 		/*
-		 * ABOVE_WIDGETS is not automatically obscured by interfaces covering chat, so
-		 * respect RuneScape's native no-click-through regions explicitly.
+		 * Respect native no-click-through interfaces that obscure the chat surface.
 		 */
 		final Rectangle interactionBounds = unionInteractionBounds(hitboxes, localHighlights);
-
 		final List<Rectangle> blockingBounds = collectBlockingWidgetBounds(
 				chatboxArea, splitPrivateRoot,
 				interactionBounds);
-
 		final List<ReferenceHitbox> visibleHitboxes = new ArrayList<>();
-
 		for (ReferenceHitbox hitbox : hitboxes) {
 			if (hitbox == null || hitbox.getBounds() == null) {
 				continue;
 			}
-
 			Rectangle visibleBounds = new Rectangle(hitbox.getBounds());
-
 			switch (hitbox.getSurface()) {
 				case CHATBOX:
 					if (!hasVisibleChatbox || !chatScrollBounds.intersects(visibleBounds)) {
@@ -139,10 +125,7 @@ public class ChatReferenceOverlay extends Overlay {
 				continue;
 			}
 
-			/*
-			 * Preserve visible fragments when an interface
-			 * obscures only part of a reference.
-			 */
+			// Preserve visible fragments around partially obscuring interfaces.
 			for (Rectangle fragment : subtractBlockingBounds(visibleBounds, blockingBounds)) {
 				if (fragment == null || fragment.isEmpty()) {
 					continue;
@@ -157,33 +140,21 @@ public class ChatReferenceOverlay extends Overlay {
 		registry.replace(visibleHitboxes);
 
 		final Player localPlayer = client.getLocalPlayer();
-
 		final String localPlayerName = localPlayer != null
 				? localPlayer.getName()
 				: null;
-
 		final Color originalColor = graphics.getColor();
-
 		final Shape originalClip = graphics.getClip();
-
 		final Shape unobscuredClip = buildUnobscuredClip(originalClip, blockingBounds);
 
 		try {
-			/*
-			 * Draw non-clickable local/self backgrounds before clickable reference
-			 * decorations so reference decoration remains visually above them.
-			 */
+			// Draw local decorations before clickable reference decorations.
 			drawLocalHighlights(graphics, localHighlights, chatScrollBounds, hasVisibleChatbox, unobscuredClip);
 
 			graphics.setColor(originalColor);
 
-			/*
-			 * Render each reference independently because CHATBOX
-			 * and SPLIT_PRIVATE use different clipping rules.
-			 */
 			for (ReferenceHitbox hitbox : visibleHitboxes) {
 				final PlayerReference reference = hitbox.getReference();
-
 				if (reference == null) {
 					continue;
 				}
@@ -191,34 +162,21 @@ public class ChatReferenceOverlay extends Overlay {
 				graphics.setClip(unobscuredClip);
 
 				if (hitbox.getSurface() == ReferenceLayoutService.Surface.CHATBOX) {
-					/*
-					 * Clip CHATBOX decorations so ABOVE_WIDGETS rendering
-					 * cannot escape the visible chat history.
-					 */
+					// Keep CHATBOX decoration inside the visible chat history.
 					graphics.clip(chatScrollBounds);
 				}
 
-				/*
-				 * SENDER is an interaction target, not a semantic mention,
-				 * so clickable sender names must not receive mention highlighting.
-				 */
+				// SENDER is interaction-only and does not receive mention decoration.
 				if (reference.getType() != ReferenceType.SENDER && config.highlightBackground()) {
 					drawReferenceBackground(graphics, hitbox, localPlayerName);
 				}
 
-				/*
-				 * Mention underlines are rendered over the final chat presentation.
-				 *
-				 * Unresolved tags retain their dotted underline while
-				 * resolved references receive a solid underline.
-				 */
+				// Resolved references use solid overlay underlines; unresolved tags remain dotted.
 				if (config.underlineMentions() && reference.getType() != ReferenceType.SENDER) {
 					final LocalMentionMatch localMatch = localMentionMatcher.match(reference, localPlayerName);
-
 					final Color underlineColor = localMatch.isMatchesLocalPlayer()
 							? config.selfMentionColor()
 							: config.otherMentionColor();
-
 					if (reference.getType() == ReferenceType.TAG && !reference.isLocallyResolved()) {
 						drawDottedUnderline(graphics, hitbox.getBounds(), underlineColor);
 					} else {
@@ -227,10 +185,7 @@ public class ChatReferenceOverlay extends Overlay {
 				}
 			}
 		} finally {
-			/*
-			 * Always restore Graphics2D state because RuneLite shares this
-			 * graphics context with other overlay rendering.
-			 */
+			// Restore shared Graphics2D state.
 			graphics.setClip(originalClip);
 			graphics.setColor(originalColor);
 		}
@@ -238,9 +193,8 @@ public class ChatReferenceOverlay extends Overlay {
 		return null;
 	}
 
-	/**
-	 * Build the smallest canvas region needed for RuneTags chat rendering and
-	 * interaction so native widget traversal can ignore unrelated interfaces.
+	/*
+	 * Build the smallest canvas region needed for chat rendering and interaction.
 	 */
 	private static Rectangle unionInteractionBounds(
 			List<ReferenceHitbox> hitboxes,
@@ -278,9 +232,8 @@ public class ChatReferenceOverlay extends Overlay {
 		return result;
 	}
 
-	/**
-	 * Find visible native widgets that prevent interaction with widgets beneath
-	 * them, excluding the chat surfaces RuneTags deliberately decorates.
+	/*
+	 * Find visible native blockers outside the chat surfaces RuneTags decorates.
 	 */
 	private List<Rectangle> collectBlockingWidgetBounds(
 			Widget chatboxArea,
@@ -291,15 +244,11 @@ public class ChatReferenceOverlay extends Overlay {
 		}
 
 		final Widget[] roots = client.getWidgetRoots();
-
 		if (roots == null || roots.length == 0) {
 			return Collections.emptyList();
 		}
-
 		final List<Rectangle> blockingBounds = new ArrayList<>();
-
 		final Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-
 		for (Widget root : roots) {
 			collectBlockingWidgetBounds(
 					root, chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited,
@@ -323,17 +272,12 @@ public class ChatReferenceOverlay extends Overlay {
 
 		final Rectangle bounds = widget.getBounds();
 
-		/*
-		 * Prune widget subtrees outside the RuneTags interaction region.
-		 */
+		// Prune widget subtrees outside the RuneTags interaction region.
 		if (bounds != null && !bounds.isEmpty() && !interactionBounds.intersects(bounds)) {
 			return;
 		}
 
-		/*
-		 * Once a no-click-through widget blocks this region,
-		 * its descendants cannot expose the chat beneath it.
-		 */
+		// A no-click-through blocker also hides its descendants from chat interaction.
 		if (bounds != null && !bounds.isEmpty() && widget.getNoClickThrough() && !belongsToChatPresentation(
 				widget,
 				chatboxArea, splitPrivateRoot)) {
@@ -374,9 +318,8 @@ public class ChatReferenceOverlay extends Overlay {
 		}
 	}
 
-	/**
-	 * A no-click-through Widget belonging to either native chat presentation must
-	 * not hide RuneTags from the very chat surface it is decorating.
+	/*
+	 * Native chat branches are never treated as blockers for their own presentation.
 	 */
 	private static boolean belongsToChatPresentation(Widget widget, Widget chatboxArea, Widget splitPrivateRoot) {
 		return sharesWidgetBranch(widget, chatboxArea) || sharesWidgetBranch(widget, splitPrivateRoot);
@@ -400,9 +343,8 @@ public class ChatReferenceOverlay extends Overlay {
 		return false;
 	}
 
-	/**
-	 * Build the RuneTags paint region by subtracting native no-click-through
-	 * interface bounds from the current graphics clip.
+	/*
+	 * Build the paint region by subtracting native no-click-through bounds.
 	 */
 	private Shape buildUnobscuredClip(Shape originalClip, List<Rectangle> blockingBounds) {
 		final Area visibleArea = originalClip != null
@@ -422,11 +364,8 @@ public class ChatReferenceOverlay extends Overlay {
 		return visibleArea;
 	}
 
-	/**
-	 * Remove native interface regions from one clickable reference rectangle.
-	 *
-	 * Rectangle fragments are retained individually because ChatHitboxRegistry
-	 * stores rectangular hit targets.
+	/*
+	 * Remove blocked interface regions while retaining rectangular hitbox fragments.
 	 */
 	private static List<Rectangle> subtractBlockingBounds(Rectangle source, List<Rectangle> blockingBounds) {
 		if (source == null || source.isEmpty()) {
@@ -447,7 +386,6 @@ public class ChatReferenceOverlay extends Overlay {
 			}
 
 			final List<Rectangle> next = new ArrayList<>();
-
 			for (Rectangle fragment : fragments) {
 				subtractRectangle(fragment, blocker, next);
 			}
@@ -464,44 +402,31 @@ public class ChatReferenceOverlay extends Overlay {
 		}
 
 		final Rectangle intersection = source.intersection(blocker);
-
 		if (intersection.isEmpty()) {
 			output.add(source);
 			return;
 		}
-
 		final int sourceRight = source.x + source.width;
-
 		final int sourceBottom = source.y + source.height;
-
 		final int intersectionRight = intersection.x + intersection.width;
-
 		final int intersectionBottom = intersection.y + intersection.height;
 
-		/*
-		 * Area above the blocker.
-		 */
+		// Area above the blocker.
 		if (intersection.y > source.y) {
 			output.add(new Rectangle(source.x, source.y, source.width, intersection.y - source.y));
 		}
 
-		/*
-		 * Area below the blocker.
-		 */
+		// Area below the blocker.
 		if (intersectionBottom < sourceBottom) {
 			output.add(new Rectangle(source.x, intersectionBottom, source.width, sourceBottom - intersectionBottom));
 		}
 
-		/*
-		 * Area left of the blocker within the blocker's vertical band.
-		 */
+		// Area left of the blocker within its vertical band.
 		if (intersection.x > source.x) {
 			output.add(new Rectangle(source.x, intersection.y, intersection.x - source.x, intersection.height));
 		}
 
-		/*
-		 * Area right of the blocker within the blocker's vertical band.
-		 */
+		// Area right of the blocker within its vertical band.
 		if (intersectionRight < sourceRight) {
 			output.add(new Rectangle(
 					intersectionRight, intersection.y, sourceRight - intersectionRight,
@@ -520,17 +445,13 @@ public class ChatReferenceOverlay extends Overlay {
 		}
 
 		final Color backgroundColor = config.selfBackgroundColor();
-
 		final boolean drawBackground = config.highlightBackground()
 				&& backgroundColor != null
 				&& backgroundColor.getAlpha() > 0;
-
 		final boolean drawUnderline = config.underlineMentions();
-
 		if (!drawBackground && !drawUnderline) {
 			return;
 		}
-
 		for (LocalHighlight highlight : highlights) {
 			if (highlight == null || highlight.getBounds() == null) {
 				continue;
@@ -539,7 +460,6 @@ public class ChatReferenceOverlay extends Overlay {
 			graphics.setClip(unobscuredClip);
 
 			Rectangle visibleBounds = highlight.getBounds();
-
 			switch (highlight.getSurface()) {
 				case CHATBOX:
 					if (!hasVisibleChatbox || !chatScrollBounds.intersects(visibleBounds)) {
@@ -582,29 +502,22 @@ public class ChatReferenceOverlay extends Overlay {
 
 	private void drawReferenceBackground(Graphics2D graphics, ReferenceHitbox hitbox, String localPlayerName) {
 		final PlayerReference reference = hitbox.getReference();
-
 		final Rectangle bounds = hitbox.getBounds();
-
 		if (reference == null || bounds == null) {
 			return;
 		}
-
 		final LocalMentionMatch localMatch = localMentionMatcher.match(reference, localPlayerName);
-
 		final boolean isSelf = localMatch.isMatchesLocalPlayer();
 
 		/*
-		 * Reference backgrounds are independent from foreground mention coloring and
-		 * apply only to the exact mention/tag hitbox. Mention Whole Message therefore
-		 * does not affect this path.
+		 * Reference backgrounds apply only to the exact mention/tag hitbox and remain
+		 * independent from foreground and whole-message coloring.
 		 */
 		final Color backgroundColor = isSelf
 				? config.selfBackgroundColor()
 				: config.otherBackgroundColor();
 
-		/*
-		 * A fully transparent color disables this reference background.
-		 */
+		// Transparent colors disable this reference background.
 		if (backgroundColor == null || backgroundColor.getAlpha() == 0) {
 			return;
 		}
@@ -657,9 +570,7 @@ public class ChatReferenceOverlay extends Overlay {
 
 			final int y = bounds.y + bounds.height - 2;
 
-			/*
-			 * Segmented Dots
-			 */
+			// Segmented dots
 			for (int x = bounds.x; x < bounds.x + bounds.width; x += 3) {
 				//          — 1px dotted segments —
 				graphics.fillRect(x, y, 1, 1);

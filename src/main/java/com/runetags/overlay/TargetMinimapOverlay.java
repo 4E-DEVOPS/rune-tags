@@ -55,7 +55,6 @@ public class TargetMinimapOverlay extends Overlay {
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		final MinimapIndicatorMode indicatorMode = config.minimapIndicator();
-
 		if (!config.targetPlayerOption()
 				|| indicatorMode == MinimapIndicatorMode.OFF
 				|| client.getGameState() != GameState.LOGGED_IN) {
@@ -63,13 +62,10 @@ public class TargetMinimapOverlay extends Overlay {
 		}
 
 		final Player target = targetController.getTargetPlayer();
-
 		if (target == null) {
 			return null;
 		}
-
 		final Point minimapPoint = target.getMinimapLocation();
-
 		if (minimapPoint != null) {
 			drawMinimapIndicator(graphics, minimapPoint, config.minimapDotColor(), indicatorMode.getDiameter());
 		}

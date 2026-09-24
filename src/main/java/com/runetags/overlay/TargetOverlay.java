@@ -54,31 +54,23 @@ public class TargetOverlay extends Overlay {
 		}
 
 		final Player target = targetController.getTargetPlayer();
-
 		if (target == null) {
 			return null;
 		}
-
 		final Color targetColor = config.targetColor();
-
 		final TargetMode targetMode = config.targetMode();
-
 		if (targetMode.showsOutline()) {
 			modelOutlineRenderer.drawOutline(target, OUTLINE_WIDTH, targetColor, OUTLINE_FEATHER);
 		}
-
 		if (targetMode.showsTile()) {
 			final Polygon tilePoly = target.getCanvasTilePoly();
-
 			if (tilePoly != null) {
 				OverlayUtil.renderPolygon(graphics, tilePoly, targetColor);
 			}
 		}
-
 		if (config.targetLine()) {
 			drawTargetLine(graphics, target, targetColor);
 		}
-
 		if (config.targetName()) {
 			drawTargetName(graphics, target, targetColor);
 		}
@@ -88,28 +80,21 @@ public class TargetOverlay extends Overlay {
 
 	private void drawTargetLine(Graphics2D graphics, Player target, Color color) {
 		final Player localPlayer = client.getLocalPlayer();
-
 		if (localPlayer == null) {
 			return;
 		}
 
 		final LocalPoint localPoint = localPlayer.getLocalLocation();
 		final LocalPoint targetPoint = target.getLocalLocation();
-
 		if (localPoint == null || targetPoint == null) {
 			return;
 		}
-
 		final int plane = localPlayer.getWorldLocation().getPlane();
-
 		final Point localCanvas = net.runelite.api.Perspective.localToCanvas(client, localPoint, plane);
-
 		final Point targetCanvas = net.runelite.api.Perspective.localToCanvas(client, targetPoint, plane);
-
 		if (localCanvas == null || targetCanvas == null) {
 			return;
 		}
-
 		final Color oldColor = graphics.getColor();
 		final java.awt.Stroke oldStroke = graphics.getStroke();
 
@@ -126,7 +111,6 @@ public class TargetOverlay extends Overlay {
 
 	private static void drawTargetName(Graphics2D graphics, Player target, Color color) {
 		final String name = target.getName();
-
 		if (name == null || name.isEmpty()) {
 			return;
 		}
@@ -134,7 +118,6 @@ public class TargetOverlay extends Overlay {
 		final Point textLocation = target.getCanvasTextLocation(
 				graphics, name,
 				target.getLogicalHeight() + NAME_HEIGHT_OFFSET);
-
 		if (textLocation != null) {
 			OverlayUtil.renderTextLocation(graphics, textLocation, name, color);
 		}
