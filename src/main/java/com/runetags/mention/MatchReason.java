@@ -1,7 +1,6 @@
 package com.runetags.mention;
 
-public enum MatchReason
-{
+public enum MatchReason {
     NONE,
     ACCOUNT_NAME,
     NORMALIZED_ACCOUNT_NAME,
