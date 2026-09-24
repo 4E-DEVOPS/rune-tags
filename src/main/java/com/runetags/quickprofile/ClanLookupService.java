@@ -17,9 +17,7 @@ public class ClanLookupService {
 		}
 
 		final String encodedName = URLEncoder.encode(clanName.trim(), StandardCharsets.UTF_8);
-
 		final String url = WOM_GROUP_SEARCH_URL + encodedName;
-
 		LinkBrowser.browse(url);
 	}
 }

@@ -1,31 +1,35 @@
 package com.runetags.quickprofile;
 
 import com.runetags.Configurations;
-import com.runetags.context.*;
+import com.runetags.context.PartyContextService;
+import com.runetags.context.PlayerContext;
+import com.runetags.context.PlayerContextService;
 import com.runetags.context.ProfileMetric;
+import com.runetags.context.ProfileMetricResolver;
+import com.runetags.context.ProfileMetricValue;
 import com.runetags.hiscores.*;
-import com.runetags.target.TargetController;
 import com.runetags.input.NoteChatboxInput;
 import com.runetags.input.NoteTextLayout;
+import com.runetags.input.TagChatboxInput;
 import com.runetags.location.PlayerLocation;
-import com.runetags.player.OnlineState;
 import com.runetags.player.AccountType;
-import com.runetags.player.PlayerIdentity;
-import com.runetags.reference.PlayerReference;
-import com.runetags.player.PlayerSource;
+import com.runetags.player.OnlineState;
 import com.runetags.player.PlayerDirectory;
+import com.runetags.player.PlayerIdentity;
+import com.runetags.player.PlayerSource;
+import com.runetags.records.LocalPlayerRecordService;
+import com.runetags.reference.PlayerReference;
 import com.runetags.reports.ReportCaseService;
 import com.runetags.reports.ReportSummary;
-import com.runetags.records.LocalPlayerRecordService;
-import com.runetags.input.TagChatboxInput;
+import com.runetags.target.TargetController;
 
 import java.awt.FontMetrics;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -60,11 +64,8 @@ public class QuickProfileController {
 	private Point anchorPoint;
 
 	/*
-	 * Context resolved for the player currently displayed by this profile card.
-	 *
-	 * Local scene context is only shared with players whose relationship to the
-	 * local client is authoritative. Remote players require their own resolved
-	 * context and must not inherit local state.
+	 * Profile context is shared only through authoritative live relationships.
+	 * Remote players never inherit local client context.
 	 */
 	private PlayerContext profileContext;
 	private volatile HiscoreProfileData enrichmentData;
@@ -134,11 +135,6 @@ public class QuickProfileController {
 		clientThread.invokeLater(() -> openResolved(reference, requestedPoint));
 	}
 
-	/*
-	 * Profile context is only assigned when the player relationship provides a
-	 * valid source of context. Unresolved chat references cannot use local
-	 * player context.
-	 */
 	private void openResolved(PlayerReference reference, Point clickPoint) {
 		if (reference == null) {
 			return;
@@ -147,27 +143,17 @@ public class QuickProfileController {
 		cancelNoteEdit();
 
 		final long generation = ++openGeneration;
-
 		enrichmentData = null;
 
 		final PlayerIdentity historicalIdentity = reference.getIdentity();
-
 		PlayerIdentity liveIdentity = null;
 
-		/*
-		 * PlayerReference stores the information available when the chat message
-		 * was processed. Live presence data must come from PlayerDirectory so the
-		 * profile reflects the player's current state.
-		 */
+		// Resolve live presence from PlayerDirectory rather than the chat snapshot.
 		if (reference.getLookupName() != null && !reference.getLookupName().trim().isEmpty()) {
 			liveIdentity = playerDirectory.find(reference.getLookupName()).orElse(null);
 		}
 
-		/*
-		 * Identity fields may fall back to the original reference when live data
-		 * is unavailable. Live presence fields are intentionally not restored from
-		 * stale references.
-		 */
+		// Identity may fall back to the snapshot; live presence does not.
 		final PlayerIdentity semanticIdentity = liveIdentity != null
 				? liveIdentity
 				: historicalIdentity;
@@ -175,49 +161,59 @@ public class QuickProfileController {
 		profileContext = resolveProfileContext(liveIdentity);
 
 		final ChatMessageType originatingChatType = reference.getChatType();
-
 		final String lookupName;
-
 		if (semanticIdentity != null) {
 			lookupName = semanticIdentity.getCanonicalName();
 
 			model = QuickProfileModel.builder().displayName(semanticIdentity.getCanonicalName()).resolved(true)
 					.accountType(semanticIdentity.getAccountType() != null
 							? semanticIdentity.getAccountType()
-							: AccountType.UNKNOWN).combatLevel(
-							liveIdentity != null && liveIdentity.getCombatLevel() != null
-									? liveIdentity.getCombatLevel()
-									: semanticIdentity.getCombatLevel()).world(liveIdentity != null
+							: AccountType.UNKNOWN)
+					.combatLevel(liveIdentity != null && liveIdentity.getCombatLevel() != null
+							? liveIdentity.getCombatLevel()
+							: semanticIdentity.getCombatLevel())
+					.world(liveIdentity != null
 							? liveIdentity.getWorld()
-							: null).onlineState(liveIdentity != null && liveIdentity.getOnlineState() != null
+							: null)
+					.onlineState(liveIdentity != null && liveIdentity.getOnlineState() != null
 							? liveIdentity.getOnlineState()
 							: OnlineState.UNKNOWN)
 					.locationName(displayLocation(semanticIdentity.getCanonicalName(), liveIdentity, profileContext))
 					.channelName(displayChannelName(liveIdentity, originatingChatType))
-					.channelRank(displayChannelRank(liveIdentity)).channelSource(displayChannelSource(liveIdentity))
-					.originatingChatType(originatingChatType).nearby(liveIdentity != null && liveIdentity.isNearby())
-					.identity(liveIdentity).enrichmentState(HiscoreEnrichmentState.LOCAL).build();
+					.channelRank(displayChannelRank(liveIdentity))
+					.channelSource(displayChannelSource(liveIdentity))
+					.originatingChatType(originatingChatType)
+					.nearby(liveIdentity != null && liveIdentity.isNearby())
+					.identity(liveIdentity)
+					.enrichmentState(HiscoreEnrichmentState.LOCAL)
+					.build();
 		} else {
 			lookupName = reference.getLookupName() != null && !reference.getLookupName().isEmpty()
 					? reference.getLookupName()
 					: reference.getRawText();
 
-			model = QuickProfileModel.unresolved(lookupName).toBuilder()
+			model = QuickProfileModel.unresolved(lookupName)
+					.toBuilder()
 					.locationName(displayLocation(lookupName, null, null))
-					.channelName(displayMessageChannel(originatingChatType)).originatingChatType(originatingChatType)
+					.channelName(displayMessageChannel(originatingChatType))
+					.originatingChatType(originatingChatType)
 					.build();
 		}
 
 		if (model != null) {
-			model = model.toBuilder().previousRsns(localPlayerRecordService != null
+			model = model.toBuilder()
+					.previousRsns(localPlayerRecordService != null
 							? localPlayerRecordService.getPreviousRsns(model.getDisplayName())
-							: Collections.emptyList()).tags(localPlayerRecordService != null
+							: Collections.emptyList())
+					.tags(localPlayerRecordService != null
 							? localPlayerRecordService.getTags(model.getDisplayName())
-							: Collections.emptyList()).favorite(
-							localPlayerRecordService != null && localPlayerRecordService.isFavorite(model.getDisplayName()))
+							: Collections.emptyList())
+					.favorite(localPlayerRecordService != null
+							&& localPlayerRecordService.isFavorite(model.getDisplayName()))
 					.note(localPlayerRecordService != null
 							? localPlayerRecordService.getNote(model.getDisplayName())
-							: null).build();
+							: null)
+					.build();
 		}
 
 		anchorPoint = clickPoint != null
@@ -226,17 +222,16 @@ public class QuickProfileController {
 
 		clearLayoutBounds();
 
-		final String resolutionSources = liveIdentity != null && liveIdentity.getSources() != null && !liveIdentity
-				.getSources().isEmpty()
+		final String resolutionSources = liveIdentity != null
+				&& liveIdentity.getSources() != null
+				&& !liveIdentity.getSources().isEmpty()
 				? liveIdentity.getSources().toString()
 				: semanticIdentity != null
 						? "[HISTORICAL_ONLY]"
 						: "[UNRESOLVED]";
 
 		startAutomaticEnrichment(lookupName, generation);
-
 		startEfficiencyLookup(lookupName, generation);
-
 		startReportLookup(lookupName, generation);
 	}
 
@@ -258,44 +253,48 @@ public class QuickProfileController {
 
 	public void refreshContext() {
 		final QuickProfileModel current = model;
-
 		if (current == null || current.getDisplayName() == null || current.getDisplayName().trim().isEmpty()) {
 			return;
 		}
 
-		/*
-		 * Refreshes use the current PlayerDirectory state rather than rebuilding
-		 * identity data from every source during normal client updates.
-		 */
+		// Refresh from current directory state without rebuilding all sources.
 		final PlayerIdentity identity = playerDirectory.find(current.getDisplayName()).orElse(null);
-
 		if (identity == null) {
 			profileContext = null;
 
-			model = current.toBuilder().world(null).onlineState(OnlineState.UNKNOWN)
+			model = current.toBuilder()
+					.world(null)
+					.onlineState(OnlineState.UNKNOWN)
 					.locationName(displayLocation(current.getDisplayName(), null, null))
 					.contextMetrics(Collections.emptyList())
-					.channelName(displayMessageChannel(current.getOriginatingChatType())).channelRank(null)
-					.channelSource(null).nearby(false).identity(null).build();
+					.channelName(displayMessageChannel(current.getOriginatingChatType()))
+					.channelRank(null)
+					.channelSource(null)
+					.nearby(false)
+					.identity(null)
+					.build();
 
 			return;
 		}
 
 		final PlayerContext refreshedContext = resolveProfileContext(identity);
-
 		profileContext = refreshedContext;
 
 		final List<ProfileMetricValue> refreshedMetrics = buildContextMetrics(refreshedContext, enrichmentData);
 
 		model = current.toBuilder().accountType(resolveAccountType(identity.getAccountType(), enrichmentData))
-				.world(identity.getWorld()).onlineState(identity.getOnlineState() != null
+				.world(identity.getWorld())
+				.onlineState(identity.getOnlineState() != null
 						? identity.getOnlineState()
 						: OnlineState.UNKNOWN)
 				.locationName(displayLocation(identity.getCanonicalName(), identity, refreshedContext))
 				.contextMetrics(refreshedMetrics)
 				.channelName(displayChannelName(identity, current.getOriginatingChatType()))
-				.channelRank(displayChannelRank(identity)).channelSource(displayChannelSource(identity))
-				.nearby(identity.isNearby()).identity(identity).build();
+				.channelRank(displayChannelRank(identity))
+				.channelSource(displayChannelSource(identity))
+				.nearby(identity.isNearby())
+				.identity(identity)
+				.build();
 	}
 
 	public QuickProfileModel getModel() {
@@ -308,14 +307,12 @@ public class QuickProfileController {
 				: new Point(anchorPoint);
 	}
 
-	public ProfileContextSnapshot resolveHistoryContext(
-			String playerName) {
+	public ProfileContextSnapshot resolveHistoryContext(String playerName) {
 		if (playerName == null || playerName.trim().isEmpty()) {
 			return ProfileContextSnapshot.empty();
 		}
 
 		final PlayerIdentity identity = playerDirectory.find(playerName).orElse(null);
-
 		if (identity == null) {
 			return ProfileContextSnapshot.empty();
 		}
@@ -323,19 +320,18 @@ public class QuickProfileController {
 		final PlayerContext context = resolveProfileContext(identity);
 
 		return new ProfileContextSnapshot(
-				identity.getWorld(), context != null
-				? context.getLocationName()
-				: null, identity.getChannelName(), identity.getChannelSource());
+				identity.getWorld(),
+				context != null
+						? context.getLocationName()
+						: null,
+				identity.getChannelName(),
+				identity.getChannelSource());
 	}
 
-	/**
-	 * Opens a Quick-Card from a stored player reference.
-	 *
-	 * The displayed profile is resolved against current directory data before
-	 * showing live information.
+	/*
+	 * Open a Quick-Card using current directory data when available.
 	 */
-	public void openPlayer(
-			String playerName) {
+	public void openPlayer(String playerName) {
 		openPlayer(playerName, null, null);
 	}
 
@@ -349,7 +345,6 @@ public class QuickProfileController {
 		}
 
 		final String requestedName = playerName.trim();
-
 		final Point requestedPoint = clickPoint != null
 				? new Point(clickPoint)
 				: null;
@@ -357,10 +352,14 @@ public class QuickProfileController {
 		clientThread.invokeLater(() -> {
 			final PlayerIdentity identity = playerDirectory.find(requestedName).orElse(null);
 
-			final PlayerReference reference = PlayerReference.builder().rawText(requestedName).lookupName(
-							identity != null
-									? identity.getCanonicalName()
-									: requestedName).locallyResolved(identity != null).identity(identity).chatType(chatType)
+			final PlayerReference reference = PlayerReference.builder()
+					.rawText(requestedName)
+					.lookupName(identity != null
+							? identity.getCanonicalName()
+							: requestedName)
+					.locallyResolved(identity != null)
+					.identity(identity)
+					.chatType(chatType)
 					.build();
 
 			openResolved(reference, requestedPoint);
@@ -459,20 +458,17 @@ public class QuickProfileController {
 
 	public void removeTag(String tag) {
 		final QuickProfileModel current = model;
-
-		if (current == null || tag == null || current.getDisplayName() == null || current.getDisplayName().trim()
-				.isEmpty() || localPlayerRecordService == null) {
+		if (current == null || tag == null || current.getDisplayName() == null
+				|| current.getDisplayName().trim().isEmpty() || localPlayerRecordService == null) {
 			return;
 		}
 
 		final List<String> updated = new ArrayList<>(localPlayerRecordService.getTags(current.getDisplayName()));
-
 		if (!updated.remove(tag)) {
 			return;
 		}
 
 		localPlayerRecordService.setTags(current.getDisplayName(), updated);
-
 		model = current.toBuilder().tags(localPlayerRecordService.getTags(current.getDisplayName())).build();
 	}
 
@@ -484,8 +480,7 @@ public class QuickProfileController {
 		return favoriteButtonBounds != null && point != null && favoriteButtonBounds.contains(point);
 	}
 
-	public boolean isReportCaseLink(
-			Point point) {
+	public boolean isReportCaseLink(Point point) {
 		return reportCaseLinkBounds != null && point != null && reportCaseLinkBounds.contains(point);
 	}
 
@@ -507,14 +502,8 @@ public class QuickProfileController {
 
 	public void editTags() {
 		final QuickProfileModel current = model;
-
-		if (current == null
-				|| current.getDisplayName() == null
-				|| current.getDisplayName().trim().isEmpty()
-				|| localPlayerRecordService == null
-				|| chatboxPanelManager == null
-				|| tagEditorOpen
-				|| noteEditorOpen) {
+		if (current == null || current.getDisplayName() == null || current.getDisplayName().trim().isEmpty()
+				|| localPlayerRecordService == null || chatboxPanelManager == null || tagEditorOpen || noteEditorOpen) {
 			return;
 		}
 
@@ -558,7 +547,6 @@ public class QuickProfileController {
 
 	public void toggleFavorite() {
 		final QuickProfileModel current = model;
-
 		if (current == null
 				|| current.getDisplayName() == null
 				|| current.getDisplayName().trim().isEmpty()
@@ -567,7 +555,6 @@ public class QuickProfileController {
 		}
 
 		final boolean favorite = localPlayerRecordService.toggleFavorite(current.getDisplayName());
-
 		model = current.toBuilder().favorite(favorite).build();
 	}
 
@@ -575,14 +562,12 @@ public class QuickProfileController {
 		return noteEditorOpen;
 	}
 
-	/**
-	 * Open RuneLite's native chatbox Note editor for the current player's local
-	 * Note. The first logical line always starts with a bullet, Shift+Enter adds
-	 * another bullet line, Enter validates/saves, and ESC cancels.
+	/*
+	 * Open the native Note editor for the current player.
+	 * Enter saves, Shift+Enter adds a bullet line, and ESC cancels.
 	 */
 	public void editNote() {
 		final QuickProfileModel current = model;
-
 		if (current == null
 				|| current.getDisplayName() == null
 				|| current.getDisplayName().trim().isEmpty()
@@ -594,13 +579,10 @@ public class QuickProfileController {
 		}
 
 		final String playerName = current.getDisplayName().trim();
-
 		final ChatMessageType originatingChatType = current.getOriginatingChatType();
-
 		final Point reopenAnchor = anchorPoint != null
 				? new Point(anchorPoint)
 				: new Point(20, 20);
-
 		final String existingNote = localPlayerRecordService.getNote(playerName);
 
 		final NoteChatboxInput noteInput = new NoteChatboxInput(chatboxPanelManager, clientThread)
@@ -610,9 +592,7 @@ public class QuickProfileController {
 		noteEditorOpen = true;
 		reopenProfileAfterNoteEdit = true;
 
-		/*
-		 * Temporarily hide the Quick-Card while adding/editing a Note.
-		 */
+		// Hide the Quick-Card while the Note editor is open.
 		++openGeneration;
 		model = null;
 		anchorPoint = null;
@@ -622,48 +602,38 @@ public class QuickProfileController {
 
 		noteInput.onDone(value -> {
 			final String candidate = NoteTextLayout.normalizeForStorage(value);
-
 			if (candidate == null) {
 				localPlayerRecordService.setNote(playerName, null);
-
 				return true;
 			}
 
 			if (candidate.length() > LocalPlayerRecordService.MAX_NOTE_LENGTH) {
 				noteInput.prompt("RuneTags Note: max " + LocalPlayerRecordService.MAX_NOTE_LENGTH + " characters");
-
 				return false;
 			}
 
 			if (NoteTextLayout.logicalLineCount(candidate) > NoteTextLayout.MAX_LOGICAL_LINES) {
 				noteInput.prompt("RuneTags Note: max " + NoteTextLayout.MAX_LOGICAL_LINES + " bullets");
-
 				return false;
 			}
 
 			final FontMetrics metrics = noteDisplayFontMetrics;
-
 			final int maxWidth = noteDisplayMaxWidth;
-
 			if (metrics != null && maxWidth > 0) {
 				final NoteTextLayout.Result layout = NoteTextLayout.layout(
 						metrics, candidate, maxWidth, NoteTextLayout.MAX_RENDERED_ROWS);
 
 				if (layout.isOverflow()) {
 					noteInput.prompt("RuneTags Note: max " + NoteTextLayout.MAX_RENDERED_ROWS + " display lines");
-
 					return false;
 				}
 			}
 
 			localPlayerRecordService.setNote(playerName, candidate);
-
 			return true;
 		}).onClose(() -> {
 			noteEditorOpen = false;
-
 			final boolean shouldReopen = reopenProfileAfterNoteEdit;
-
 			reopenProfileAfterNoteEdit = false;
 
 			if (shouldReopen) {
@@ -682,7 +652,6 @@ public class QuickProfileController {
 
 	public void target() {
 		final QuickProfileModel current = model;
-
 		if (current == null || !current.isNearby()) {
 			return;
 		}
@@ -692,34 +661,24 @@ public class QuickProfileController {
 
 	public boolean isCurrentProfileTargeted() {
 		final QuickProfileModel current = model;
-
 		return current != null && targetController.isTargetingName(current.getDisplayName());
 	}
 
-	/**
-	 * Returns whether a chat reference currently resolves to a nearby player.
-	 *
-	 * The live directory is checked instead of the reference snapshot.
+	/*
+	 * Check whether a chat reference currently resolves to a nearby player.
 	 */
-	public boolean canTarget(
-			PlayerReference reference) {
+	public boolean canTarget(PlayerReference reference) {
 		final PlayerIdentity identity = resolveLiveIdentity(reference);
-
 		return identity != null && identity.isNearby();
 	}
 
-	/**
-	 * Targets a player selected from a chat reference menu.
-	 *
-	 * The player is resolved at activation time to ensure the target is still
-	 * valid in the current scene.
+	/*
+	 * Target a chat reference only when it still resolves to a nearby player.
 	 */
-	public void target(
-			PlayerReference reference) {
+	public void target(PlayerReference reference) {
 		final PlayerIdentity identity = resolveLiveIdentity(reference);
-
-		if (identity == null || !identity.isNearby() || identity.getCanonicalName() == null || identity
-				.getCanonicalName().trim().isEmpty()) {
+		if (identity == null || !identity.isNearby()
+				|| identity.getCanonicalName() == null || identity.getCanonicalName().trim().isEmpty()) {
 			return;
 		}
 
@@ -728,7 +687,6 @@ public class QuickProfileController {
 
 	public void lookup() {
 		final QuickProfileModel current = model;
-
 		if (current == null || current.getDisplayName() == null || current.getDisplayName().trim().isEmpty()) {
 			return;
 		}
@@ -736,18 +694,14 @@ public class QuickProfileController {
 		playerLookupService.lookup(current.getDisplayName());
 	}
 
-	public void lookup(
-			PlayerReference reference) {
+	public void lookup(PlayerReference reference) {
 		if (reference == null) {
 			return;
 		}
 
 		PlayerIdentity identity = reference.getIdentity();
 
-		/*
-		 * Resolve the current directory identity when available rather than using
-		 * the original chat-processing snapshot.
-		 */
+		// Prefer the current directory identity over the chat snapshot.
 		if (reference.getLookupName() != null && !reference.getLookupName().trim().isEmpty()) {
 			final PlayerIdentity currentIdentity = playerDirectory.find(reference.getLookupName()).orElse(null);
 
@@ -757,8 +711,9 @@ public class QuickProfileController {
 		}
 
 		final String lookupName;
-
-		if (identity != null && identity.getCanonicalName() != null && !identity.getCanonicalName().trim().isEmpty()) {
+		if (identity != null
+				&& identity.getCanonicalName() != null
+				&& !identity.getCanonicalName().trim().isEmpty()) {
 			lookupName = identity.getCanonicalName();
 		} else if (reference.getLookupName() != null && !reference.getLookupName().trim().isEmpty()) {
 			lookupName = reference.getLookupName();
@@ -775,13 +730,11 @@ public class QuickProfileController {
 
 	public void lookupClan() {
 		final QuickProfileModel current = model;
-
 		if (current == null || current.getChannelName() == null || current.getChannelName().trim().isEmpty()) {
 			return;
 		}
 
 		final PlayerSource channelSource = current.getChannelSource();
-
 		if (channelSource != PlayerSource.CLAN && channelSource != PlayerSource.GUEST_CLAN) {
 			return;
 		}
@@ -791,51 +744,42 @@ public class QuickProfileController {
 
 	public void openReportCase() {
 		final QuickProfileModel current = model;
-
 		if (current == null || current.getReportSummaries() == null || current.getReportSummaries().isEmpty()) {
 			return;
 		}
 
-		/*
-		 * Iterate through available summaries defensively in case the stored report
-		 * structure changes in the future.
-		 */
 		for (ReportSummary summary : current.getReportSummaries()) {
 			if (summary == null || !summary.hasCaseLink()) {
 				continue;
 			}
 
 			final String caseUrl = summary.getCaseUrl();
-
 			if (caseUrl == null || caseUrl.trim().isEmpty()) {
 				return;
 			}
 
 			LinkBrowser.browse(caseUrl);
-
 			return;
 		}
 	}
 
-	private PlayerIdentity resolveLiveIdentity(
-			PlayerReference reference) {
+	private PlayerIdentity resolveLiveIdentity(PlayerReference reference) {
 		if (reference == null) {
 			return null;
 		}
 
 		if (reference.getLookupName() != null && !reference.getLookupName().trim().isEmpty()) {
 			final PlayerIdentity identity = playerDirectory.find(reference.getLookupName()).orElse(null);
-
 			if (identity != null) {
 				return identity;
 			}
 		}
 
-		if (reference.getIdentity() != null && reference.getIdentity().getCanonicalName() != null && !reference
-				.getIdentity().getCanonicalName().trim().isEmpty()) {
-			final PlayerIdentity identity = playerDirectory.find(reference.getIdentity().getCanonicalName())
-					.orElse(null);
-
+		if (reference.getIdentity() != null
+				&& reference.getIdentity().getCanonicalName() != null
+				&& !reference.getIdentity().getCanonicalName().trim().isEmpty()) {
+			final PlayerIdentity identity =
+					playerDirectory.find(reference.getIdentity().getCanonicalName()) .orElse(null);
 			if (identity != null) {
 				return identity;
 			}
@@ -850,7 +794,6 @@ public class QuickProfileController {
 
 	public void refreshEfficiencyMetrics() {
 		final QuickProfileModel current = model;
-
 		if (current == null || current.getDisplayName() == null || current.getDisplayName().trim().isEmpty()) {
 			return;
 		}
@@ -865,7 +808,6 @@ public class QuickProfileController {
 
 	public void clearEfficiencyMetrics() {
 		final QuickProfileModel current = model;
-
 		if (current == null) {
 			return;
 		}
@@ -873,16 +815,11 @@ public class QuickProfileController {
 		model = current.toBuilder().efficientHoursPlayed(null).efficientHoursBossed(null).build();
 	}
 
-	/**
+	/*
 	 * Refresh report summaries for the currently open Quick-Card.
-	 *
-	 * This is used when Show Reports is enabled while a card is already open.
-	 * The ReportCaseService performs all network staleness checks and keeps
-	 * parsing off the client thread.
 	 */
 	public void refreshReports() {
 		final QuickProfileModel current = model;
-
 		if (current == null || current.getDisplayName() == null || current.getDisplayName().trim().isEmpty()) {
 			return;
 		}
@@ -892,7 +829,6 @@ public class QuickProfileController {
 
 	public void clearReports() {
 		final QuickProfileModel current = model;
-
 		if (current == null) {
 			return;
 		}
@@ -914,7 +850,6 @@ public class QuickProfileController {
 		}
 
 		final QuickProfileModel current = model;
-
 		if (current == null || current.getDisplayName() == null || !samePlayer(current.getDisplayName(), playerName)) {
 			return;
 		}
@@ -943,7 +878,6 @@ public class QuickProfileController {
 		}
 
 		final QuickProfileModel current = model;
-
 		if (current == null || current.getDisplayName() == null || !samePlayer(current.getDisplayName(), playerName)) {
 			return;
 		}
@@ -965,7 +899,6 @@ public class QuickProfileController {
 		applyEnrichment(generation, playerName, request.getInitialState(), request.getInitialData());
 
 		final CompletableFuture<HiscoreEnrichmentCache.CachedProfileEnrichment> future = request.getFuture();
-
 		if (future == null) {
 			return;
 		}
@@ -983,57 +916,49 @@ public class QuickProfileController {
 		}
 
 		final QuickProfileModel current = model;
-
 		if (current == null || current.getDisplayName() == null || !samePlayer(current.getDisplayName(), playerName)) {
 			return;
 		}
 
-		/*
-		 * Use the context captured when the profile opened. Asynchronous enrichment
-		 * must not recalculate context from the local player's current location.
-		 */
+		// Keep asynchronous enrichment bound to the context captured when the profile opened.
 		enrichmentData = data;
 
 		final PlayerContext playerContext = profileContext;
-
 		final List<ProfileMetricValue> contextMetrics = buildContextMetrics(playerContext, enrichmentData);
 
-		model = current.toBuilder().accountType(resolveAccountType(current.getAccountType(), data)).combatLevel(
-				data != null && data.getCombatLevel() != null
+		model = current.toBuilder()
+				.accountType(resolveAccountType(current.getAccountType(), data))
+				.combatLevel(data != null && data.getCombatLevel() != null
 						? data.getCombatLevel()
-						: current.getCombatLevel()).totalLevel(data != null
-				? data.getTotalLevel()
-				: current.getTotalLevel()).contextMetrics(contextMetrics).enrichmentState(state).build();
+						: current.getCombatLevel())
+				.totalLevel(data != null
+						? data.getTotalLevel()
+						: current.getTotalLevel())
+				.contextMetrics(contextMetrics)
+				.enrichmentState(state)
+				.build();
 	}
 
 	private static AccountType resolveAccountType(AccountType current, HiscoreProfileData data) {
 		final AccountType enriched = data != null
 				? data.getAccountType()
 				: AccountType.UNKNOWN;
-
 		return AccountType.prefer(current, enriched);
 	}
 
-	private PlayerContext resolveProfileContext(
-			PlayerIdentity identity) {
+	private PlayerContext resolveProfileContext(PlayerIdentity identity) {
 		if (identity == null) {
 			return null;
 		}
 
-		/*
-		 * Nearby context takes priority over cached Party context because local
-		 * scene information is more current.
-		 */
+		// Nearby scene context takes priority.
 		if (identity.isNearby()) {
 			return playerContextService != null
 					? playerContextService.getCurrent()
 					: null;
 		}
 
-		/*
-		 * Remote Party members may use their own shared Party context. Other remote
-		 * players must not inherit local context.
-		 */
+		// Remote Party members may use their own shared context.
 		if (identity.getSources() == null
 				|| !identity.getSources().contains(PlayerSource.PARTY)
 				|| partyContextService == null) {
@@ -1041,7 +966,6 @@ public class QuickProfileController {
 		}
 
 		final PartyContextService.PartyContext partyContext = partyContextService.find(identity.getCanonicalName());
-
 		if (partyContext == null) {
 			return null;
 		}
@@ -1051,17 +975,12 @@ public class QuickProfileController {
 	}
 
 	private String displayLocation(String playerName, PlayerIdentity identity, PlayerContext context) {
-		/*
-		 * A resolved location is preferred whenever one is available.
-		 */
+		// Prefer an explicitly resolved location.
 		if (context != null && context.getLocationName() != null && !context.getLocationName().trim().isEmpty()) {
 			return context.getLocationName();
 		}
 
-		/*
-		 * Region-grid fallback is only valid for the local player. Nearby players
-		 * without a mapped location should not expose the local region as their own.
-		 */
+		// Region-grid fallback is valid only for the local player.
 		if (isLocalPlayerName(playerName)) {
 			final PlayerContext localContext = context != null
 					? context
@@ -1080,47 +999,36 @@ public class QuickProfileController {
 			}
 		}
 
-		/*
-		 * Nearby players without a resolved location only expose their nearby state.
-		 */
+		// Nearby players without a mapped location expose only their nearby state.
 		if (identity != null && identity.isNearby()) {
 			return "Nearby";
 		}
 
-		/*
-		 * Remote players without a resolved location have no location data available.
-		 */
 		return "Location: Unknown";
 	}
 
-	private boolean isLocalPlayerName(
-			String playerName) {
+	private boolean isLocalPlayerName(String playerName) {
 		if (client == null || playerName == null || playerName.trim().isEmpty()) {
 			return false;
 		}
 
 		final Player localPlayer = client.getLocalPlayer();
-
 		return localPlayer != null && localPlayer.getName() != null && samePlayer(playerName, localPlayer.getName());
 	}
 
-	/**
-	 * Locations.json stores region-grid coordinates as [regionX, regionY].
-	 * WorldPoint#getRegionID packs that pair as (regionX << 8) | regionY.
+	/*
+	 * Locations.json stores [regionX, regionY]; region IDs pack that pair as
+	 * (regionX << 8) | regionY.
 	 */
-	private static String formatRegionGrid(
-			int regionId) {
+	private static String formatRegionGrid(int regionId) {
 		final int regionX = (regionId >>> 8) & 0xFF;
-
 		final int regionY = regionId & 0xFF;
 
 		return "Region: [" + regionX + ", " + regionY + "]";
 	}
 
 	private static String displayChannelName(PlayerIdentity identity, ChatMessageType originatingChatType) {
-		/*
-		 * Prefer the resolved shared channel when available.
-		 */
+		// Prefer the resolved shared channel.
 		if (identity != null && identity.getChannelName() != null && !identity.getChannelName().trim().isEmpty()) {
 			return identity.getChannelName();
 		}
@@ -1128,8 +1036,7 @@ public class QuickProfileController {
 		return displayMessageChannel(originatingChatType);
 	}
 
-	private static String displayMessageChannel(
-			ChatMessageType chatType) {
+	private static String displayMessageChannel(ChatMessageType chatType) {
 		if (chatType == null) {
 			return null;
 		}
@@ -1159,11 +1066,8 @@ public class QuickProfileController {
 		}
 	}
 
-	private static String displayChannelRank(
-			PlayerIdentity identity) {
-		/*
-		 * Message-derived channels do not provide a channel rank.
-		 */
+	private static String displayChannelRank(PlayerIdentity identity) {
+		// Message-derived channels do not provide a channel rank.
 		if (identity == null || identity.getChannelName() == null || identity.getChannelName().trim().isEmpty()) {
 			return null;
 		}
@@ -1171,11 +1075,8 @@ public class QuickProfileController {
 		return identity.getChannelRank();
 	}
 
-	private static PlayerSource displayChannelSource(
-			PlayerIdentity identity) {
-		/*
-		 * Message-derived channels do not map to a PlayerSource.
-		 */
+	private static PlayerSource displayChannelSource(PlayerIdentity identity) {
+		// Message-derived channels do not map to a PlayerSource.
 		if (identity == null || identity.getChannelName() == null || identity.getChannelName().trim().isEmpty()) {
 			return null;
 		}
@@ -1189,10 +1090,8 @@ public class QuickProfileController {
 		}
 
 		final List<ProfileMetricValue> values = new ArrayList<>();
-
 		for (ProfileMetric metric : playerContext.getMetrics()) {
 			final Integer value = data.getContextValue(metric.getHiscoreSkillName());
-
 			if (value == null) {
 				continue;
 			}

@@ -2,8 +2,8 @@ package com.runetags.quickprofile;
 
 import com.runetags.context.ProfileMetricValue;
 import com.runetags.hiscores.HiscoreEnrichmentState;
-import com.runetags.player.OnlineState;
 import com.runetags.player.AccountType;
+import com.runetags.player.OnlineState;
 import com.runetags.player.PlayerIdentity;
 import com.runetags.player.PlayerSource;
 import com.runetags.reports.ReportSummary;
@@ -63,7 +63,12 @@ public class QuickProfileModel {
 	HiscoreEnrichmentState enrichmentState = HiscoreEnrichmentState.LOCAL;
 
 	public static QuickProfileModel unresolved(String name) {
-		return QuickProfileModel.builder().displayName(name).resolved(false).onlineState(OnlineState.UNKNOWN)
-				.nearby(false).enrichmentState(HiscoreEnrichmentState.LOCAL).build();
+		return QuickProfileModel.builder()
+				.displayName(name)
+				.resolved(false)
+				.onlineState(OnlineState.UNKNOWN)
+				.nearby(false)
+				.enrichmentState(HiscoreEnrichmentState.LOCAL)
+				.build();
 	}
 }
