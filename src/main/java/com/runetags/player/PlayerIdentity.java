@@ -11,38 +11,32 @@ import net.runelite.api.coords.WorldPoint;
 
 @Value
 @Builder(toBuilder = true)
-public class PlayerIdentity
-{
-    String canonicalName;
-    String normalizedName;
+public class PlayerIdentity {
+	String canonicalName;
+	String normalizedName;
 
-    @Builder.Default
-    AccountType accountType =
-            AccountType.UNKNOWN;
+	@Builder.Default
+	AccountType accountType = AccountType.UNKNOWN;
 
-    @Builder.Default
-    Set<PlayerSource> sources = Collections.emptySet();
+	@Builder.Default
+	Set<PlayerSource> sources = Collections.emptySet();
 
-    Integer combatLevel;
-    Integer world;
-    OnlineState onlineState;
+	Integer combatLevel;
+	Integer world;
+	OnlineState onlineState;
 
-    String channelName;
-    String channelRank;
-    PlayerSource channelSource;
+	String channelName;
+	String channelRank;
+	PlayerSource channelSource;
 
-    Player nearbyPlayer;
-    WorldPoint lastKnownWorldPoint;
+	Player nearbyPlayer;
+	WorldPoint lastKnownWorldPoint;
 
-    public boolean isNearby()
-    {
-        return nearbyPlayer != null
-                || sources.contains(PlayerSource.NEARBY);
-    }
+	public boolean isNearby() {
+		return nearbyPlayer != null || sources.contains(PlayerSource.NEARBY);
+	}
 
-    public static Set<PlayerSource> sourceSet(PlayerSource source)
-    {
-        return Collections.unmodifiableSet(
-                EnumSet.of(source));
-    }
+	public static Set<PlayerSource> sourceSet(PlayerSource source) {
+		return Collections.unmodifiableSet(EnumSet.of(source));
+	}
 }

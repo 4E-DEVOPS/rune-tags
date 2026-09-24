@@ -1,7 +1,6 @@
 package com.runetags.player;
 
-public enum PlayerSource
-{
+public enum PlayerSource {
     FRIEND,
     CLAN,
     GUEST_CLAN,

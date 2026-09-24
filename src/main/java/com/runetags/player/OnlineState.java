@@ -1,8 +1,7 @@
 package com.runetags.player;
 
-public enum OnlineState
-{
-    ONLINE,
-    OFFLINE,
-    UNKNOWN
+public enum OnlineState {
+	ONLINE,
+	OFFLINE,
+	UNKNOWN
 }
