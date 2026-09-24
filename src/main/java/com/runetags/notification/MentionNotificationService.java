@@ -22,40 +22,36 @@ public class MentionNotificationService {
 		this.notifier = notifier;
 	}
 
-	public void notifyMention(
-			TaggedMessage taggedMessage) {
-		if (taggedMessage == null || taggedMessage.getLocalMentionMatch() == null || !taggedMessage
-				.getLocalMentionMatch().isMatchesLocalPlayer()) {
+	public void notifyMention(TaggedMessage taggedMessage) {
+		if (taggedMessage == null
+				|| taggedMessage.getLocalMentionMatch() == null
+				|| !taggedMessage.getLocalMentionMatch().isMatchesLocalPlayer()) {
 			return;
 		}
 
 		/*
-		 * Override RuneLite's global notification settings so RuneTags controls focus
-		 * and flash behavior while disabling tray, RuneLite sound, and game-message
-		 * notifications. The RuneTags in-game mention sound is handled separately.
+		 * Override RuneLite notification settings so RuneTags owns focus/flash behavior
+		 * while tray, RuneLite sound, and game-message output remain disabled.
 		 */
 		final Notification notification = new Notification(
-				true,                       // enabled
-				true,                               // initialized
-				true,                               // override
-				false,                              // tray
-				TrayIcon.MessageType.NONE,          // tray icon type
-				config.requestFocusOnMention(),     // request focus
-				NotificationSound.OFF,              // RuneLite sound
-				null,                               // custom sound name
-				100,                                // unused volume
-				0,                                  // unused timeout
-				false,                              // game message
-				config.flashOnMention(),            // flash mode
-				config.flashColor(),                // flash color
+				true,								// enabled
+				true,								// initialized
+				true,								// override
+				false,								// tray
+				TrayIcon.MessageType.NONE,			// tray icon type
+				config.requestFocusOnMention(),		// request focus
+				NotificationSound.OFF,				// RuneLite sound
+				null,								// custom sound name
+				100,								// unused volume
+				0,									// unused timeout
+				false,								// game message
+				config.flashOnMention(),			// flash mode
+				config.flashColor(),				// flash color
 				config.sendNotificationsWhenFocused());
 
 		notifier.notify(notification, notificationText(taggedMessage));
 
-		/*
-		 * The RuneTags game sound is independent from Send Notifications When Focused,
-		 * so disabling focused notifications does not suppress the sound.
-		 */
+		// Mention sound remains independent from focused-notification delivery.
 		playMentionSound();
 	}
 
@@ -69,7 +65,6 @@ public class MentionNotificationService {
 		}
 
 		final int soundId = config.mentionSoundId();
-
 		if (soundId <= 0) {
 			return;
 		}
@@ -77,18 +72,14 @@ public class MentionNotificationService {
 		client.playSoundEffect(soundId);
 	}
 
-	private static String notificationText(
-			TaggedMessage taggedMessage) {
+	private static String notificationText(TaggedMessage taggedMessage) {
 		final String sender = taggedMessage.getCanonicalSender();
-
 		final String message = taggedMessage.getOriginalMessage();
-
 		if (sender == null || sender.isEmpty()) {
 			return message != null && !message.isEmpty()
 					? message
 					: "[RuneTags][Notification] Player Mentioned";
 		}
-
 		if (message == null || message.isEmpty()) {
 			return sender;
 		}
