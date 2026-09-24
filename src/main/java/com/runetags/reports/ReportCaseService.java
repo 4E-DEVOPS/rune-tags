@@ -47,20 +47,13 @@ public class ReportCaseService {
 			+ ".com/while-loop/runelite-plugins/runewatch-updater/mixedlist.json";
 
 	/*
-	 * Persistent last-known-good report dataset.
-	 *
-	 * This follows RuneTags' existing persistent-storage convention under
-	 * RuneLite.RUNELITE_DIR.
+	 * Persistent last-known-good report dataset under RuneLite's RuneTags directory.
 	 */
-	private static final Path DEFAULT_REPORT_DIRECTORY = RuneLite.RUNELITE_DIR.toPath().resolve("RuneTags")
-			.resolve("reports");
-
+	private static final Path DEFAULT_REPORT_DIRECTORY = RuneLite.RUNELITE_DIR.toPath().resolve("RuneTags").resolve("reports");
 	private static final Path DEFAULT_REPORT_LIST_FILE = DEFAULT_REPORT_DIRECTORY.resolve("mixedlist.json");
-
 	private static final Path DEFAULT_REPORT_LIST_TEMP_FILE = DEFAULT_REPORT_DIRECTORY.resolve("mixedlist.json.tmp");
 
 	private static final Duration REFRESH_INTERVAL = Duration.ofMinutes(15);
-
 	private static final Duration RETRY_INTERVAL = Duration.ofMinutes(1);
 
 	private static final DateTimeFormatter FEED_DATE_FORMAT = DateTimeFormatter.ofPattern(
@@ -76,7 +69,6 @@ public class ReportCaseService {
 
 	private final ExecutorService parserExecutor = Executors.newSingleThreadExecutor(runnable -> {
 		final Thread thread = new Thread(runnable, "RuneTags-ReportParser");
-
 		thread.setDaemon(true);
 		return thread;
 	});
@@ -84,17 +76,8 @@ public class ReportCaseService {
 	private final Object stateLock = new Object();
 
 	/*
-	 * Runtime snapshot of the persistent report dataset.
-	 *
-	 * The physical last-known-good copy lives at:
-	 *
-	 *     .runelite/RuneTags/reports/mixedlist.json
-	 *
-	 * On login RuneTags loads and parses that snapshot once in the background.
-	 * The parsed map then serves every Quick-Card through local HashMap lookups.
-	 *
-	 * No periodic refresh timer exists. Once the snapshot becomes 15 minutes old,
-	 * opening a Quick-Card is what requests a fresh copy.
+	 * Runtime snapshot of the persisted report feed. The parsed map is refreshed lazily when
+	 * the dataset changes; Quick-Card opens trigger refresh only after the freshness window.
 	 */
 	private String rawDataset;
 	private Instant lastSuccessfulDownload;
@@ -102,14 +85,12 @@ public class ReportCaseService {
 
 	private long datasetRevision;
 	private long parsedRevision = -1L;
-
 	private Map<String, List<ReportSummary>> parsedReports = Collections.emptyMap();
 
 	private boolean initializationInFlight;
 	private boolean downloadInFlight;
 	private Call activeCall;
 	private long lifecycleEpoch;
-
 	private final List<Runnable> successfulDownloadWaiters = new ArrayList<>();
 
 	private boolean closed;
@@ -133,18 +114,9 @@ public class ReportCaseService {
 		this.reportListTempFile = reportListFile.resolveSibling(reportListFile.getFileName().toString() + ".tmp");
 	}
 
-	/**
-	 * Initialize Reports for the current logged-in session.
-	 *
-	 * Prefer the persistent last-known-good snapshot when one exists:
-	 *
-	 * 1. Load it from disk on the background parser thread.
-	 * 2. Parse it immediately so the first Quick-Card is only a map lookup.
-	 * 3. Refresh from the public feed only when the saved snapshot is missing
-	 * or at least 15 minutes old.
-	 *
-	 * World hops retain the existing in-memory snapshot. Logout clears memory but
-	 * intentionally leaves the persistent file untouched.
+	/*
+	 * Initialize reports from the persisted snapshot, then refresh only when missing or stale.
+	 * World hops retain memory; logout clears memory without deleting the persisted file.
 	 */
 	public void refreshInitialIfMissing() {
 		if (!config.showReports()) {
@@ -152,7 +124,6 @@ public class ReportCaseService {
 		}
 
 		final long epoch;
-
 		synchronized (stateLock) {
 			if (closed || initializationInFlight || rawDataset != null || downloadInFlight) {
 				return;
@@ -166,12 +137,7 @@ public class ReportCaseService {
 			try {
 				loadSavedDataset(epoch);
 
-				/*
-				 * Parse the saved snapshot once during initialization.
-				 *
-				 * This keeps JSON parsing off the client thread while ensuring the
-				 * first Quick-Card normally requires only a local HashMap lookup.
-				 */
+				// Parse the saved snapshot before the first Quick-Card lookup.
 				parsedReportsForCurrentDataset();
 			} finally {
 				synchronized (stateLock) {
@@ -181,40 +147,26 @@ public class ReportCaseService {
 				}
 			}
 
-			/*
-			 * This is intentionally NOT forced.
-			 *
-			 * A saved snapshot younger than 15 minutes is accepted as current.
-			 * A missing/stale snapshot downloads a replacement. Successful
-			 * downloads are immediately parsed on the same background executor.
-			 */
+			// Accept a fresh saved snapshot; refresh only when missing or stale.
 			requestRefresh(false, () -> parsedReportsForCurrentDataset());
 		});
 	}
 
-	private void saveDataset(
-			String dataset) {
+	private void saveDataset(String dataset) {
 		if (dataset == null || dataset.trim().isEmpty()) {
 			return;
 		}
 
 		try {
 			Files.createDirectories(reportDirectory);
-
 			Files.write(reportListTempFile, dataset.getBytes(StandardCharsets.UTF_8));
 
-			/*
-			 * Never overwrite the last-known-good snapshot with a partially written
-			 * response. Write a temporary file first, then replace the live dataset.
-			 */
+			// Replace the last-known-good snapshot only after the temporary file is complete.
 			try {
 				Files.move(
-						reportListTempFile, reportListFile, StandardCopyOption.REPLACE_EXISTING,
-						StandardCopyOption.ATOMIC_MOVE);
+					reportListTempFile, reportListFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 			} catch (IOException atomicMoveFailure) {
-				/*
-				 * Some file systems do not support ATOMIC_MOVE.
-				 */
+				// Fall back when the file system does not support atomic moves.
 				Files.move(reportListTempFile, reportListFile, StandardCopyOption.REPLACE_EXISTING);
 			}
 
@@ -224,27 +176,23 @@ public class ReportCaseService {
 		}
 	}
 
-	private void loadSavedDataset(
-			long epoch) {
+	private void loadSavedDataset(long epoch) {
 		if (!Files.isRegularFile(reportListFile)) {
 			return;
 		}
 
 		try {
 			final byte[] bytes = Files.readAllBytes(reportListFile);
-
 			if (bytes.length == 0) {
 				return;
 			}
 
 			final String savedDataset = new String(bytes, StandardCharsets.UTF_8);
-
 			if (savedDataset.trim().isEmpty()) {
 				return;
 			}
 
 			final Instant savedAt = Files.getLastModifiedTime(reportListFile).toInstant();
-
 			synchronized (stateLock) {
 				if (closed || epoch != lifecycleEpoch) {
 					return;
@@ -252,10 +200,7 @@ public class ReportCaseService {
 
 				rawDataset = savedDataset;
 
-				/*
-				 * The file's last-modified timestamp represents when RuneTags last
-				 * successfully replaced the local feed snapshot.
-				 */
+				// File modification time records the last successful persisted download.
 				lastSuccessfulDownload = savedAt;
 
 				++datasetRevision;
@@ -268,15 +213,9 @@ public class ReportCaseService {
 		}
 	}
 
-	/**
-	 * Request the latest published report summary for one Quick-Card player.
-	 *
-	 * The persisted dataset is parsed once during login initialization, so normal
-	 * Quick-Card access is only a local map lookup.
-	 *
-	 * If the saved dataset is 15+ minutes old, the current parsed snapshot remains
-	 * usable immediately while a fresh copy is downloaded, persisted, parsed, and
-	 * atomically promoted in the background.
+	/*
+	 * Return the current report summary for one Quick-Card player. Missing or stale data
+	 * refreshes in the background while the current parsed snapshot remains usable.
 	 */
 	public void requestReports(String playerName, Consumer<List<ReportSummary>> onComplete) {
 		if (onComplete == null) {
@@ -284,7 +223,6 @@ public class ReportCaseService {
 		}
 
 		final String playerKey = normalizePlayerName(playerName);
-
 		if (playerKey.isEmpty() || !config.showReports()) {
 			deliver(onComplete, Collections.emptyList());
 			return;
@@ -292,60 +230,37 @@ public class ReportCaseService {
 
 		final boolean hasDataset;
 		final boolean stale;
-
 		synchronized (stateLock) {
 			if (closed) {
 				return;
 			}
 
 			hasDataset = rawDataset != null;
-
 			stale = isStaleLocked(Instant.now());
 		}
 
-		/*
-		 * Serve the current parsed snapshot immediately.
-		 *
-		 * Because login initialization parses the persisted dataset in advance, this
-		 * normally reduces Quick-Card report lookup to a HashMap lookup.
-		 */
+		// Serve the current parsed snapshot immediately while any refresh runs in the background.
 		if (hasDataset) {
 			parseAndDeliver(playerKey, onComplete);
 		}
 
-		/*
-		 * No periodic timer exists.
-		 *
-		 * Missing/stale data refreshes only because:
-		 *
-		 * - Reports were initialized at login; or
-		 * - a Quick-Card was opened after the 15-minute freshness window.
-		 *
-		 * The old parsed snapshot stays active during the refresh. Once the new
-		 * dataset has been persisted and parsed, deliver the replacement result to
-		 * the still-open card.
-		 */
+		// Refresh lazily on missing or stale data; no periodic timer runs.
 		if (!hasDataset || stale) {
 			requestRefresh(false, () -> parseAndDeliver(playerKey, onComplete));
 		}
 	}
 
-	/**
-	 * Clear report data for logout/config-disable without permanently closing the
-	 * service. A later login/config-enable can download a fresh snapshot.
+	/*
+	 * Clear session report state without closing the service or deleting persisted data.
 	 */
 	public void clear() {
 		final Call callToCancel;
-
 		synchronized (stateLock) {
 			++lifecycleEpoch;
-
 			callToCancel = activeCall;
-
 			activeCall = null;
 			initializationInFlight = false;
 			downloadInFlight = false;
-
 			successfulDownloadWaiters.clear();
 
 			rawDataset = null;
@@ -373,17 +288,14 @@ public class ReportCaseService {
 
 	private void requestRefresh(boolean force, Runnable onSuccess) {
 		final Instant now = Instant.now();
-
 		final long epoch;
 		final Call call;
-
 		synchronized (stateLock) {
 			if (closed || !config.showReports()) {
 				return;
 			}
 
 			final boolean needsRefresh = force || rawDataset == null || isStaleLocked(now);
-
 			if (!needsRefresh) {
 				if (onSuccess != null) {
 					parserExecutor.execute(onSuccess);
@@ -400,10 +312,7 @@ public class ReportCaseService {
 				return;
 			}
 
-			/*
-			 * During an outage, repeated Quick-Card opens should not hammer the
-			 * upstream feed. Retry at most once per minute until a download works.
-			 */
+			// Throttle failed refresh attempts to once per minute.
 			if (!force
 					&& lastDownloadAttempt != null
 					&& Duration.between(lastDownloadAttempt, now).compareTo(RETRY_INTERVAL) < 0) {
@@ -415,7 +324,6 @@ public class ReportCaseService {
 			}
 
 			final Request request = new Request.Builder().url(REPORT_LIST_URL).build();
-
 			call = httpClient.newCall(request);
 
 			activeCall = call;
@@ -428,7 +336,6 @@ public class ReportCaseService {
 			@Override
 			public void onFailure(Call failedCall, IOException exception) {
 				log.debug("[RuneTags][Reports] Report-list Download Failed | ERROR: {}", exception.getMessage());
-
 				finishDownload(epoch, null, false);
 			}
 
@@ -439,20 +346,17 @@ public class ReportCaseService {
 
 				try (Response closedResponse = response) {
 					if (!closedResponse.isSuccessful()) {
-						//log.debug("[RuneTags][Reports] Report-list Download Returned HTTP {}", closedResponse.code
-						// ());
+						//log.debug("[RuneTags][Reports] Report-list Download Returned HTTP {}", closedResponse.code());
 						return;
 					}
 
 					final ResponseBody responseBody = closedResponse.body();
-
 					if (responseBody == null) {
 						log.debug("[RuneTags][Reports] Report-list Download Returned an Empty Body");
 						return;
 					}
 
 					body = responseBody.string();
-
 					success = body != null && !body.trim().isEmpty();
 				} catch (IOException exception) {
 					log.debug(
@@ -469,10 +373,8 @@ public class ReportCaseService {
 		final List<Runnable> callbacks;
 
 		/*
-		 * Persist successful responses before promoting them to the current runtime
-		 * snapshot. A failed disk write does not invalidate the freshly downloaded
-		 * in-memory copy, but the previous physical file remains available for the
-		 * next client session.
+		 * Persist successful responses before promoting them in memory. A failed disk write
+		 * leaves the previous file intact but does not discard the fresh in-memory dataset.
 		 */
 		if (success) {
 			saveDataset(downloadedBody);
@@ -488,27 +390,13 @@ public class ReportCaseService {
 
 			if (success) {
 				rawDataset = downloadedBody;
-
 				lastSuccessfulDownload = Instant.now();
-
 				++datasetRevision;
 
-				/*
-				 * Do NOT clear parsedReports here.
-				 *
-				 * The existing parsed snapshot remains usable while the replacement feed is
-				 * parsed in the background. parsedRevision no longer matches datasetRevision,
-				 * so parsedReportsForCurrentDataset() knows that a replacement parse is due.
-				 *
-				 * Once that parse completes successfully, it atomically replaces the old map.
-				 */
+				// Keep the previous parsed map active until replacement parsing succeeds.
 				callbacks = new ArrayList<>(successfulDownloadWaiters);
 			} else if (rawDataset != null && parsedRevision != datasetRevision) {
-				/*
-				 * The refresh failed, but an older downloaded dataset is still
-				 * available and has not yet been parsed. Let the waiting card use
-				 * that saved snapshot rather than showing nothing.
-				 */
+				// Let waiters use an unparsed older dataset when refresh fails.
 				callbacks = new ArrayList<>(successfulDownloadWaiters);
 			} else {
 				callbacks = Collections.emptyList();
@@ -518,8 +406,8 @@ public class ReportCaseService {
 		}
 
 		if (success) {
-			//log.debug("[RuneTags][Reports] Report-list Dataset Downloaded and Persisted | Background Parse
-			// Requested");
+			//log.debug(
+			//		"[RuneTags][Reports] Report-list Dataset Downloaded and Persisted | Background Parse Requested");
 		}
 
 		for (Runnable callback : callbacks) {
@@ -530,9 +418,7 @@ public class ReportCaseService {
 	private void parseAndDeliver(String playerKey, Consumer<List<ReportSummary>> onComplete) {
 		parserExecutor.execute(() -> {
 			final Map<String, List<ReportSummary>> reports = parsedReportsForCurrentDataset();
-
 			final List<ReportSummary> playerReports = reports.get(playerKey);
-
 			final List<ReportSummary> safeReports = playerReports != null
 					? playerReports
 					: Collections.emptyList();
@@ -545,7 +431,6 @@ public class ReportCaseService {
 		while (true) {
 			final String dataset;
 			final long revision;
-
 			synchronized (stateLock) {
 				if (closed || rawDataset == null) {
 					return Collections.emptyMap();
@@ -566,10 +451,7 @@ public class ReportCaseService {
 					return Collections.emptyMap();
 				}
 
-				/*
-				 * If a new download replaced the raw snapshot while parsing was in
-				 * progress, discard the stale parse and restart against the new data.
-				 */
+				// Discard a stale parse if a newer dataset arrived while parsing.
 				if (revision != datasetRevision) {
 					continue;
 				}
@@ -582,8 +464,7 @@ public class ReportCaseService {
 		}
 	}
 
-	private Map<String, List<ReportSummary>> parseDataset(
-			String dataset) {
+	private Map<String, List<ReportSummary>> parseDataset(String dataset) {
 		if (dataset == null || dataset.trim().isEmpty()) {
 			return Collections.emptyMap();
 		}
@@ -592,17 +473,14 @@ public class ReportCaseService {
 
 		try {
 			final JsonElement root = new JsonParser().parse(dataset);
-
 			if (!root.isJsonArray()) {
 				log.debug("[RuneTags][Reports] Report-list Dataset was not a JSON Array");
 				return Collections.emptyMap();
 			}
 
 			final JsonArray cases = root.getAsJsonArray();
-
 			for (JsonElement element : cases) {
 				final FeedCase reportCase;
-
 				try {
 					reportCase = gson.fromJson(element, FeedCase.class);
 				} catch (JsonParseException exception) {
@@ -614,21 +492,17 @@ public class ReportCaseService {
 				}
 
 				final String playerKey = normalizePlayerName(reportCase.rsn);
-
 				final String source = normalizeSource(reportCase.source);
-
 				if (playerKey.isEmpty() || source == null) {
 					continue;
 				}
 
 				final LocalDateTime publishedDate = parsePublishedDate(reportCase.publishedDate);
-
 				accumulators.computeIfAbsent(playerKey, ignored -> new PlayerAccumulator())
 						.add(source, reportCase, publishedDate);
 			}
 		} catch (JsonParseException exception) {
 			log.debug("[RuneTags][Reports] Unable to Parse Report-list Dataset | ERROR: {}", exception.getMessage());
-
 			return Collections.emptyMap();
 		}
 
@@ -636,14 +510,8 @@ public class ReportCaseService {
 
 		for (Map.Entry<String, PlayerAccumulator> entry : accumulators.entrySet()) {
 			final ReportSummary playerSummary = entry.getValue().toSummary();
-
 			if (playerSummary != null) {
-				/*
-				 * QuickProfileModel currently stores report summaries as a List.
-				 *
-				 * Keep that public shape for now, but RuneTags intentionally presents
-				 * only ONE latest published report block per player.
-				 */
+				// QuickProfileModel keeps a list, but RuneTags exposes only the latest report per player.
 				summaries.put(entry.getKey(), Collections.singletonList(playerSummary));
 			}
 		}
@@ -665,14 +533,12 @@ public class ReportCaseService {
 		});
 	}
 
-	private boolean isStaleLocked(
-			Instant now) {
+	private boolean isStaleLocked(Instant now) {
 		return lastSuccessfulDownload == null
 				|| Duration.between(lastSuccessfulDownload, now).compareTo(REFRESH_INTERVAL) >= 0;
 	}
 
-	private static String normalizePlayerName(
-			String value) {
+	private static String normalizePlayerName(String value) {
 		if (value == null) {
 			return "";
 		}
@@ -680,8 +546,7 @@ public class ReportCaseService {
 		return Text.removeTags(Text.toJagexName(value)).trim().toLowerCase(Locale.ROOT);
 	}
 
-	private static String normalizeSource(
-			String source) {
+	private static String normalizeSource(String source) {
 		if (source == null || source.trim().isEmpty() || "RW".equalsIgnoreCase(source.trim())) {
 			return "RW";
 		}
@@ -693,8 +558,7 @@ public class ReportCaseService {
 		return null;
 	}
 
-	private static LocalDateTime parsePublishedDate(
-			String value) {
+	private static LocalDateTime parsePublishedDate(String value) {
 		if (value == null || value.trim().isEmpty()) {
 			return null;
 		}
@@ -706,8 +570,7 @@ public class ReportCaseService {
 		}
 	}
 
-	private static String caseIdentifier(
-			FeedCase reportCase) {
+	private static String caseIdentifier(FeedCase reportCase) {
 		if (reportCase == null) {
 			return null;
 		}
@@ -731,14 +594,13 @@ public class ReportCaseService {
 		private String publishedDate;
 
 		/*
-		 * Current RuneWatch mixedlist uses "hash" for public case identifiers.
+		 * Current RuneWatch mixedlist uses hash as the public case identifier.
 		 */
 		@SerializedName("hash")
 		private String hash;
 
 		/*
-		 * Retain compatibility with older/alternate mixedlist schemas which exposed
-		 * the same case identifier as short_code.
+		 * Older mixedlist schemas may expose the same case identifier as short_code.
 		 */
 		@SerializedName("short_code")
 		private String shortCode;
@@ -767,13 +629,8 @@ public class ReportCaseService {
 			++count;
 
 			/*
-			 * Prefer the newest dated report.
-			 *
-			 * A dated report always outranks an undated report because the latter
-			 * cannot establish that it is newer.
-			 *
-			 * If every report is undated, retain the latest entry encountered in
-			 * the feed.
+			 * Prefer the newest dated report. Dated reports outrank undated reports; when every
+			 * report is undated, retain the latest feed entry.
 			 */
 			if (latestCase == null || isNewer(publishedDate, latestPublishedDate)) {
 				latestSource = source;
@@ -787,23 +644,24 @@ public class ReportCaseService {
 				return null;
 			}
 
-			return ReportSummary.builder().source(latestSource).caseCount(count).rsn(latestCase.rsn)
-					.publishedDate(latestPublishedDate).caseId(caseIdentifier(latestCase)).reason(latestCase.reason)
-					.evidenceRating(latestCase.evidenceRating).build();
+			return ReportSummary.builder()
+					.source(latestSource)
+					.caseCount(count)
+					.rsn(latestCase.rsn)
+					.publishedDate(latestPublishedDate)
+					.caseId(caseIdentifier(latestCase))
+					.reason(latestCase.reason)
+					.evidenceRating(latestCase.evidenceRating)
+					.build();
 		}
 
 		private static boolean isNewer(LocalDateTime candidate, LocalDateTime current) {
-			/*
-			 * When neither case has a date, allow the later feed entry to replace
-			 * the previous one.
-			 */
+			// Later undated feed entries replace earlier undated entries.
 			if (candidate == null) {
 				return current == null;
 			}
 
-			/*
-			 * A dated record outranks an undated record.
-			 */
+			// A dated record outranks an undated record.
 			return current == null || candidate.isAfter(current);
 		}
 	}
