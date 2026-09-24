@@ -17,19 +17,16 @@ import lombok.Value;
  */
 @Value
 @Builder(toBuilder = true)
-public class LocalPlayerRecord
-{
-    String currentRsn;
+public class LocalPlayerRecord {
+	String currentRsn;
 
-    @Builder.Default
-    List<String> previousRsns =
-            Collections.emptyList();
+	@Builder.Default
+	List<String> previousRsns = Collections.emptyList();
 
-    boolean favorite;
+	boolean favorite;
 
-    String note;
+	String note;
 
-    @Builder.Default
-    List<String> tags =
-            Collections.emptyList();
+	@Builder.Default
+	List<String> tags = Collections.emptyList();
 }
