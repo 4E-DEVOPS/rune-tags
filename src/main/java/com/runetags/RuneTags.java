@@ -1,5 +1,7 @@
 package com.runetags;
 
+import com.google.gson.Gson;
+import com.google.inject.Provides;
 import com.runetags.chat.ChatHitboxRegistry;
 import com.runetags.chat.ChatProcessor;
 import com.runetags.chat.ChatText;
@@ -41,9 +43,6 @@ import com.runetags.suggestion.SuggestionOverlay;
 import com.runetags.suggestion.SuggestionService;
 import com.runetags.target.PlayerVisibilityService;
 import com.runetags.target.TargetController;
-
-import com.google.gson.Gson;
-import com.google.inject.Provides;
 
 import java.awt.Point;
 import java.awt.image.BufferedImage;
@@ -125,17 +124,15 @@ import okhttp3.OkHttpClient;
 @PluginDescriptor(
 		name = "RuneTags",
 		description = "Quick-card profiles for player mentions and tags.",
-		tags = {"1877", "runetags", "rune-tags", "player", "players", "quick", "card", "profile", "tags", "tagging", "mentions", "chat", "clan"},
+		tags = {"1877", "card", "chat", "clan", "mentions", "player", "players", "profile", "quick", "tagging", "tags", "rune-tags", "runetags"},
 		enabledByDefault = true
 )
 public class RuneTags extends Plugin {
-
 	private static final int MESSAGE_REPOSITORY_CAPACITY = 500;
 	private static final String PLAYER_MENU_OPEN_PROFILE = "Open Profile";
 
 	/*
-	 * Periodic reconciliation interval for PlayerDirectory state
-	 * that cannot be fully covered by incremental RuneLite events.
+	 * Periodically reconcile PlayerDirectory state not covered by incremental RuneLite events.
 	 */
 	private static final int DIRECTORY_RECONCILE_GAME_TICKS = 25;
 	private static final int DIRECTORY_TARGETED_REFRESH_LIMIT = 2;
@@ -272,10 +269,8 @@ public class RuneTags extends Plugin {
 	private long lastFavoriteUiRevision = Long.MIN_VALUE;
 
 	/*
-	 * Short-lived mapping for RuneLite RUNELITE_PLAYER Open Profile entries.
-	 *
-	 * A player can despawn while the native context menu remains open, so retain
-	 * the identifier -> name mapping until the corresponding click arrives.
+	 * Retain RUNELITE_PLAYER identifiers until the corresponding menu click.
+	 * Native menus can outlive the Player object that created them.
 	 */
 	private final Map<Integer, String> playerProfileIndexNames = new HashMap<>();
 
@@ -284,75 +279,33 @@ public class RuneTags extends Plugin {
 	 * START-UP & SHUT-DOWN
 	 * ================================================================
 	 */
-
 	@Override
 	protected void startUp() {
-		/*
-		 * ================================================================
-		 * 1. Identity / mention parsing
-		 * ================================================================
-		 *
-		 * Everything downstream ultimately depends on normalized
-		 * player identities and semantic parsing.
-		 */
+		// 1. Identity / mention parsing
 		nameNormalizer = new NameNormalizer();
-
 		localPlayerRecordService = new LocalPlayerRecordService(gson, nameNormalizer, configManager);
-
-		playerDirectory = new PlayerDirectory(
-				client,
-				partyService,
-				worldService,
-				nameNormalizer);
-
+		playerDirectory = new PlayerDirectory(client, partyService, worldService, nameNormalizer);
 		tagParser = new TagParser(nameNormalizer, playerDirectory);
-
 		knownPlayerMentionParser = new KnownPlayerMentionParser(playerDirectory, nameNormalizer);
-
 		localMentionMatcher = new LocalMentionMatcher(config, nameNormalizer);
-
 		messageFormatter = new MessageFormatter(config, localMentionMatcher);
-
 		chatProcessor = new ChatProcessor(tagParser, knownPlayerMentionParser, localMentionMatcher);
 
-		/*
-		 * ================================================================
-		 * 2. Context / profile enrichment
-		 * ================================================================
-		 */
+		// 2. Context / profile enrichment
 		hiscoreEnrichmentCache = new HiscoreEnrichmentCache();
-
 		hiscoreEnrichmentService = new HiscoreEnrichmentService(hiscoreClient, hiscoreEnrichmentCache);
-
 		efficiencyMetricService = new EfficiencyMetricService(okHttpClient, gson);
-
 		playerLocationService = new PlayerLocationService(client, locationIndex);
-
 		profileMetricResolver = new ProfileMetricResolver();
-
 		playerContextService = new PlayerContextService(client, playerLocationService, profileMetricResolver);
-
 		partyContextService = new PartyContextService(partyService, locationIndex, nameNormalizer);
 
-		/*
-		 * ================================================================
-		 * 3. Targeting / lookup / Quick Profile
-		 * ================================================================
-		 */
+		// 3. Targeting / lookup / Quick Profile
 		targetController = new TargetController(client, config);
-
 		playerVisibilityService = new PlayerVisibilityService(hooks, targetController);
-
 		playerLookupService = new PlayerLookupService(config);
-
 		clanLookupService = new ClanLookupService();
-
-		reportCaseService = new ReportCaseService(
-				okHttpClient,
-				gson,
-				clientThread,
-				config);
-
+		reportCaseService = new ReportCaseService(okHttpClient, gson, clientThread, config);
 		quickProfileController = new QuickProfileController(
 				client,
 				clientThread,
@@ -369,46 +322,26 @@ public class RuneTags extends Plugin {
 				reportCaseService,
 				localPlayerRecordService,
 				chatboxPanelManager);
-
 		quickProfileOverlay = new QuickProfileOverlay(
 				client,
 				config,
 				runeLiteConfig,
 				quickProfileController,
 				tooltipManager);
-
-		favoriteOverlay = new FavoriteOverlay(
-				client,
-				config,
-				localPlayerRecordService,
-				modelOutlineRenderer);
-
-		targetOverlay = new TargetOverlay(
-				client,
-				config,
-				targetController,
-				modelOutlineRenderer);
-
+		favoriteOverlay = new FavoriteOverlay(client, config, localPlayerRecordService, modelOutlineRenderer);
+		targetOverlay = new TargetOverlay(client, config, targetController, modelOutlineRenderer);
 		targetMinimapOverlay = new TargetMinimapOverlay(client, config, targetController);
 
-		/*
-		 * ================================================================
-		 * 4. Mention notifications / persistent history
-		 * ================================================================
-		 */
+		// 4. Mention notifications / persistent history
 		mentionNotificationService = new MentionNotificationService(client, config, notifier);
-
 		mentionHistoryService.reload();
-
 		mentionHistoryPanel = new MentionHistoryPanel(
 				client,
 				config,
 				mentionHistoryService,
 				quickProfileController,
 				localPlayerRecordService);
-
 		final BufferedImage historyIcon = ImageUtil.loadImageResource(RuneTags.class, "sidebar_icon.png");
-
 		mentionHistoryNavigation = NavigationButton.builder()
 				.tooltip("RuneTags")
 				.icon(historyIcon)
@@ -416,54 +349,25 @@ public class RuneTags extends Plugin {
 				.panel(mentionHistoryPanel)
 				.build();
 
-		/*
-		 * ================================================================
-		 * 5. Structured chat storage / geometry / interaction
-		 * ================================================================
-		 */
+		// 5. Structured chat storage / geometry / interaction
 		messageRepository = new TaggedMessageRepository(MESSAGE_REPOSITORY_CAPACITY);
-
-		nativeBootstrapService = new NativeBootstrapService(
-				client,
-				playerDirectory,
-				chatProcessor,
-				messageRepository);
-
+		nativeBootstrapService = new NativeBootstrapService(client, playerDirectory, chatProcessor, messageRepository);
 		chatHitboxRegistry = new ChatHitboxRegistry();
-
 		referenceLayoutService = new ReferenceLayoutService(
 				client,
 				config,
 				messageRepository,
 				localPlayerRecordService);
-
-		/*
-		 * Requires message ownership and layout services to resolve configured chat fonts.
-		 */
-		fontLayoutService = new FontLayoutService(
-				client,
-				config,
-				messageRepository,
-				referenceLayoutService);
-
-		/*
-		 * Clickable PlayerReference highlights / hitboxes.
-		 */
+		// Font resolution depends on finalized message ownership and layout state.
+		fontLayoutService = new FontLayoutService(client, config, messageRepository, referenceLayoutService);
 		chatReferenceOverlay = new ChatReferenceOverlay(
 				referenceLayoutService,
 				chatHitboxRegistry,
 				client,
 				config,
 				localMentionMatcher);
-
-		suggestionService = new SuggestionService(
-				client,
-				clientThread,
-				config,
-				playerDirectory);
-
+		suggestionService = new SuggestionService(client, clientThread, config, playerDirectory);
 		suggestionOverlay = new SuggestionOverlay(client, suggestionService);
-
 		inputListener = new InputListener(
 				client,
 				config,
@@ -471,28 +375,20 @@ public class RuneTags extends Plugin {
 				quickProfileController,
 				suggestionService);
 
-		/*
-		 * ================================================================
-		 * 6. Runtime state
-		 * ================================================================
-		 */
+		// 6. Runtime state
 		nextMessageId = 0;
 		nativeChatBootstrapPending = true;
-
 		pendingDirectoryRefreshes.clear();
 		fullDirectoryRefreshPending = false;
 		directoryReconcileTicks = 0;
 		playerProfileIndexNames.clear();
 
 		/*
-		 * RuneTags may be enabled from RuneLite's Swing configuration UI.
-		 *
-		 * PlayerDirectory and PlayerContextService access client-thread-only
-		 * game state, so initial synchronization must execute on the client thread.
+		 * Initial client-state synchronization must run on the client thread when
+		 * RuneTags is enabled from RuneLite's Swing configuration UI.
 		 */
 		clientThread.invokeLater(() -> {
-			if (client.getGameState()
-					!= GameState.LOGGED_IN) {
+			if (client.getGameState() != GameState.LOGGED_IN) {
 				return;
 			}
 
@@ -528,55 +424,29 @@ public class RuneTags extends Plugin {
 				? localPlayerRecordService.getFavoriteRevision()
 				: Long.MIN_VALUE;
 
-		/*
-		 * ================================================================
-		 * 7. Register external RuneLite hooks LAST
-		 * ================================================================
-		 *
-		 * Register external hooks only after all RuneTags services are initialized.
-		 */
+		// 7. Register external RuneLite hooks LAST
 		mentionHistoryNavigationAdded = false;
-
-		if (config.mentionHistory()
-				&& mentionHistoryNavigation != null) {
+		if (config.mentionHistory() && mentionHistoryNavigation != null) {
 			clientToolbar.addNavigation(mentionHistoryNavigation);
-
 			mentionHistoryNavigationAdded = true;
 		}
-
 		overlayManager.add(chatReferenceOverlay);
-
 		overlayManager.add(favoriteOverlay);
-
 		overlayManager.add(targetOverlay);
-
 		overlayManager.add(targetMinimapOverlay);
-
 		overlayManager.add(quickProfileOverlay);
-
 		overlayManager.add(suggestionOverlay);
-
 		playerVisibilityService.start();
-
 		menuManager.get().addPlayerMenuItem(PLAYER_MENU_OPEN_PROFILE);
-
 		mouseManager.registerMouseListener(inputListener);
-
 		keyManager.registerKeyListener(inputListener);
-
 		log.debug("[RuneTags] Plugin Initiated!");
 	}
 
 	@Override
 	protected void shutDown() {
 		final boolean uninstalling = updateMessages.prepareShutdown();
-		/*
-		 * ================================================================
-		 * 1. Stop external interaction first
-		 * ================================================================
-		 *
-		 * Disable external entry points before releasing internal state.
-		 */
+		// 1. Stop external interaction first
 		if (inputListener != null) {
 			keyManager.unregisterKeyListener(inputListener);
 
@@ -603,20 +473,13 @@ public class RuneTags extends Plugin {
 			playerVisibilityService.stop();
 		}
 
-		if (mentionHistoryNavigation != null
-				&& mentionHistoryNavigationAdded) {
+		if (mentionHistoryNavigation != null && mentionHistoryNavigationAdded) {
 			clientToolbar.removeNavigation(mentionHistoryNavigation);
 
 			mentionHistoryNavigationAdded = false;
 		}
 
-		/*
-		 * ================================================================
-		 * 2. Remove overlays
-		 * ================================================================
-		 *
-		 * Reverse their registration order.
-		 */
+		// 2. Remove overlays
 		if (suggestionOverlay != null) {
 			overlayManager.remove(suggestionOverlay);
 		}
@@ -641,11 +504,7 @@ public class RuneTags extends Plugin {
 			overlayManager.remove(chatReferenceOverlay);
 		}
 
-		/*
-		 * ================================================================
-		 * 3. Invalidate active runtime controllers
-		 * ================================================================
-		 */
+		// 3. Invalidate active runtime controllers
 		if (quickProfileController != null) {
 			quickProfileController.close();
 		}
@@ -654,14 +513,7 @@ public class RuneTags extends Plugin {
 			targetController.clear("plugin stopped");
 		}
 
-		/*
-		 * ================================================================
-		 * 4. Clear runtime / cached state
-		 * ================================================================
-		 *
-		 * Return every physical chat widget still owned by RuneTags to its
-		 * native FontId before discarding semantic/font ownership state.
-		 */
+		// 4. Clear runtime / cached state
 		if (referenceLayoutService != null) {
 			referenceLayoutService.restoreFavoriteSenderColors();
 			referenceLayoutService.restoreMentionFonts();
@@ -692,17 +544,8 @@ public class RuneTags extends Plugin {
 			hiscoreEnrichmentCache.clear();
 		}
 
-		/*
-		 * ================================================================
-		 * 5. Release RuneTags objects in reverse dependency order
-		 * ================================================================
-		 *
-		 * Initialize chat rendering dependencies before consumers that use their state.
-		 */
-
-		/*
-		 * Input / chat presentation.
-		 */
+		// 5. Release RuneTags objects in reverse dependency order
+		// Input and chat presentation
 		inputListener = null;
 		suggestionOverlay = null;
 		suggestionService = null;
@@ -713,16 +556,12 @@ public class RuneTags extends Plugin {
 		referenceLayoutService = null;
 		chatHitboxRegistry = null;
 
-		/*
-		 * Persistent/history UI.
-		 */
+		// Persistent history UI
 		mentionHistoryNavigation = null;
 		mentionHistoryNavigationAdded = false;
 		mentionHistoryPanel = null;
 
-		/*
-		 * Structured chat services.
-		 */
+		// Structured chat services
 		nativeBootstrapService = null;
 		messageRepository = null;
 
@@ -735,9 +574,7 @@ public class RuneTags extends Plugin {
 		knownPlayerMentionParser = null;
 		tagParser = null;
 
-		/*
-		 * Quick Profile / targeting.
-		 */
+		// Quick Profile and targeting
 		quickProfileOverlay = null;
 
 		targetMinimapOverlay = null;
@@ -753,9 +590,7 @@ public class RuneTags extends Plugin {
 		clanLookupService = null;
 		reportCaseService = null;
 
-		/*
-		 * Enrichment / context.
-		 */
+		// Enrichment and context
 		hiscoreEnrichmentService = null;
 		hiscoreEnrichmentCache = null;
 
@@ -764,16 +599,12 @@ public class RuneTags extends Plugin {
 
 		profileMetricResolver = null;
 
-		/*
-		 * Identity root.
-		 */
+		// Identity root
 		playerDirectory = null;
 		localPlayerRecordService = null;
 		nameNormalizer = null;
 
-		/*
-		 * Runtime counters.
-		 */
+		// Runtime counters
 		nextMessageId = 0;
 		nativeChatBootstrapPending = false;
 
@@ -791,7 +622,6 @@ public class RuneTags extends Plugin {
 	 * GAME STATE
 	 * ================================================================
 	 */
-
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event) {
 		if (event == null) {
@@ -799,7 +629,6 @@ public class RuneTags extends Plugin {
 		}
 
 		final GameState gameState = event.getGameState();
-
 		if (gameState == GameState.LOGGED_IN) {
 			updateMessages.onLoggedIn();
 		}
@@ -832,14 +661,8 @@ public class RuneTags extends Plugin {
 
 		if (gameState == GameState.HOPPING) {
 			/*
-			 * RuneScape preserves visible chat across a normal world hop.
-			 *
-			 * Preserve:
-			 * - TaggedMessageRepository;
-			 * - currently rendered reference hitboxes;
-			 * - durable account observations.
-			 *
-			 * Only live world/session-derived profile state becomes invalid.
+			 * Preserve retained chat semantics, hitboxes, and durable account observations.
+			 * Only live world/session profile state becomes invalid.
 			 */
 			clearPendingDirectorySynchronization();
 			directoryReconcileTicks = 0;
@@ -866,17 +689,8 @@ public class RuneTags extends Plugin {
 
 		if (gameState == GameState.LOGIN_SCREEN) {
 			/*
-			 * RuneScape retains chat history while the client remains open.
-			 *
-			 * Preserve:
-			 * - TaggedMessageRepository;
-			 * - currently derived reference hitboxes;
-			 * - durable account observations.
-			 *
-			 * Only live world/session-derived player state becomes invalid.
-			 *
-			 * ChatReferenceOverlay remains responsible for replacing the physical
-			 * hitbox geometry as RuneScape's rendered chat widgets change.
+			 * Preserve retained chat semantics, hitboxes, and durable account observations.
+			 * Only live world/session player state becomes invalid.
 			 */
 			clearPendingDirectorySynchronization();
 			directoryReconcileTicks = 0;
@@ -909,7 +723,6 @@ public class RuneTags extends Plugin {
 	 * CHAT COMMANDS
 	 * ================================================================
 	 */
-
 	@Subscribe
 	public void onCommandExecuted(CommandExecuted event) {
 		updateMessages.onCommandExecuted(event);
@@ -920,7 +733,6 @@ public class RuneTags extends Plugin {
 	 * CHAT CONSTRUCTION
 	 * ================================================================
 	 */
-
 	@Subscribe
 	public void onScriptPreFired(ScriptPreFired event) {
 		if (fontLayoutService != null) {
@@ -933,7 +745,6 @@ public class RuneTags extends Plugin {
 	 * TICK PROCESSING
 	 * ================================================================
 	 */
-
 	@Subscribe
 	public void onGameTick(GameTick event) {
 		if (client.getGameState() != GameState.LOGGED_IN) {
@@ -941,9 +752,8 @@ public class RuneTags extends Plugin {
 		}
 
 		/*
-		 * Dedicated events keep the directory current for normal live changes.
-		 * Reconcile occasionally so durable/offline social-list changes which do
-		 * not expose a dedicated event still converge without depending on chat.
+		 * Dedicated events handle normal directory changes; periodic reconciliation covers
+		 * durable or offline social-list changes without dedicated events.
 		 */
 		directoryReconcileTicks++;
 
@@ -960,30 +770,21 @@ public class RuneTags extends Plugin {
 		}
 
 		/*
-		 * An open QuickCard refreshes only the player it represents.
-		 *
-		 * Full PlayerDirectory discovery remains event-driven for chat parsing,
-		 * initial profile opening, login synchronization, and future consumers such
-		 * as player suggestions.
+		 * Refresh only the open Quick-Card here. Full PlayerDirectory discovery remains
+		 * event-driven or periodic.
 		 */
-		if (quickProfileController != null
-				&& quickProfileController.isOpen()) {
-
+		if (quickProfileController != null && quickProfileController.isOpen()) {
 			quickProfileController.refreshContext();
 		}
 
-		if (targetController != null
-				&& targetController.isTargeting()) {
+		if (targetController != null && targetController.isTargeting()) {
 			targetController.refresh();
 		}
 	}
 
 	@Subscribe
 	public void onPostClientTick(PostClientTick event) {
-		/*
-		 * Apply all PlayerDirectory changes observed during this client tick as one
-		 * coalesced synchronization before any later consumer sees the next tick.
-		 */
+		// Apply coalesced PlayerDirectory changes before next-tick consumers run.
 		flushPendingDirectorySynchronization();
 
 		if (fontLayoutService != null) {
@@ -996,7 +797,6 @@ public class RuneTags extends Plugin {
 
 		if (localPlayerRecordService != null) {
 			final long favoriteUiRevision = localPlayerRecordService.getFavoriteRevision();
-
 			if (favoriteUiRevision != lastFavoriteUiRevision) {
 				lastFavoriteUiRevision = favoriteUiRevision;
 
@@ -1012,16 +812,13 @@ public class RuneTags extends Plugin {
 	 * NAME HISTORY
 	 * ================================================================
 	 */
-
 	@Subscribe
 	public void onNameableNameChanged(NameableNameChanged event) {
-		if (localPlayerRecordService == null
-				|| event == null) {
+		if (localPlayerRecordService == null || event == null) {
 			return;
 		}
 
 		final Nameable nameable = event.getNameable();
-
 		if (nameable == null
 				|| nameable.getName() == null
 				|| nameable.getName().trim().isEmpty()
@@ -1030,20 +827,15 @@ public class RuneTags extends Plugin {
 			return;
 		}
 
-		localPlayerRecordService.observeNameChange(
-				nameable.getName(),
-				nameable.getPrevName());
+		localPlayerRecordService.observeNameChange(nameable.getName(), nameable.getPrevName());
 
 		/*
-		 * The same rename can affect PlayerDirectory membership keys. Queue both
-		 * names so the normal end-of-client-tick synchronization reconstructs the
-		 * affected social identity without forcing an immediate full rebuild.
+		 * Queue both names so end-of-tick synchronization rebuilds the affected identity
+		 * without forcing a full directory refresh.
 		 */
-		queueDirectoryPlayerRefresh(
-				nameable.getPrevName());
+		queueDirectoryPlayerRefresh(nameable.getPrevName());
 
-		queueDirectoryPlayerRefresh(
-				nameable.getName());
+		queueDirectoryPlayerRefresh(nameable.getName());
 	}
 
 	private void captureKnownNameHistory() {
@@ -1052,43 +844,30 @@ public class RuneTags extends Plugin {
 		}
 
 		final Map<String, String> observations = new LinkedHashMap<>();
-
 		final FriendContainer friendContainer = client.getFriendContainer();
-
-		if (friendContainer != null
-				&& friendContainer.getMembers() != null) {
-			for (Friend friend
-					: friendContainer.getMembers()) {
+		if (friendContainer != null && friendContainer.getMembers() != null) {
+			for (Friend friend : friendContainer.getMembers()) {
 				addNameHistoryObservation(observations, friend);
 			}
 		}
 
 		final ClanChannel clanChannel = client.getClanChannel();
-
-		if (clanChannel != null
-				&& clanChannel.getMembers() != null) {
-			for (ClanChannelMember member
-					: clanChannel.getMembers()) {
+		if (clanChannel != null && clanChannel.getMembers() != null) {
+			for (ClanChannelMember member : clanChannel.getMembers()) {
 				addNameHistoryObservation(observations, member);
 			}
 		}
 
 		final ClanChannel guestClanChannel = client.getGuestClanChannel();
-
-		if (guestClanChannel != null
-				&& guestClanChannel.getMembers() != null) {
-			for (ClanChannelMember member
-					: guestClanChannel.getMembers()) {
+		if (guestClanChannel != null && guestClanChannel.getMembers() != null) {
+			for (ClanChannelMember member : guestClanChannel.getMembers()) {
 				addNameHistoryObservation(observations, member);
 			}
 		}
 
 		final FriendsChatManager friendsChatManager = client.getFriendsChatManager();
-
-		if (friendsChatManager != null
-				&& friendsChatManager.getMembers() != null) {
-			for (FriendsChatMember member
-					: friendsChatManager.getMembers()) {
+		if (friendsChatManager != null && friendsChatManager.getMembers() != null) {
+			for (FriendsChatMember member : friendsChatManager.getMembers()) {
 				addNameHistoryObservation(observations, member);
 			}
 		}
@@ -1106,9 +885,7 @@ public class RuneTags extends Plugin {
 			return;
 		}
 
-		observations.put(
-				nameable.getName(),
-				nameable.getPrevName());
+		observations.put(nameable.getName(), nameable.getPrevName());
 	}
 
 	/**
@@ -1116,58 +893,43 @@ public class RuneTags extends Plugin {
 	 * PLAYER DIRECTORY
 	 * ================================================================
 	 */
-
 	@Subscribe
 	public void onClanChannelChanged(ClanChannelChanged event) {
-		/*
-		 * Joining/leaving an entire clan or guest-clan channel is a bulk change.
-		 */
+		// Clan channel replacement is a bulk directory change.
 		queueFullDirectoryRefresh();
 	}
 
 	@Subscribe
 	public void onClanMemberJoined(ClanMemberJoined event) {
-		if (event != null
-				&& event.getClanMember() != null) {
-			queueDirectoryPlayerRefresh(
-					event.getClanMember().getName());
+		if (event != null && event.getClanMember() != null) {
+			queueDirectoryPlayerRefresh(event.getClanMember().getName());
 		}
 	}
 
 	@Subscribe
 	public void onClanMemberLeft(ClanMemberLeft event) {
-		if (event != null
-				&& event.getClanMember() != null) {
-			queueDirectoryPlayerRefresh(
-					event.getClanMember().getName());
+		if (event != null && event.getClanMember() != null) {
+			queueDirectoryPlayerRefresh(event.getClanMember().getName());
 		}
 	}
 
 	@Subscribe
 	public void onFriendsChatChanged(FriendsChatChanged event) {
-		/*
-		 * Initial channel population can emit many member events. One bulk refresh
-		 * is both cheaper and less error-prone than processing that initialization
-		 * stream member-by-member.
-		 */
+		// Rebuild once for initial Friends Chat population instead of processing each event.
 		queueFullDirectoryRefresh();
 	}
 
 	@Subscribe
 	public void onFriendsChatMemberJoined(FriendsChatMemberJoined event) {
-		if (event != null
-				&& event.getMember() != null) {
-			queueDirectoryPlayerRefresh(
-					event.getMember().getName());
+		if (event != null && event.getMember() != null) {
+			queueDirectoryPlayerRefresh(event.getMember().getName());
 		}
 	}
 
 	@Subscribe
 	public void onFriendsChatMemberLeft(FriendsChatMemberLeft event) {
-		if (event != null
-				&& event.getMember() != null) {
-			queueDirectoryPlayerRefresh(
-					event.getMember().getName());
+		if (event != null && event.getMember() != null) {
+			queueDirectoryPlayerRefresh(event.getMember().getName());
 		}
 	}
 
@@ -1180,8 +942,7 @@ public class RuneTags extends Plugin {
 			return;
 		}
 
-		playerDirectory.addNearbyPlayer(
-				event.getPlayer());
+		playerDirectory.addNearbyPlayer(event.getPlayer());
 
 		refreshOpenQuickProfile();
 	}
@@ -1195,18 +956,15 @@ public class RuneTags extends Plugin {
 			return;
 		}
 
-		playerDirectory.removeNearbyPlayer(
-				event.getPlayer());
+		playerDirectory.removeNearbyPlayer(event.getPlayer());
 
 		refreshOpenQuickProfile();
 	}
 
 	@Subscribe
 	public void onRemovedFriend(RemovedFriend event) {
-		if (event != null
-				&& event.getNameable() instanceof Friend) {
-			queueDirectoryPlayerRefresh(
-					event.getNameable().getName());
+		if (event != null && event.getNameable() instanceof Friend) {
+			queueDirectoryPlayerRefresh(event.getNameable().getName());
 		}
 	}
 
@@ -1218,23 +976,18 @@ public class RuneTags extends Plugin {
 	@Subscribe
 	public void onUserJoin(UserJoin event) {
 		/*
-		 * UserJoin carries the stable member ID before RuneLite necessarily knows
-		 * the character name. Clear any stale context for a theoretically reused
-		 * member ID, then wait for StatusUpdate to supply the usable character name.
+		 * UserJoin can arrive before the character name. Clear stale member-ID context
+		 * and wait for StatusUpdate to provide a usable name.
 		 */
-		if (event != null
-				&& partyContextService != null) {
-			partyContextService.removeMember(
-					event.getMemberId());
+		if (event != null && partyContextService != null) {
+			partyContextService.removeMember(event.getMemberId());
 		}
 	}
 
 	@Subscribe
 	public void onUserPart(UserPart event) {
-		if (event != null
-				&& partyContextService != null) {
-			partyContextService.removeMember(
-					event.getMemberId());
+		if (event != null && partyContextService != null) {
+			partyContextService.removeMember(event.getMemberId());
 		}
 
 		queueFullDirectoryRefresh();
@@ -1247,10 +1000,9 @@ public class RuneTags extends Plugin {
 		}
 
 		String previousPlayerName = null;
-
 		if (partyContextService != null) {
-			final PartyContextService.PartyContext previousContext = partyContextService.findByMemberId(
-					event.getMemberId());
+			final PartyContextService.PartyContext previousContext =
+					partyContextService.findByMemberId(event.getMemberId());
 
 			previousPlayerName = previousContext != null
 					? previousContext.getPlayerName()
@@ -1260,24 +1012,15 @@ public class RuneTags extends Plugin {
 		}
 
 		/*
-		 * RuneLite's Party plugin populates PartyMember.displayName/loggedIn from
-		 * StatusUpdate. Queue the affected character now and apply it after the
-		 * current EventBus dispatch has settled, so PlayerDirectory sees RuneLite's
-		 * updated PartyMember state regardless of subscriber ordering.
-		 *
-		 * Queue the previous name as well when one is known. This handles the rare
-		 * same-member-ID name transition without leaving an old PARTY identity until
-		 * the periodic reconciliation.
+		 * StatusUpdate supplies PartyMember display-name and login state. Queue both the
+		 * previous and current names for end-of-tick directory synchronization.
 		 */
 		queueDirectoryPlayerRefresh(previousPlayerName);
 
 		String playerName = event.getCharacterName();
-
-		if (playerName == null
-				|| playerName.trim().isEmpty()) {
+		if (playerName == null || playerName.trim().isEmpty()) {
 			final PartyMember member = partyService != null
-					? partyService.getMemberById(
-					event.getMemberId())
+					? partyService.getMemberById(event.getMemberId())
 					: null;
 
 			playerName = member != null
@@ -1298,11 +1041,8 @@ public class RuneTags extends Plugin {
 
 		pendingDirectoryRefreshes.add(playerName);
 
-		/*
-		 * Escalate bursts of targeted updates into a full synchronization pass.
-		 */
-		if (pendingDirectoryRefreshes.size()
-				> DIRECTORY_TARGETED_REFRESH_LIMIT) {
+		// Escalate bursts of targeted updates to one full directory refresh.
+		if (pendingDirectoryRefreshes.size() > DIRECTORY_TARGETED_REFRESH_LIMIT) {
 			queueFullDirectoryRefresh();
 		}
 	}
@@ -1322,24 +1062,20 @@ public class RuneTags extends Plugin {
 			return;
 		}
 
-		if (!fullDirectoryRefreshPending
-				&& pendingDirectoryRefreshes.isEmpty()) {
+		if (!fullDirectoryRefreshPending && pendingDirectoryRefreshes.isEmpty()) {
 			return;
 		}
 
-		if (client.getGameState()
-				!= GameState.LOGGED_IN) {
+		if (client.getGameState() != GameState.LOGGED_IN) {
 			clearPendingDirectorySynchronization();
 			return;
 		}
 
 		final boolean fullRefresh = fullDirectoryRefreshPending;
 
-
 		/*
-		 * Clear the request before executing it. Any new event raised while the
-		 * directory is being synchronized becomes a fresh request for the next
-		 * client tick instead of being lost.
+		 * Clear pending requests before synchronization so events raised during the pass
+		 * become requests for the next client tick.
 		 */
 		fullDirectoryRefreshPending = false;
 
@@ -1360,8 +1096,7 @@ public class RuneTags extends Plugin {
 	}
 
 	private void refreshOpenQuickProfile() {
-		if (quickProfileController != null
-				&& quickProfileController.isOpen()) {
+		if (quickProfileController != null && quickProfileController.isOpen()) {
 			quickProfileController.refreshContext();
 		}
 	}
@@ -1381,53 +1116,33 @@ public class RuneTags extends Plugin {
 	 * CHAT MESSAGES
 	 * ================================================================
 	 */
-
 	@Subscribe
 	public void onChatMessage(ChatMessage event) {
-		if (chatProcessor == null
-				|| !isSupportedChatType(event.getType())
-				|| event.getMessageNode() == null) {
+		if (chatProcessor == null || !isSupportedChatType(event.getType()) || event.getMessageNode() == null) {
 			return;
 		}
 
 		/*
-		 * PlayerDirectory discovery is now maintained independently of chat.
-		 *
-		 * If a RuneLite membership/presence event was observed earlier in this
-		 * client tick, apply that small queued delta before parsing this message.
-		 * Ordinary messages with no pending directory changes pay no rebuild cost.
+		 * Apply queued membership or presence changes before parsing chat so semantic
+		 * resolution sees current directory state.
 		 */
 		flushPendingDirectorySynchronization();
 
 		final Player localPlayer = client.getLocalPlayer();
-
 		final String localName = localPlayer != null
 				? localPlayer.getName()
 				: null;
 
-		/*
-		 * Keep the RuneLite/Jagex-marked version for rendering and build a
-		 * semantic version separately for RuneTags parsing.
-		 */
-
+		// Preserve native markup for rendering and derive a separate semantic body.
 		final String rawMessage = event.getMessageNode().getValue();
-
 		final String semanticMessage = ChatText.toSemanticPlain(rawMessage);
-
-		if (playerDirectory != null
-				&& event.getName() != null
-				&& !event.getName().trim().isEmpty()) {
+		if (playerDirectory != null && event.getName() != null && !event.getName().trim().isEmpty()) {
 			/*
-			 * Only incoming/player-authored chat is authoritative evidence of the
-			 * named player's native account icon.
-			 *
-			 * PRIVATECHATOUT names the recipient. Its lack of an account icon tells
-			 * us nothing about that recipient and must not overwrite an account type
-			 * previously learned from their own chat.
+			 * Incoming player-authored chat is authoritative for native account icons.
+			 * PRIVATECHATOUT names the recipient and must not overwrite their account type.
 			 */
 			if (event.getType() != ChatMessageType.PRIVATECHATOUT) {
-				playerDirectory.observeAccountType(
-						event.getName());
+				playerDirectory.observeAccountType(event.getName());
 			}
 		}
 
@@ -1438,65 +1153,45 @@ public class RuneTags extends Plugin {
 				semanticMessage,
 				localName);
 
-		/*
-		 * TaggedMessage remains the semantic source of truth.
-		 */
+		// TaggedMessage remains the semantic source of truth
 		messageRepository.add(taggedMessage);
 
 		/*
-		 * A new supported message may cause RuneScape to reconstruct and recycle
-		 * retained physical chat rows.
-		 *
-		 * This is only a boolean request. All messages reconstructed during this
-		 * client tick are synchronized together once at PostClientTick.
+		 * New supported messages can recycle retained chat rows. Mark fonts dirty and
+		 * synchronize all reconstructed rows once at PostClientTick.
 		 */
 		if (fontLayoutService != null) {
 			fontLayoutService.markFontsDirty();
 		}
 
-		if (mentionHistoryService != null
-				&& taggedMessage
-				.getLocalMentionMatch()
-				.isMatchesLocalPlayer()) {
+		if (mentionHistoryService != null && taggedMessage.getLocalMentionMatch().isMatchesLocalPlayer()) {
 			final QuickProfileController.ProfileContextSnapshot historyContext = quickProfileController != null
-					? quickProfileController.resolveHistoryContext(
-					taggedMessage.getCanonicalSender())
+					? quickProfileController.resolveHistoryContext(taggedMessage.getCanonicalSender())
 					: QuickProfileController.ProfileContextSnapshot.empty();
 
 			mentionHistoryService.add(
 					taggedMessage,
 					historyContext.getWorld(),
 					historyContext.getLocationName(),
-					historyChannelName(
-							taggedMessage,
-							historyContext));
+					historyChannelName(taggedMessage, historyContext));
 
-			/*
-			 * Refresh the sidebar after the persistent history has been updated.
-			 * MentionHistoryPanel.reload() moves itself onto Swing's EDT when needed.
-			 */
+			// Reload the history panel after persistent history is updated.
 			if (mentionHistoryPanel != null) {
 				mentionHistoryPanel.reload();
 			}
 		}
 
 		/*
-		 * Do not rerun LocalMentionMatcher here. Whole-message foreground
-		 * coloring, notifications, mention highlighting, and mention history
-		 * should all consume the same semantic match produced by ChatProcessor.
+		 * Reuse ChatProcessor semantic match state for formatting, notifications,
+		 * highlighting, and history.
 		 */
 		if (mentionNotificationService != null
-				&& taggedMessage
-				.getLocalMentionMatch()
-				.isMatchesLocalPlayer()
-				&& !isLocalSender(
-				taggedMessage,
-				localName)) {
+				&& taggedMessage.getLocalMentionMatch().isMatchesLocalPlayer()
+				&& !isLocalSender(taggedMessage, localName)) {
 			mentionNotificationService.notifyMention(taggedMessage);
 		}
 
 		final String formattedMessage = messageFormatter.format(taggedMessage, rawMessage, localName);
-
 		if (!formattedMessage.equals(rawMessage)) {
 			event.getMessageNode().setValue(formattedMessage);
 			event.getMessageNode().setRuneLiteFormatMessage(formattedMessage);
@@ -1512,13 +1207,10 @@ public class RuneTags extends Plugin {
 			return false;
 		}
 
-		final String senderKey = nameNormalizer.comparisonKey(
-				taggedMessage.getCanonicalSender());
-
+		final String senderKey = nameNormalizer.comparisonKey(taggedMessage.getCanonicalSender());
 		final String localKey = nameNormalizer.comparisonKey(localPlayerName);
 
-		return !senderKey.isEmpty()
-				&& senderKey.equals(localKey);
+		return !senderKey.isEmpty() && senderKey.equals(localKey);
 	}
 
 	private static boolean isSupportedChatType(ChatMessageType type) {
@@ -1549,19 +1241,13 @@ public class RuneTags extends Plugin {
 	private static String historyChannelName(
 			TaggedMessage taggedMessage,
 			QuickProfileController.ProfileContextSnapshot context) {
-		if (taggedMessage == null
-				|| taggedMessage.getType() == null) {
+		if (taggedMessage == null || taggedMessage.getType() == null) {
 			return null;
 		}
 
 		/*
-		 * Only preserve the shared channel name when it corresponds to the
-		 * channel in which the historical message was actually sent.
-		 *
-		 * Example:
-		 * A player may be both PARTY and CLAN. If they mentioned us in Clan Chat,
-		 * we must not record "Party" merely because Party is PlayerDirectory's
-		 * highest-priority current channel.
+		 * Preserve a shared channel name only when its PlayerSource matches the channel
+		 * that produced the historical message.
 		 */
 		switch (taggedMessage.getType()) {
 			case CLAN_CHAT:
@@ -1590,18 +1276,15 @@ public class RuneTags extends Plugin {
 	 * CHAT INTERACTION
 	 * ================================================================
 	 */
-
 	@Subscribe
 	public void onMenuOpened(MenuOpened event) {
 		/*
-		 * Cache RuneLite's native RUNELITE_PLAYER Open Profile entries before
-		 * the menu can outlive the Player object which produced them. This
-		 * mirrors the lifecycle used by RuneLite's own player-menu integrations.
+		 * Cache RUNELITE_PLAYER profile entries because the native menu can outlive the
+		 * Player object that created them.
 		 */
 		playerProfileIndexNames.clear();
 
-		if (event != null
-				&& event.getMenuEntries() != null) {
+		if (event != null && event.getMenuEntries() != null) {
 			for (MenuEntry entry : event.getMenuEntries()) {
 				if (entry == null
 						|| entry.getType() != MenuAction.RUNELITE_PLAYER
@@ -1610,16 +1293,11 @@ public class RuneTags extends Plugin {
 				}
 
 				final Player player = entry.getPlayer();
-
-				if (player == null
-						|| player.getName() == null
-						|| player.getName().trim().isEmpty()) {
+				if (player == null || player.getName() == null || player.getName().trim().isEmpty()) {
 					continue;
 				}
 
-				playerProfileIndexNames.put(
-						entry.getIdentifier(),
-						player.getName());
+				playerProfileIndexNames.put(entry.getIdentifier(), player.getName());
 			}
 		}
 
@@ -1643,17 +1321,12 @@ public class RuneTags extends Plugin {
 
 		String playerName = player != null
 				? player.getName()
-				: playerProfileIndexNames.get(
-						event.getId());
+				: playerProfileIndexNames.get(event.getId());
 
-		if (playerName != null
-				&& !playerName.trim().isEmpty()) {
+		if (playerName != null && !playerName.trim().isEmpty()) {
 			final net.runelite.api.Point canvasPoint = client.getMouseCanvasPosition();
-
 			final Point anchorPoint = canvasPoint != null
-					? new Point(
-					canvasPoint.getX(),
-					canvasPoint.getY())
+					? new Point(canvasPoint.getX(), canvasPoint.getY())
 					: null;
 
 			quickProfileController.openPlayer(playerName, anchorPoint);
@@ -1667,12 +1340,9 @@ public class RuneTags extends Plugin {
 	 * CONFIGURATION
 	 * ================================================================
 	 */
-
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event) {
-		if (event == null
-				|| !Constants.CONFIG_GROUP.equals(
-				event.getGroup())) {
+		if (event == null || !Constants.CONFIG_GROUP.equals(event.getGroup())) {
 			return;
 		}
 
@@ -1703,8 +1373,7 @@ public class RuneTags extends Plugin {
 				break;
 
 			case "showNotes":
-				if (!config.showNotes()
-						&& quickProfileController != null) {
+				if (!config.showNotes() && quickProfileController != null) {
 					quickProfileController.cancelNoteEdit();
 				}
 				break;
@@ -1712,11 +1381,8 @@ public class RuneTags extends Plugin {
 			case "wiseOldManMetrics":
 			case "showEhp":
 			case "showEhb":
-				if (quickProfileController != null
-						&& quickProfileController.isOpen()) {
-					if (config.wiseOldManMetrics()
-							&& (config.showEhp()
-							|| config.showEhb())) {
+				if (quickProfileController != null && quickProfileController.isOpen()) {
+					if (config.wiseOldManMetrics() && (config.showEhp() || config.showEhb())) {
 						quickProfileController.refreshEfficiencyMetrics();
 					} else {
 						quickProfileController.clearEfficiencyMetrics();
@@ -1727,13 +1393,11 @@ public class RuneTags extends Plugin {
 			case "showReports":
 				if (reportCaseService != null) {
 					if (config.showReports()) {
-						if (client.getGameState()
-								== GameState.LOGGED_IN) {
+						if (client.getGameState() == GameState.LOGGED_IN) {
 							reportCaseService.refreshInitialIfMissing();
 						}
 
-						if (quickProfileController != null
-								&& quickProfileController.isOpen()) {
+						if (quickProfileController != null && quickProfileController.isOpen()) {
 							quickProfileController.refreshReports();
 						}
 					} else {
@@ -1747,8 +1411,7 @@ public class RuneTags extends Plugin {
 				break;
 
 			case "targetPlayerOption":
-				if (!config.targetPlayerOption()
-						&& targetController != null) {
+				if (!config.targetPlayerOption() && targetController != null) {
 					targetController.clear("targeting disabled");
 				}
 				break;
@@ -1757,11 +1420,7 @@ public class RuneTags extends Plugin {
 				clientThread.invokeLater(() -> {
 					client.refreshChat();
 
-					/*
-					 * Script construction normally marks this automatically, but keep the
-					 * configuration lifecycle explicit so switching to NORMAL also forces
-					 * final restoration.
-					 */
+					// Switching to NORMAL also requires a final restoration pass.
 					if (fontLayoutService != null) {
 						fontLayoutService.markFontsDirty();
 					}
@@ -1796,7 +1455,6 @@ public class RuneTags extends Plugin {
 	 * CONFIGURATION PROVIDER
 	 * ================================================================
 	 */
-
 	@Provides
 	Configurations provideConfig(ConfigManager configManager) {
 		return configManager.getConfig(Configurations.class);
@@ -1807,7 +1465,6 @@ public class RuneTags extends Plugin {
 	 * PARTY CONTEXT
 	 * ================================================================
 	 */
-
 	@Subscribe
 	public void onLocationUpdate(LocationUpdate event) {
 		if (partyContextService == null) {
@@ -1816,9 +1473,7 @@ public class RuneTags extends Plugin {
 
 		partyContextService.onLocationUpdate(event);
 
-		final PartyContextService.PartyContext context = partyContextService.findByMemberId(
-				event.getMemberId());
-
+		final PartyContextService.PartyContext context = partyContextService.findByMemberId(event.getMemberId());
 		if (context != null) {
 			refreshOpenQuickProfile();
 		}
@@ -1829,26 +1484,21 @@ public class RuneTags extends Plugin {
 	 * NATIVE CHAT BOOTSTRAP
 	 * ================================================================
 	 */
-
 	private void bootstrapNativeChatIfPending() {
 		if (!nativeChatBootstrapPending
 				|| nativeBootstrapService == null
 				|| messageRepository == null
 				|| chatProcessor == null
-				|| client.getGameState()
-				!= GameState.LOGGED_IN) {
+				|| client.getGameState() != GameState.LOGGED_IN) {
 			return;
 		}
 
 		final Player localPlayer = client.getLocalPlayer();
-
 		final String localPlayerName = localPlayer != null
 				? localPlayer.getName()
 				: null;
 
-		/*
-		 * Reset repository state before rebuilding from RuneScape's native chat buffer.
-		 */
+		// Reset semantic state before rebuilding from the native chat buffer.
 		messageRepository.clear();
 
 		nextMessageId = 0;
@@ -1858,13 +1508,12 @@ public class RuneTags extends Plugin {
 		nativeChatBootstrapPending = false;
 
 		/*
-		 * Existing native chat may already be visible when RuneTags is enabled.
-		 *
-		 * Request one final semantic/font synchronization so retained messages receive
-		 * their configured font without waiting for another incoming message.
+		 * Existing chat may already be visible when RuneTags starts. Request one final
+		 * semantic/font synchronization without waiting for another incoming message.
 		 */
 		if (fontLayoutService != null) {
 			fontLayoutService.markFontsDirty();
 		}
 	}
 }
+
