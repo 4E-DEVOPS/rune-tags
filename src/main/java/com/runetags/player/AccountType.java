@@ -2,52 +2,40 @@ package com.runetags.player;
 
 import net.runelite.api.IconID;
 
-public enum AccountType
-{
+public enum AccountType {
     UNKNOWN(
             "Unknown",
             null),
-
     NORMAL(
             "Normal",
             "normal.png"),
-
     IRONMAN(
             "Ironman",
             "ironman.png"),
-
     HARDCORE(
             "Hardcore Ironman",
             "hardcore.png"),
-
     ULTIMATE(
             "Ultimate Ironman",
             "ultimate.png"),
-
     GROUP_IRONMAN(
             "Group Ironman",
             "group_ironman.png"),
-
     GROUP_HARDCORE(
             "Hardcore Group Ironman",
             "group_hardcore.png"),
-
     GROUP_UNRANKED(
             "Unranked Group Ironman",
             "group_unranked.png"),
-
     DEADMAN(
             "Deadman",
             "deadman.png"),
-
     LEAGUES(
             "Leagues",
             "leagues.png"),
-
     PLAYER_MODERATOR(
             "Player Moderator",
             "player_moderator.png"),
-
     JAGEX_MODERATOR(
             "Jagex Moderator",
             "jagex_moderator.png");
@@ -55,10 +43,7 @@ public enum AccountType
     private final String displayName;
     private final String iconFileName;
 
-    AccountType(
-            String displayName,
-            String iconFileName)
-    {
+    AccountType(String displayName, String iconFileName) {
         this.displayName = displayName;
         this.iconFileName = iconFileName;
     }
@@ -78,16 +63,12 @@ public enum AccountType
         return this != UNKNOWN;
     }
 
-    public boolean isTemporary()
-    {
-        return this == DEADMAN
-                || this == LEAGUES;
+    public boolean isTemporary() {
+        return this == DEADMAN || this == LEAGUES;
     }
 
-    public boolean isPermanentAccountType()
-    {
-        switch (this)
-        {
+    public boolean isPermanentAccountType() {
+        switch (this) {
             case NORMAL:
             case IRONMAN:
             case HARDCORE:
@@ -107,10 +88,8 @@ public enum AccountType
         }
     }
 
-    public boolean isModerator()
-    {
-        return this == JAGEX_MODERATOR
-                || this == PLAYER_MODERATOR;
+    public boolean isModerator() {
+        return this == JAGEX_MODERATOR || this == PLAYER_MODERATOR;
     }
 
     /**
@@ -121,10 +100,8 @@ public enum AccountType
      * Permanent account types share the same priority because they represent
      * mutually exclusive account modes rather than stronger/weaker badges.
      */
-    public int getPriority()
-    {
-        switch (this)
-        {
+    public int getPriority() {
+        switch (this) {
             case JAGEX_MODERATOR:
                 return 100;
 
@@ -157,20 +134,13 @@ public enum AccountType
      * account-mode classification from arbitrarily replacing another merely
      * because it was observed later.
      */
-    public static AccountType prefer(
-            AccountType first,
-            AccountType second)
-    {
-        final AccountType left =
-                first != null
-                        ? first
-                        : UNKNOWN;
-
-        final AccountType right =
-                second != null
-                        ? second
-                        : UNKNOWN;
-
+    public static AccountType prefer(AccountType first, AccountType second) {
+        final AccountType left = first != null
+				? first
+				: UNKNOWN;
+        final AccountType right = second != null
+				? second
+				: UNKNOWN;
         return right.getPriority() > left.getPriority()
                 ? right
                 : left;
@@ -183,19 +153,12 @@ public enum AccountType
      * RuneScape supplies the official account-mode icons as <img=X> tags
      * inside player-name strings.
      */
-    public static AccountType fromChatName(
-            String rawName,
-            boolean leaguesWorld)
-    {
-        if (rawName == null
-                || rawName.isEmpty())
-        {
+    public static AccountType fromChatName(String rawName, boolean leaguesWorld) {
+        if (rawName == null || rawName.isEmpty()) {
             return UNKNOWN;
         }
 
-        if (rawName.contains(
-                IconID.JAGEX_MODERATOR.toString()))
-        {
+        if (rawName.contains(IconID.JAGEX_MODERATOR.toString())) {
             return JAGEX_MODERATOR;
         }
 
