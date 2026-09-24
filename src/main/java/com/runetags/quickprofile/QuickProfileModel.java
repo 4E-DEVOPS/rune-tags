@@ -18,63 +18,52 @@ import net.runelite.api.ChatMessageType;
 
 @Value
 @Builder(toBuilder = true)
-public class QuickProfileModel
-{
-    String displayName;
-    boolean resolved;
+public class QuickProfileModel {
+	String displayName;
+	boolean resolved;
 
-    @Builder.Default
-    AccountType accountType = AccountType.UNKNOWN;
+	@Builder.Default
+	AccountType accountType = AccountType.UNKNOWN;
 
-    Integer combatLevel;
-    Integer totalLevel;
-    Double efficientHoursPlayed;
-    Double efficientHoursBossed;
-    Integer world;
-    OnlineState onlineState;
+	Integer combatLevel;
+	Integer totalLevel;
+	Double efficientHoursPlayed;
+	Double efficientHoursBossed;
+	Integer world;
+	OnlineState onlineState;
 
-    String locationName;
+	String locationName;
 
-    String channelName;
-    String channelRank;
-    PlayerSource channelSource;
+	String channelName;
+	String channelRank;
+	PlayerSource channelSource;
 
-    ChatMessageType originatingChatType;
+	ChatMessageType originatingChatType;
 
-    @Builder.Default
-    List<ProfileMetricValue> contextMetrics =
-            Collections.emptyList();
+	@Builder.Default
+	List<ProfileMetricValue> contextMetrics = Collections.emptyList();
 
-    @Builder.Default
-    List<ReportSummary> reportSummaries =
-            Collections.emptyList();
+	@Builder.Default
+	List<ReportSummary> reportSummaries = Collections.emptyList();
 
-    @Builder.Default
-    List<String> previousRsns =
-            Collections.emptyList();
+	@Builder.Default
+	List<String> previousRsns = Collections.emptyList();
 
-    @Builder.Default
-    List<String> tags =
-            Collections.emptyList();
+	@Builder.Default
+	List<String> tags = Collections.emptyList();
 
-    boolean favorite;
+	boolean favorite;
 
-    String note;
+	String note;
 
-    boolean nearby;
-    PlayerIdentity identity;
+	boolean nearby;
+	PlayerIdentity identity;
 
-    @Builder.Default
-    HiscoreEnrichmentState enrichmentState = HiscoreEnrichmentState.LOCAL;
+	@Builder.Default
+	HiscoreEnrichmentState enrichmentState = HiscoreEnrichmentState.LOCAL;
 
-    public static QuickProfileModel unresolved(String name)
-    {
-        return QuickProfileModel.builder()
-                .displayName(name)
-                .resolved(false)
-                .onlineState(OnlineState.UNKNOWN)
-                .nearby(false)
-                .enrichmentState(HiscoreEnrichmentState.LOCAL)
-                .build();
-    }
+	public static QuickProfileModel unresolved(String name) {
+		return QuickProfileModel.builder().displayName(name).resolved(false).onlineState(OnlineState.UNKNOWN)
+				.nearby(false).enrichmentState(HiscoreEnrichmentState.LOCAL).build();
+	}
 }
