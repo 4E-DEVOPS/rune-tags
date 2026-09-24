@@ -1,6 +1,10 @@
 package com.runetags.input;
 
-import java.awt.*;
+import com.runetags.records.PlayerTagCatalog;
+
+import java.awt.Color;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -8,7 +12,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
-import com.runetags.records.PlayerTagCatalog;
 import net.runelite.api.FontID;
 import net.runelite.api.FontTypeFace;
 import net.runelite.api.widgets.Widget;
@@ -65,11 +68,9 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 
 	public TagChatboxInput value(List<String> tags) {
 		selected.clear();
-
 		if (tags != null) {
 			for (String value : tags) {
 				final String tag = PlayerTagCatalog.canonical(value);
-
 				if (tag != null && !selected.contains(tag) && selected.size() < PlayerTagCatalog.MAX_TAGS_PER_PLAYER) {
 					selected.add(tag);
 				}
@@ -110,7 +111,6 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 		built = false;
 		hoveredHitbox = null;
 		hitboxes.clear();
-
 		if (onClose != null) {
 			onClose.run();
 		}
@@ -133,14 +133,12 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 
 	private void update() {
 		final Widget container = chatboxPanelManager.getContainerWidget();
-
 		if (container == null) {
 			return;
 		}
 
 		container.deleteAllChildren();
 		hitboxes.clear();
-
 		final Widget promptWidget = container.createChild(-1, WidgetType.TEXT);
 		promptWidget.setText(prompt);
 		promptWidget.setTextColor(0x800000);
@@ -154,13 +152,10 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 		promptWidget.setYTextAlignment(WidgetTextAlignment.CENTER);
 		promptWidget.setWidthMode(WidgetSizeMode.MINUS);
 		promptWidget.revalidate();
-
 		final Widget probe = container.createChild(-1, WidgetType.RECTANGLE);
 		probe.setFontId(FontID.PLAIN_12);
-
 		final FontTypeFace font = probe.getFont();
 		probe.setHidden(true);
-
 		if (font == null) {
 			return;
 		}
@@ -182,7 +177,6 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 		}
 
 		final List<String> available = new ArrayList<>();
-
 		for (String tag : PlayerTagCatalog.ALL) {
 			if (!selected.contains(tag)) {
 				available.add(tag);
@@ -194,12 +188,9 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 
 	private void drawAvailable(Widget container, FontTypeFace font, List<String> tags, int y) {
 		int x = LEFT;
-
 		final int maxX = Math.max(LEFT, container.getWidth() - RIGHT - PILL_EDGE_BUFFER);
-
 		for (String tag : tags) {
 			final int width = font.getTextWidth(tag) + (PILL_PAD_X * 2);
-
 			if (x > LEFT && x + width + PILL_GAP_X > maxX) {
 				x = LEFT;
 				y += PILL_HEIGHT + PILL_GAP_Y;
@@ -213,7 +204,6 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 			background.setOriginalWidth(width);
 			background.setOriginalHeight(PILL_HEIGHT);
 			background.revalidate();
-
 			final Widget text = container.createChild(-1, WidgetType.TEXT);
 			text.setFontId(FontID.PLAIN_12);
 			text.setText(Text.escapeJagex(tag));
@@ -223,9 +213,7 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 			text.setOriginalWidth(width - (PILL_PAD_X * 2));
 			text.setOriginalHeight(PILL_HEIGHT);
 			text.revalidate();
-
 			hitboxes.add(new TagHitbox(new Rectangle(x, y, width, PILL_HEIGHT), tag, background));
-
 			x += width + PILL_GAP_X;
 		}
 	}
@@ -257,15 +245,12 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 		}
 
 		final Widget container = chatboxPanelManager.getContainerWidget();
-
 		if (container == null) {
 			return event;
 		}
 
 		final net.runelite.api.Point canvas = container.getCanvasLocation();
-
 		final Point local = new Point(event.getX() - canvas.getX(), event.getY() - canvas.getY());
-
 		for (TagHitbox hitbox : new ArrayList<>(hitboxes)) {
 			if (!hitbox.bounds.contains(local)) {
 				continue;
@@ -276,7 +261,6 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 			}
 
 			selected.add(hitbox.tag);
-
 			if (onDone != null) {
 				onDone.accept(Collections.unmodifiableList(new ArrayList<>(selected)));
 			}
@@ -322,16 +306,13 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 	@Override
 	public MouseEvent mouseMoved(MouseEvent event) {
 		final Widget container = chatboxPanelManager.getContainerWidget();
-
 		if (container == null) {
 			return event;
 		}
 
 		final net.runelite.api.Point canvas = container.getCanvasLocation();
 		final Point local = new Point(event.getX() - canvas.getX(), event.getY() - canvas.getY());
-
 		TagHitbox nextHoveredHitbox = null;
-
 		for (TagHitbox hitbox : hitboxes) {
 			if (hitbox.bounds.contains(local)) {
 				nextHoveredHitbox = hitbox;
@@ -348,7 +329,6 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 		}
 
 		hoveredHitbox = nextHoveredHitbox;
-
 		if (hoveredHitbox != null) {
 			setPillColor(hoveredHitbox.background, PILL_BACKGROUND_HOVER);
 		}
@@ -360,7 +340,6 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 		private final Rectangle bounds;
 		private final String tag;
 		private final Widget background;
-
 		private TagHitbox(Rectangle bounds, String tag, Widget background) {
 			this.bounds = bounds;
 			this.tag = tag;

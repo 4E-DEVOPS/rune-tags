@@ -31,11 +31,10 @@ import net.runelite.client.input.MouseListener;
 import net.runelite.client.util.Text;
 
 /**
- * RuneTags-specific native chatbox editor for local player Notes.
+ * Native chatbox editor for RuneTags player Notes.
  *
- * Unlike the stock ChatboxTextInput, Notes preserve hard line breaks:
- * Shift+Enter inserts a new bullet line, Enter submits, and explicit logical
- * lines are limited independently from soft-wrapped rows.
+ * Hard line breaks remain logical bullet boundaries while soft wrapping is handled
+ * independently for display. Shift+Enter inserts a bullet line and Enter submits.
  */
 @Slf4j
 public final class NoteChatboxInput extends ChatboxInput implements KeyListener, MouseListener {
@@ -70,62 +69,47 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		this.clientThread = clientThread;
 	}
 
-	public NoteChatboxInput prompt(
-			String prompt) {
+	public NoteChatboxInput prompt(String prompt) {
 		this.prompt = prompt;
-
 		requestUpdate();
 		return this;
 	}
 
-	public NoteChatboxInput lines(
-			int lines) {
+	public NoteChatboxInput lines(int lines) {
 		this.visibleLines = Math.max(1, lines);
-
 		requestUpdate();
 		return this;
 	}
 
-	public NoteChatboxInput maxLength(
-			int maxLength) {
+	public NoteChatboxInput maxLength(int maxLength) {
 		this.maxLength = Math.max(1, maxLength);
-
 		return this;
 	}
 
-	public NoteChatboxInput maxLogicalLines(
-			int maxLogicalLines) {
+	public NoteChatboxInput maxLogicalLines(int maxLogicalLines) {
 		this.maxLogicalLines = Math.max(1, maxLogicalLines);
-
 		return this;
 	}
 
-	public NoteChatboxInput value(
-			String initialValue) {
+	public NoteChatboxInput value(String initialValue) {
 		value.setLength(0);
-
 		final String editorValue = NoteTextLayout.normalizeForEditor(initialValue);
-
 		appendWithinLimit(editorValue);
-
 		if (value.length() == 0) {
 			value.append(NoteTextLayout.BULLET_PREFIX);
 		}
 
 		cursor = value.length();
-
 		requestUpdate();
 		return this;
 	}
 
-	public NoteChatboxInput onDone(
-			Predicate<String> onDone) {
+	public NoteChatboxInput onDone(Predicate<String> onDone) {
 		this.onDone = onDone;
 		return this;
 	}
 
-	public NoteChatboxInput onClose(
-			Runnable onClose) {
+	public NoteChatboxInput onClose(Runnable onClose) {
 		this.onClose = onClose;
 		return this;
 	}
@@ -140,7 +124,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		}
 
 		chatboxPanelManager.openInput(this);
-
 		return this;
 	}
 
@@ -154,7 +137,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 	protected void close() {
 		built = false;
 		visibleRows = Collections.emptyList();
-
 		if (onClose != null) {
 			onClose.run();
 		}
@@ -168,15 +150,12 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 
 	private void update() {
 		final Widget container = chatboxPanelManager.getContainerWidget();
-
 		if (container == null) {
 			return;
 		}
 
 		container.deleteAllChildren();
-
 		final Widget promptWidget = container.createChild(-1, WidgetType.TEXT);
-
 		promptWidget.setText(prompt);
 		promptWidget.setTextColor(0x800000);
 		promptWidget.setFontId(FontID.BARBARIAN);
@@ -189,39 +168,30 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		promptWidget.setYTextAlignment(WidgetTextAlignment.CENTER);
 		promptWidget.setWidthMode(WidgetSizeMode.MINUS);
 		promptWidget.revalidate();
-
 		drawEditor(container);
 	}
 
-	private void drawEditor(
-			Widget container) {
+	private void drawEditor(Widget container) {
 		final Widget cursorWidget = container.createChild(-1, WidgetType.RECTANGLE);
-
 		final long start = System.currentTimeMillis();
-
 		cursorWidget.setOnTimerListener((JavaScriptCallback) event -> {
 			final boolean on = (System.currentTimeMillis() - start) % CURSOR_FLASH_RATE_MILLIS
 					> CURSOR_FLASH_RATE_MILLIS / 2;
-
 			cursorWidget.setOpacity(on
 					? 255
 					: 0);
 		});
-
 		cursorWidget.setTextColor(0xFFFFFF);
 		cursorWidget.setHasListener(true);
 		cursorWidget.setFilled(true);
 		cursorWidget.setFontId(FontID.PLAIN_12);
-
 		final FontTypeFace font = cursorWidget.getFont();
-
 		if (font == null) {
 			visibleRows = Collections.emptyList();
 			return;
 		}
 
 		final int lineHeight = Math.max(1, font.getBaseline());
-
 		final int width = Math.max(1, container.getWidth());
 
 		/*
@@ -230,26 +200,16 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		 * without drawing another bullet.
 		 */
 		final int textX = EDITOR_LEFT_PADDING + BULLET_GUTTER_WIDTH;
-
 		final int textAreaWidth = Math.max(1, width - textX - EDITOR_RIGHT_PADDING);
-
 		final List<InputRow> allRows = buildRows(font, textAreaWidth);
-
 		final int cursorRowIndex = findCursorRow(allRows);
-
 		final int viewportStart = viewportStart(allRows.size(), cursorRowIndex);
-
 		final int viewportEnd = Math.min(allRows.size(), viewportStart + visibleLines);
-
 		final List<VisibleRow> rendered = new ArrayList<>();
-
 		int y = TEXT_Y;
-
 		for (int index = viewportStart; index < viewportEnd; ++index) {
 			final InputRow row = allRows.get(index);
-
 			final String displayText = row.text;
-
 			final int textWidth = font.getTextWidth(displayText);
 
 			/*
@@ -258,59 +218,35 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 			 */
 			if (row.bullet) {
 				final Widget bulletWidget = container.createChild(-1, WidgetType.RECTANGLE);
-
 				bulletWidget.setTextColor(0x000000);
 				bulletWidget.setFilled(true);
-
 				bulletWidget.setOriginalX(EDITOR_LEFT_PADDING + 2);
-
 				bulletWidget.setOriginalY(y + Math.max(1, (lineHeight - BULLET_SIZE) / 2) + BULLET_Y_OFFSET);
-
 				bulletWidget.setOriginalWidth(BULLET_SIZE);
-
 				bulletWidget.setOriginalHeight(BULLET_SIZE);
-
 				bulletWidget.revalidate();
 			}
 
 			final Widget textWidget = container.createChild(-1, WidgetType.TEXT);
-
 			textWidget.setFontId(FontID.PLAIN_12);
-
 			textWidget.setText(Text.escapeJagex(displayText));
-
 			textWidget.setOriginalX(textX);
-
 			textWidget.setOriginalY(y);
-
 			textWidget.setOriginalWidth(textAreaWidth);
-
 			textWidget.setOriginalHeight(lineHeight);
-
 			textWidget.revalidate();
-
 			if (index == cursorRowIndex) {
 				final int relativeCursor = Math.max(0, Math.min(displayText.length(), cursor - row.start));
-
 				final int cursorX = textX + font.getTextWidth(displayText.substring(0, relativeCursor));
-
 				cursorWidget.setOriginalX(cursorX - 1);
-
 				cursorWidget.setOriginalY(y);
-
 				cursorWidget.setOriginalWidth(2);
-
 				cursorWidget.setOriginalHeight(lineHeight);
-
 				cursorWidget.revalidate();
 			}
 
-			/*
-			 * Use the full text area for mouse targeting so clicking after visible text
-			 * places the cursor at that row's end.
-			 */
+			// Use the full text area so clicks after visible text place the cursor at the row end.
 			rendered.add(new VisibleRow(row, textX, y, textAreaWidth, lineHeight));
-
 			y += lineHeight;
 		}
 
@@ -319,18 +255,13 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 
 	private List<InputRow> buildRows(FontTypeFace font, int maxWidth) {
 		final List<InputRow> rows = new ArrayList<>();
-
 		int logicalStart = 0;
-
 		while (logicalStart <= value.length()) {
 			final int newlineIndex = indexOfNewline(logicalStart);
-
 			final int logicalEnd = newlineIndex >= 0
 					? newlineIndex
 					: value.length();
-
 			final int prefixLength = NoteTextLayout.BULLET_PREFIX.length();
-
 			final boolean hasBullet = logicalEnd - logicalStart >= prefixLength && value
 					.substring(logicalStart, logicalStart + prefixLength).equals(NoteTextLayout.BULLET_PREFIX);
 
@@ -341,9 +272,7 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 			final int contentStart = hasBullet
 					? logicalStart + prefixLength
 					: logicalStart;
-
 			wrapLogicalLine(rows, font, maxWidth, contentStart, logicalEnd, hasBullet);
-
 			if (newlineIndex < 0) {
 				break;
 			}
@@ -367,27 +296,19 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 			boolean bullet) {
 		if (start >= end) {
 			output.add(new InputRow(start, end, "", bullet));
-
 			return;
 		}
 
 		int rowStart = start;
-
 		boolean firstRow = true;
-
 		while (rowStart < end) {
 			int fittingEnd = rowStart;
-
 			int lastSpace = -1;
-
 			for (int index = rowStart; index < end; ++index) {
 				final char character = value.charAt(index);
-
 				final String candidate = value.substring(rowStart, index + 1);
-
 				if (font.getTextWidth(candidate) <= maxWidth) {
 					fittingEnd = index + 1;
-
 					if (character == ' ') {
 						lastSpace = index;
 					}
@@ -415,18 +336,14 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 			 * character must belong to exactly one InputRow.
 			 */
 			output.add(new InputRow(rowStart, rowEnd, value.substring(rowStart, rowEnd), firstRow && bullet));
-
 			rowStart = rowEnd;
-
 			firstRow = false;
 		}
 	}
 
-	private int findCursorRow(
-			List<InputRow> rows) {
+	private int findCursorRow(List<InputRow> rows) {
 		for (int index = 0; index < rows.size(); ++index) {
 			final InputRow row = rows.get(index);
-
 			if (row.start == row.end && cursor == row.start) {
 				return index;
 			}
@@ -459,8 +376,7 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		return Math.max(0, Math.min(cursorRowIndex - visibleLines + 1, rowCount - visibleLines));
 	}
 
-	private int indexOfNewline(
-			int fromIndex) {
+	private int indexOfNewline(int fromIndex) {
 		for (int index = fromIndex; index < value.length(); ++index) {
 			if (value.charAt(index) == '\n') {
 				return index;
@@ -471,14 +387,12 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 	}
 
 	@Override
-	public void keyTyped(
-			KeyEvent event) {
+	public void keyTyped(KeyEvent event) {
 		if (!chatboxPanelManager.shouldTakeInput()) {
 			return;
 		}
 
 		final char character = event.getKeyChar();
-
 		if (character < 32 || character >= 127) {
 			return;
 		}
@@ -489,20 +403,17 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		}
 
 		value.insert(cursor, character);
-
 		++cursor;
 		requestUpdate();
 	}
 
 	@Override
-	public void keyPressed(
-			KeyEvent event) {
+	public void keyPressed(KeyEvent event) {
 		if (!chatboxPanelManager.shouldTakeInput()) {
 			return;
 		}
 
 		final int code = event.getKeyCode();
-
 		if (event.isControlDown()) {
 			if (code == KeyEvent.VK_V) {
 				event.consume();
@@ -515,7 +426,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		switch (code) {
 			case KeyEvent.VK_ENTER:
 				event.consume();
-
 				if (event.isShiftDown()) {
 					insertBulletLine();
 					return;
@@ -527,92 +437,70 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 
 				chatboxPanelManager.close();
 				return;
-
 			case KeyEvent.VK_ESCAPE:
 				event.consume();
 				chatboxPanelManager.close();
 				return;
-
 			case KeyEvent.VK_BACK_SPACE:
 				event.consume();
 				backspace();
 				return;
-
 			case KeyEvent.VK_DELETE:
 				event.consume();
 				delete();
 				return;
-
 			case KeyEvent.VK_LEFT:
 				event.consume();
-
 				final int editableStart = editableLineStart(cursor);
-
 				if (cursor > editableStart) {
 					--cursor;
 				} else {
 					final int logicalStart = logicalLineStart(cursor);
-
 					if (logicalStart > 0) {
-						/*
-						 * Cross "\n• " as one structural boundary to the previous logical line.
-						 */
+						// Cross "\n• " as one structural boundary to the previous logical line.
 						cursor = logicalLineEnd(logicalStart - 1);
 					}
 				}
 
 				requestUpdate();
 				return;
-
 			case KeyEvent.VK_RIGHT:
 				event.consume();
-
 				final int currentLineEnd = logicalLineEnd(cursor);
-
 				if (cursor < currentLineEnd) {
 					++cursor;
 				} else if (currentLineEnd < value.length()) {
-					/*
-					 * Skip the complete newline + bullet prefix as one structural boundary.
-					 */
+					// Skip the complete newline + bullet prefix as one structural boundary.
 					cursor = editableLineStart(currentLineEnd + 1);
 				}
 
 				requestUpdate();
 				return;
-
 			case KeyEvent.VK_HOME:
 				event.consume();
-
 				cursor = editableLineStart(cursor);
-
 				requestUpdate();
 				return;
-
 			case KeyEvent.VK_END:
 				event.consume();
 				cursor = logicalLineEnd(cursor);
 				requestUpdate();
 				return;
-
 			case KeyEvent.VK_UP:
 				event.consume();
 				moveVertical(-1);
 				return;
-
 			case KeyEvent.VK_DOWN:
 				event.consume();
 				moveVertical(1);
 				return;
-
 			default:
 				return;
 		}
 	}
 
 	@Override
-	public void keyReleased(
-			KeyEvent event) {
+	public void keyReleased(KeyEvent event) {
 	}
 
 	private void insertBulletLine() {
@@ -622,16 +510,13 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		}
 
 		final String insertion = "\n" + NoteTextLayout.BULLET_PREFIX;
-
 		if (value.length() + insertion.length() > maxLength) {
 			setTemporaryPrompt("RuneTags Note: max " + maxLength + " characters");
 			return;
 		}
 
 		value.insert(cursor, insertion);
-
 		cursor += insertion.length();
-
 		requestUpdate();
 	}
 
@@ -641,9 +526,7 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		}
 
 		final int lineStart = logicalLineStart(cursor);
-
 		final int editableStart = editableLineStart(cursor);
-
 		final int lineEnd = logicalLineEnd(cursor);
 
 		/*
@@ -653,24 +536,18 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		 */
 		if (cursor == editableStart && lineStart > 0 && lineEnd == editableStart) {
 			value.delete(lineStart - 1, editableStart);
-
 			cursor = lineStart - 1;
-
 			requestUpdate();
 			return;
 		}
 
-		/*
-		 * Prevent Backspace from entering or deleting the structural bullet prefix.
-		 */
+		// Prevent Backspace from entering or deleting the structural bullet prefix.
 		if (cursor <= editableStart) {
 			return;
 		}
 
 		value.deleteCharAt(cursor - 1);
-
 		--cursor;
-
 		requestUpdate();
 	}
 
@@ -681,23 +558,17 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 
 		final int lineEnd = logicalLineEnd(cursor);
 
-		/*
-		 * Prevent Delete from crossing a logical-line boundary
-		 * and removing its newline or bullet prefix.
-		 */
+		// Prevent Delete from crossing a logical-line boundary or removing its bullet prefix.
 		if (cursor >= lineEnd) {
 			return;
 		}
 
 		value.deleteCharAt(cursor);
-
 		requestUpdate();
 	}
 
-	private int logicalLineStart(
-			int position) {
+	private int logicalLineStart(int position) {
 		int index = Math.max(0, Math.min(position, value.length()));
-
 		while (index > 0 && value.charAt(index - 1) != '\n') {
 			--index;
 		}
@@ -705,14 +576,10 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		return index;
 	}
 
-	private int editableLineStart(
-			int position) {
+	private int editableLineStart(int position) {
 		final int lineStart = logicalLineStart(position);
-
 		final int lineEnd = logicalLineEnd(lineStart);
-
 		final int prefixLength = NoteTextLayout.BULLET_PREFIX.length();
-
 		if (lineEnd - lineStart >= prefixLength && value.substring(lineStart, lineStart + prefixLength)
 				.equals(NoteTextLayout.BULLET_PREFIX)) {
 			return lineStart + prefixLength;
@@ -721,10 +588,8 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		return lineStart;
 	}
 
-	private int logicalLineEnd(
-			int position) {
+	private int logicalLineEnd(int position) {
 		int index = Math.max(0, Math.min(position, value.length()));
-
 		while (index < value.length() && value.charAt(index) != '\n') {
 			++index;
 		}
@@ -732,19 +597,15 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		return index;
 	}
 
-	private void moveVertical(
-			int direction) {
+	private void moveVertical(int direction) {
 		final List<VisibleRow> rows = visibleRows;
-
 		if (rows.isEmpty()) {
 			return;
 		}
 
 		int currentIndex = -1;
-
 		for (int index = 0; index < rows.size(); ++index) {
 			final InputRow row = rows.get(index).row;
-
 			if (cursor >= row.start && cursor <= row.end) {
 				currentIndex = index;
 				break;
@@ -756,19 +617,14 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		}
 
 		final int targetIndex = currentIndex + direction;
-
 		if (targetIndex < 0 || targetIndex >= rows.size()) {
 			return;
 		}
 
 		final InputRow currentRow = rows.get(currentIndex).row;
-
 		final InputRow targetRow = rows.get(targetIndex).row;
-
 		final int column = Math.max(0, cursor - currentRow.start);
-
 		cursor = Math.min(targetRow.end, targetRow.start + column);
-
 		requestUpdate();
 	}
 
@@ -776,26 +632,21 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		try {
 			final Object clipboardValue = Toolkit.getDefaultToolkit().getSystemClipboard()
 					.getData(DataFlavor.stringFlavor);
-
 			if (clipboardValue == null) {
 				return;
 			}
 
 			String pasted = clipboardValue.toString().replace("\r\n", " ").replace('\r', ' ').replace('\n', ' ')
 					.replace(NoteTextLayout.BULLET, "-");
-
 			final StringBuilder clean = new StringBuilder();
-
 			for (int index = 0; index < pasted.length(); ++index) {
 				final char character = pasted.charAt(index);
-
 				if (character >= 32 && character < 127) {
 					clean.append(character);
 				}
 			}
 
 			final int available = Math.max(0, maxLength - value.length());
-
 			if (clean.length() > available) {
 				clean.setLength(available);
 			}
@@ -805,88 +656,68 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 			}
 
 			value.insert(cursor, clean);
-
 			cursor += clean.length();
-
 			requestUpdate();
 		} catch (IOException | UnsupportedFlavorException exception) {
 			log.warn("Unable to Read Clipboard for RuneTags Note", exception);
 		}
 	}
 
-	private void appendWithinLimit(
-			String text) {
+	private void appendWithinLimit(String text) {
 		if (text == null || text.isEmpty()) {
 			return;
 		}
 
 		final int available = Math.max(0, maxLength - value.length());
-
 		value.append(text, 0, Math.min(text.length(), available));
 	}
 
-	private void setTemporaryPrompt(
-			String message) {
+	private void setTemporaryPrompt(String message) {
 		prompt = message;
 		requestUpdate();
 	}
 
 	@Override
-	public MouseEvent mouseClicked(
-			MouseEvent mouseEvent) {
+	public MouseEvent mouseClicked(MouseEvent mouseEvent) {
 		return mouseEvent;
 	}
 
 	@Override
-	public MouseEvent mousePressed(
-			MouseEvent mouseEvent) {
+	public MouseEvent mousePressed(MouseEvent mouseEvent) {
 		if (mouseEvent.getButton() != MouseEvent.BUTTON1) {
 			return mouseEvent;
 		}
 
 		final Widget container = chatboxPanelManager.getContainerWidget();
-
 		if (container == null) {
 			return mouseEvent;
 		}
 
 		final net.runelite.api.Point canvasLocation = container.getCanvasLocation();
-
 		final int localX = mouseEvent.getX() - canvasLocation.getX();
-
 		final int localY = mouseEvent.getY() - canvasLocation.getY();
-
 		for (VisibleRow visibleRow : visibleRows) {
 			final Rectangle bounds = new Rectangle(
 					visibleRow.x, visibleRow.y, Math.max(1, visibleRow.width),
 					visibleRow.height);
-
 			if (!bounds.contains(new Point(localX, localY))) {
 				continue;
 			}
 
 			final Widget probe = container.createChild(-1, WidgetType.RECTANGLE);
-
 			probe.setFontId(FontID.PLAIN_12);
-
 			final FontTypeFace font = probe.getFont();
-
 			probe.setHidden(true);
-
 			if (font == null) {
 				break;
 			}
 
 			final int relativeX = Math.max(0, localX - visibleRow.x);
-
 			int bestOffset = 0;
 			int bestDistance = Integer.MAX_VALUE;
-
 			for (int offset = 0; offset <= visibleRow.row.text.length(); ++offset) {
 				final int x = font.getTextWidth(visibleRow.row.text.substring(0, offset));
-
 				final int distance = Math.abs(x - relativeX);
-
 				if (distance < bestDistance) {
 					bestDistance = distance;
 					bestOffset = offset;
@@ -894,7 +725,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 			}
 
 			cursor = Math.min(visibleRow.row.end, visibleRow.row.start + bestOffset);
-
 			requestUpdate();
 			break;
 		}
@@ -903,32 +733,27 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 	}
 
 	@Override
-	public MouseEvent mouseReleased(
-			MouseEvent mouseEvent) {
+	public MouseEvent mouseReleased(MouseEvent mouseEvent) {
 		return mouseEvent;
 	}
 
 	@Override
-	public MouseEvent mouseEntered(
-			MouseEvent mouseEvent) {
+	public MouseEvent mouseEntered(MouseEvent mouseEvent) {
 		return mouseEvent;
 	}
 
 	@Override
-	public MouseEvent mouseExited(
-			MouseEvent mouseEvent) {
+	public MouseEvent mouseExited(MouseEvent mouseEvent) {
 		return mouseEvent;
 	}
 
 	@Override
-	public MouseEvent mouseDragged(
-			MouseEvent mouseEvent) {
+	public MouseEvent mouseDragged(MouseEvent mouseEvent) {
 		return mouseEvent;
 	}
 
 	@Override
-	public MouseEvent mouseMoved(
-			MouseEvent mouseEvent) {
+	public MouseEvent mouseMoved(MouseEvent mouseEvent) {
 		return mouseEvent;
 	}
 
@@ -937,7 +762,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		private final int end;
 		private final String text;
 		private final boolean bullet;
-
 		private InputRow(int start, int end, String text, boolean bullet) {
 			this.start = start;
 			this.end = end;
@@ -954,7 +778,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		private final int y;
 		private final int width;
 		private final int height;
-
 		private VisibleRow(InputRow row, int x, int y, int width, int height) {
 			this.row = row;
 			this.x = x;
