@@ -26,17 +26,27 @@ import net.runelite.client.util.Text;
 public class RaidInput extends MouseAdapter {
 	private static final String MENU_OPEN_PROFILE = "Open Profile";
 
-	private static final int APPLICANT_STRIDE = 20;
-	private static final int APPLICANT_NAME_OFFSET = 1;
-	private static final int APPLICANT_CONTENT_START = 1;
-	private static final int APPLICANT_CONTENT_END = 18;
-	private static final int APPLICANT_STATS_START = 2;
-	private static final int APPLICANT_STATS_END = 16;
+	private static final int TOB_APPLICANT_STRIDE = 20;
+	private static final int TOB_APPLICANT_NAME = 1;
+	private static final int TOB_APPLICANT_CONTENT_START = 1;
+	private static final int TOB_APPLICANT_CONTENT_END = 18;
+	private static final int TOB_APPLICANT_STATS_START = 2;
+	private static final int TOB_APPLICANT_STATS_END = 16;
 
-	private static final int CURRENT_STRIDE = 11;
-	private static final int CURRENT_NAME_OFFSET = 1;
-	private static final int CURRENT_CONTENT_START = 1;
-	private static final int CURRENT_CONTENT_END = 10;
+	private static final int TOB_CURRENT_STRIDE = 11;
+	private static final int TOB_CURRENT_NAME = 1;
+	private static final int TOB_CURRENT_CONTENT_START = 1;
+	private static final int TOB_CURRENT_CONTENT_END = 10;
+
+	private static final int TOA_MEMBER_STRIDE = 13;
+	private static final int TOA_MEMBER_NAME = 1;
+	private static final int TOA_MEMBER_CONTENT_START = 1;
+	private static final int TOA_MEMBER_CONTENT_END = 10;
+
+	private static final int TOA_APPLICANT_STRIDE = 20;
+	private static final int TOA_APPLICANT_NAME = 1;
+	private static final int TOA_APPLICANT_STATS_END = 16;
+	private static final int TOA_APPLICANT_CONTENT = 18;
 
 	private final Client client;
 	private final Configurations config;
@@ -54,7 +64,6 @@ public class RaidInput extends MouseAdapter {
 	public void onMenuEntryAdded(MenuEntryAdded event) {
 		if (event == null
 				|| !allowsRightClick()
-				|| event.getActionParam1() != InterfaceID.TobPartydetails.APPLICANTS
 				|| (event.getType() != MenuAction.CC_OP.getId()
 				&& event.getType() != MenuAction.CC_OP_LOW_PRIORITY.getId())) {
 			return;
@@ -63,8 +72,7 @@ public class RaidInput extends MouseAdapter {
 		final String option = event.getOption() != null
 				? Text.removeTags(event.getOption())
 				: "";
-
-		if (!"Reject".equals(option)) {
+		if (!isRaidAnchor(event.getActionParam1(), option)) {
 			return;
 		}
 
@@ -126,23 +134,15 @@ public class RaidInput extends MouseAdapter {
 		final Point point = event.getPoint();
 
 		if (interactionMode.allowsLeftClick()) {
-			final RaidHit applicantHit = applicantClickHit(point);
-			if (applicantHit != null) {
-				openProfile(applicantHit.playerName, point);
+			final RaidHit hit = leftClickHit(point);
+			if (hit != null) {
+				openProfile(hit.playerName, point);
 				return consumeLeftClick(event);
 			}
 		}
 
-		final RaidHit currentHit = currentPlayerHit(point);
-		if (currentHit == null) {
-			return event;
-		}
-
-		if (interactionMode.allowsLeftClick()) {
-			openProfile(currentHit.playerName, point);
-		}
-
-		if (interactionMode.allowsLeftClick() || interactionMode.allowsRightClick()) {
+		final RaidHit currentHit = tobCurrentHit(point);
+		if (currentHit != null && interactionMode.allowsRightClick()) {
 			return consumeLeftClick(event);
 		}
 
@@ -175,26 +175,50 @@ public class RaidInput extends MouseAdapter {
 	}
 
 	private RaidHit leftClickHit(Point point) {
-		final RaidHit applicantHit = applicantClickHit(point);
-		return applicantHit != null
-				? applicantHit
-				: currentPlayerHit(point);
+		RaidHit hit = tobApplicantClick(point);
+		if (hit != null) {
+			return hit;
+		}
+
+		hit = tobCurrentHit(point);
+		if (hit != null) {
+			return hit;
+		}
+
+		hit = toaMemberHit(point);
+		if (hit != null) {
+			return hit;
+		}
+
+		return toaApplicantClick(point);
 	}
 
 	private RaidHit raidPlayerHit(Point point) {
-		final RaidHit applicantHit = applicantPlayerHit(point);
-		return applicantHit != null
-				? applicantHit
-				: currentPlayerHit(point);
+		RaidHit hit = tobApplicantHit(point);
+		if (hit != null) {
+			return hit;
+		}
+
+		hit = tobCurrentHit(point);
+		if (hit != null) {
+			return hit;
+		}
+
+		hit = toaMemberHit(point);
+		if (hit != null) {
+			return hit;
+		}
+
+		return toaApplicantHit(point);
 	}
 
-	private RaidHit applicantClickHit(Point point) {
-		final RaidHit nameHit = applicantNameHit(point);
+	private RaidHit tobApplicantClick(Point point) {
+		final RaidHit nameHit = tobApplicantName(point);
 		if (nameHit != null) {
 			return nameHit;
 		}
 
-		final RaidHit statsHit = applicantStatsHit(point);
+		final RaidHit statsHit = tobApplicantStats(point);
 		if (statsHit == null || hasNativeAction(statsHit.playerName)) {
 			return null;
 		}
@@ -202,40 +226,77 @@ public class RaidInput extends MouseAdapter {
 		return statsHit;
 	}
 
-	private RaidHit applicantNameHit(Point point) {
+	private RaidHit tobApplicantName(Point point) {
 		return playerHit(InterfaceID.TobPartydetails.APPLICANTS,
 				point,
-				APPLICANT_STRIDE,
-				APPLICANT_NAME_OFFSET,
-				APPLICANT_NAME_OFFSET,
-				APPLICANT_NAME_OFFSET);
+				TOB_APPLICANT_STRIDE,
+				TOB_APPLICANT_NAME,
+				TOB_APPLICANT_NAME,
+				TOB_APPLICANT_NAME);
 	}
 
-	private RaidHit applicantStatsHit(Point point) {
+	private RaidHit tobApplicantStats(Point point) {
 		return playerHit(InterfaceID.TobPartydetails.APPLICANTS,
 				point,
-				APPLICANT_STRIDE,
-				APPLICANT_NAME_OFFSET,
-				APPLICANT_STATS_START,
-				APPLICANT_STATS_END);
+				TOB_APPLICANT_STRIDE,
+				TOB_APPLICANT_NAME,
+				TOB_APPLICANT_STATS_START,
+				TOB_APPLICANT_STATS_END);
 	}
 
-	private RaidHit applicantPlayerHit(Point point) {
+	private RaidHit tobApplicantHit(Point point) {
 		return playerHit(InterfaceID.TobPartydetails.APPLICANTS,
 				point,
-				APPLICANT_STRIDE,
-				APPLICANT_NAME_OFFSET,
-				APPLICANT_CONTENT_START,
-				APPLICANT_CONTENT_END);
+				TOB_APPLICANT_STRIDE,
+				TOB_APPLICANT_NAME,
+				TOB_APPLICANT_CONTENT_START,
+				TOB_APPLICANT_CONTENT_END);
 	}
 
-	private RaidHit currentPlayerHit(Point point) {
+	private RaidHit tobCurrentHit(Point point) {
 		return playerHit(InterfaceID.TobPartydetails.CURRENT,
 				point,
-				CURRENT_STRIDE,
-				CURRENT_NAME_OFFSET,
-				CURRENT_CONTENT_START,
-				CURRENT_CONTENT_END);
+				TOB_CURRENT_STRIDE,
+				TOB_CURRENT_NAME,
+				TOB_CURRENT_CONTENT_START,
+				TOB_CURRENT_CONTENT_END);
+	}
+
+	private RaidHit toaMemberHit(Point point) {
+		return playerHit(InterfaceID.ToaPartydetails.MEMBERS_LIST,
+				point,
+				TOA_MEMBER_STRIDE,
+				TOA_MEMBER_NAME,
+				TOA_MEMBER_CONTENT_START,
+				TOA_MEMBER_CONTENT_END);
+	}
+
+	private RaidHit toaApplicantClick(Point point) {
+		final RaidHit hit = toaApplicantHit(point);
+		if (hit == null || hasNativeAction(hit.playerName)) {
+			return null;
+		}
+
+		return hit;
+	}
+
+	private RaidHit toaApplicantHit(Point point) {
+		final RaidHit statsHit = playerHit(InterfaceID.ToaPartydetails.APPLICANTS_LIST,
+				point,
+				TOA_APPLICANT_STRIDE,
+				TOA_APPLICANT_NAME,
+				TOA_APPLICANT_NAME,
+				TOA_APPLICANT_STATS_END);
+		if (statsHit != null) {
+			return statsHit;
+		}
+
+		return playerHit(InterfaceID.ToaPartydetails.APPLICANTS_LIST,
+				point,
+				TOA_APPLICANT_STRIDE,
+				TOA_APPLICANT_NAME,
+				TOA_APPLICANT_CONTENT,
+				TOA_APPLICANT_CONTENT);
 	}
 
 	private RaidHit playerHit(int componentId, Point point, int stride, int nameOffset, int hitStart, int hitEnd) {
@@ -285,10 +346,17 @@ public class RaidInput extends MouseAdapter {
 	}
 
 	private void updateApplicantState(Point point) {
-		final RaidHit applicantHit = applicantPlayerHit(point);
+		final RaidHit applicantHit = applicantStateHit(point);
 		nativeApplicantPlayer = applicantHit != null && hasApplicantAction(applicantHit.playerName)
 				? applicantHit.playerName
 				: null;
+	}
+
+	private RaidHit applicantStateHit(Point point) {
+		final RaidHit tobHit = tobApplicantHit(point);
+		return tobHit != null
+				? tobHit
+				: toaApplicantHit(point);
 	}
 
 	private boolean hasApplicantAction(String playerName) {
@@ -362,7 +430,7 @@ public class RaidInput extends MouseAdapter {
 
 		for (int i = 0; i < entries.length; i++) {
 			final MenuEntry entry = entries[i];
-			if (entry != null && "Reject".equals(entry.getOption())
+			if (entry != null && isMenuAnchor(entry.getOption())
 					&& playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
 				return i;
 			}
@@ -377,13 +445,33 @@ public class RaidInput extends MouseAdapter {
 				return entry.getTarget();
 			}
 
-			if (entry != null && "Reject".equals(entry.getOption())
+			if (entry != null && isMenuAnchor(entry.getOption())
 					&& playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
 				return entry.getTarget();
 			}
 		}
 
 		return playerName;
+	}
+
+	private static boolean isRaidAnchor(int componentId, String option) {
+		if (componentId == InterfaceID.TobPartydetails.APPLICANTS) {
+			return "Reject".equals(option);
+		}
+
+		if (componentId == InterfaceID.ToaPartydetails.MEMBERS_LIST) {
+			return "Kick".equals(option);
+		}
+
+		if (componentId == InterfaceID.ToaPartydetails.APPLICANTS_LIST) {
+			return "Reject".equals(option);
+		}
+
+		return false;
+	}
+
+	private static boolean isMenuAnchor(String option) {
+		return "Reject".equals(option) || "Kick".equals(option);
 	}
 
 	private void openProfile(String playerName, Point anchorPoint) {
