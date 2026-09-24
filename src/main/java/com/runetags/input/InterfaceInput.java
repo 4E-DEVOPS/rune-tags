@@ -24,8 +24,8 @@ import net.runelite.client.util.Text;
 public class InterfaceInput extends MouseAdapter {
 	private static final String MENU_OPEN_PROFILE = "Open Profile";
 
-	private static final String GROUPING_ADD_FRIEND = "Add friend ";
-	private static final String GROUPING_REMOVE_FRIEND = "Remove friend ";
+	private static final String GROUPING_ADD_IGNORE = "Add ignore ";
+	private static final String GROUPING_REMOVE_IGNORE = "Remove ignore ";
 
 	private final Client client;
 	private final QuickProfileController quickProfileController;
@@ -68,9 +68,11 @@ public class InterfaceInput extends MouseAdapter {
 		}
 
 		if (componentId == InterfaceID.Grouping.PLAYERLIST) {
-			final String playerName = groupingPlayerName(option);
-			if (!playerName.isEmpty()) {
-				addProfileEntry(event, playerName, -2);
+			if (isGroupOption(option)) {
+				final String playerName = groupingPlayerName(option);
+				if (!playerName.isEmpty()) {
+					addProfileEntry(event, playerName, -2);
+				}
 			}
 
 			return;
@@ -246,7 +248,7 @@ public class InterfaceInput extends MouseAdapter {
 		}
 
 		if (groupId == InterfaceID.GIM_SIDEPANEL) {
-			return isGroupOption(option);
+			return isIronOption(option);
 		}
 
 		return false;
@@ -256,8 +258,12 @@ public class InterfaceInput extends MouseAdapter {
 		return "Add ignore".equals(option) || "Remove friend".equals(option);
 	}
 
-	private static boolean isGroupOption(String option) {
+	private static boolean isIronOption(String option) {
 		return "Add friend".equals(option) || "Remove friend".equals(option) || "Remove ignore".equals(option);
+	}
+
+	private static boolean isGroupOption(String option) {
+		return option.startsWith(GROUPING_ADD_IGNORE) || option.startsWith(GROUPING_REMOVE_IGNORE);
 	}
 
 	private static boolean isRankOption(String option) {
@@ -271,12 +277,12 @@ public class InterfaceInput extends MouseAdapter {
 	}
 
 	private static String groupingPlayerName(String option) {
-		if (option.startsWith(GROUPING_ADD_FRIEND)) {
-			return cleanPlayerName(option.substring(GROUPING_ADD_FRIEND.length()));
+		if (option.startsWith(GROUPING_ADD_IGNORE)) {
+			return cleanPlayerName(option.substring(GROUPING_ADD_IGNORE.length()));
 		}
 
-		if (option.startsWith(GROUPING_REMOVE_FRIEND)) {
-			return cleanPlayerName(option.substring(GROUPING_REMOVE_FRIEND.length()));
+		if (option.startsWith(GROUPING_REMOVE_IGNORE)) {
+			return cleanPlayerName(option.substring(GROUPING_REMOVE_IGNORE.length()));
 		}
 
 		return "";
