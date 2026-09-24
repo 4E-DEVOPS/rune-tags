@@ -22,6 +22,7 @@ import com.runetags.history.MentionHistoryPanel;
 import com.runetags.history.MentionHistoryService;
 import com.runetags.input.InputListener;
 import com.runetags.input.InterfaceInput;
+import com.runetags.input.RaidInput;
 import com.runetags.location.LocationIndex;
 import com.runetags.location.PlayerLocationService;
 import com.runetags.mention.KnownPlayerMentionParser;
@@ -88,6 +89,7 @@ import net.runelite.api.events.NameableNameChanged;
 import net.runelite.api.events.PlayerDespawned;
 import net.runelite.api.events.PlayerSpawned;
 import net.runelite.api.events.PostClientTick;
+import net.runelite.api.events.PostMenuSort;
 import net.runelite.api.events.RemovedFriend;
 import net.runelite.api.events.ScriptPreFired;
 import net.runelite.client.Notifier;
@@ -224,6 +226,7 @@ public class RuneTags extends Plugin {
 	private SuggestionOverlay suggestionOverlay;
 	private InputListener inputListener;
 	private InterfaceInput interfaceInput;
+	private RaidInput raidInput;
 
 	/*
 	 * Context / profile enrichment.
@@ -377,7 +380,8 @@ public class RuneTags extends Plugin {
 				chatHitboxRegistry,
 				quickProfileController,
 				suggestionService);
-		interfaceInput = new InterfaceInput(client, quickProfileController);
+		interfaceInput = new InterfaceInput(client, config, quickProfileController);
+		raidInput = new RaidInput(client, config, quickProfileController);
 
 		// 6. Runtime state
 		nextMessageId = 0;
@@ -444,6 +448,7 @@ public class RuneTags extends Plugin {
 		menuManager.get().addPlayerMenuItem(PLAYER_MENU_OPEN_PROFILE);
 		mouseManager.registerMouseListener(inputListener);
 		mouseManager.registerMouseListener(interfaceInput);
+		mouseManager.registerMouseListener(raidInput);
 		keyManager.registerKeyListener(inputListener);
 		log.debug("[RuneTags] Plugin Initiated!");
 	}
@@ -452,6 +457,10 @@ public class RuneTags extends Plugin {
 	protected void shutDown() {
 		final boolean uninstalling = updateMessages.prepareShutdown();
 		// 1. Stop external interaction first
+		if (raidInput != null) {
+			mouseManager.unregisterMouseListener(raidInput);
+		}
+
 		if (interfaceInput != null) {
 			mouseManager.unregisterMouseListener(interfaceInput);
 		}
@@ -555,6 +564,7 @@ public class RuneTags extends Plugin {
 
 		// 5. Release RuneTags objects in reverse dependency order
 		// Input and chat presentation
+		raidInput = null;
 		interfaceInput = null;
 		inputListener = null;
 		suggestionOverlay = null;
@@ -1291,6 +1301,21 @@ public class RuneTags extends Plugin {
 		if (interfaceInput != null) {
 			interfaceInput.onMenuEntryAdded(event);
 		}
+
+		if (raidInput != null) {
+			raidInput.onMenuEntryAdded(event);
+		}
+	}
+
+	@Subscribe
+	public void onPostMenuSort(PostMenuSort event) {
+		if (interfaceInput != null) {
+			interfaceInput.onPostMenuSort(event);
+		}
+
+		if (raidInput != null) {
+			raidInput.onPostMenuSort(event);
+		}
 	}
 
 	@Subscribe
@@ -1316,6 +1341,14 @@ public class RuneTags extends Plugin {
 
 				playerProfileIndexNames.put(entry.getIdentifier(), player.getName());
 			}
+		}
+
+		if (interfaceInput != null) {
+			interfaceInput.onMenuOpened(event);
+		}
+
+		if (raidInput != null) {
+			raidInput.onMenuOpened(event);
 		}
 
 		if (inputListener != null) {
@@ -1533,5 +1566,3 @@ public class RuneTags extends Plugin {
 		}
 	}
 }
-
-
