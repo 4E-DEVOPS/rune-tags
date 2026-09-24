@@ -38,229 +38,173 @@ import net.runelite.client.ui.overlay.OverlayPriority;
  *
  * Also renders local-reference backgrounds and unresolved-tag underlines.
  */
-public class ChatReferenceOverlay extends Overlay
-{
-    private static final int BACKGROUND_HORIZONTAL_PADDING = 1;
-    private static final int BACKGROUND_VERTICAL_PADDING = 0;
+public class ChatReferenceOverlay extends Overlay {
+	private static final int BACKGROUND_HORIZONTAL_PADDING = 1;
+	private static final int BACKGROUND_VERTICAL_PADDING = 0;
 
-    private static final int MAX_OCCLUSION_WIDGET_DEPTH = 12;
+	private static final int MAX_OCCLUSION_WIDGET_DEPTH = 12;
 
-    private final ReferenceLayoutService layoutService;
-    private final ChatHitboxRegistry registry;
-    private final Client client;
-    private final Configurations config;
-    private final LocalMentionMatcher localMentionMatcher;
+	private final ReferenceLayoutService layoutService;
+	private final ChatHitboxRegistry registry;
+	private final Client client;
+	private final Configurations config;
+	private final LocalMentionMatcher localMentionMatcher;
 
-    public ChatReferenceOverlay(
-            ReferenceLayoutService layoutService,
-            ChatHitboxRegistry registry,
-            Client client,
-            Configurations config,
-            LocalMentionMatcher localMentionMatcher)
-    {
-        this.layoutService = layoutService;
-        this.registry = registry;
-        this.client = client;
-        this.config = config;
-        this.localMentionMatcher = localMentionMatcher;
+	public ChatReferenceOverlay(
+			ReferenceLayoutService layoutService,
+			ChatHitboxRegistry registry,
+			Client client,
+			Configurations config,
+			LocalMentionMatcher localMentionMatcher) {
+		this.layoutService = layoutService;
+		this.registry = registry;
+		this.client = client;
+		this.config = config;
+		this.localMentionMatcher = localMentionMatcher;
 
-        setPosition(OverlayPosition.DYNAMIC);
-        setLayer(OverlayLayer.ABOVE_WIDGETS);
-        setPriority(OverlayPriority.HIGHEST);
-    }
+		setPosition(OverlayPosition.DYNAMIC);
+		setLayer(OverlayLayer.ABOVE_WIDGETS);
+		setPriority(OverlayPriority.HIGHEST);
+	}
 
-    @Override
-    public Dimension render(Graphics2D graphics)
-    {
-        /*
-         * Native chat text is clipped to the chatbox, but ABOVE_WIDGETS overlays are
-         * not. Use the visible chat area to constrain RuneTags rendering and input.
-         */
-        final Widget chatScrollArea = client.getWidget(InterfaceID.Chatbox.SCROLLAREA);
+	@Override
+	public Dimension render(Graphics2D graphics) {
+		/*
+		 * Native chat text is clipped to the chatbox, but ABOVE_WIDGETS overlays are
+		 * not. Use the visible chat area to constrain RuneTags rendering and input.
+		 */
+		final Widget chatScrollArea = client.getWidget(InterfaceID.Chatbox.SCROLLAREA);
 		final Widget chatboxArea = client.getWidget(InterfaceID.Chatbox.CHATAREA);
 
-        final Rectangle chatScrollBounds = chatScrollArea != null && !chatScrollArea.isHidden()
-					? chatScrollArea.getBounds()
-					: null;
+		final Rectangle chatScrollBounds = chatScrollArea != null && !chatScrollArea.isHidden()
+				? chatScrollArea.getBounds()
+				: null;
 
-        final boolean hasVisibleChatbox = chatScrollBounds != null && chatScrollBounds.width > 0 && chatScrollBounds.height > 0;
+		final boolean hasVisibleChatbox = chatScrollBounds != null
+				&& chatScrollBounds.width > 0
+				&& chatScrollBounds.height > 0;
 
-        /*
-         * Calculate semantic/reference hitboxes from the rendered chat.
-         */
-        final LayoutResult layoutResult =
-                layoutService.layout();
+		/*
+		 * Calculate semantic/reference hitboxes from the rendered chat.
+		 */
+		final LayoutResult layoutResult = layoutService.layout();
 
-        final List<ReferenceHitbox> hitboxes =
-                layoutResult.getHitboxes();
+		final List<ReferenceHitbox> hitboxes = layoutResult.getHitboxes();
 
-        final List<LocalHighlight> localHighlights =
-                layoutResult.getLocalHighlights();
+		final List<LocalHighlight> localHighlights = layoutResult.getLocalHighlights();
 
-        /*
-         * CHATBOX references are clipped to the visible chat history, including
-         * partially scrolled rows. SPLIT_PRIVATE references come from visible PmChat
-         * widgets outside CHATBOX_MESSAGE_LINES and must not use that clip.
-         */
-        final Widget splitPrivateRoot =
-                client.getWidget(InterfaceID.PmChat.CONTAINER);
+		/*
+		 * CHATBOX references are clipped to the visible chat history, including
+		 * partially scrolled rows. SPLIT_PRIVATE references come from visible PmChat
+		 * widgets outside CHATBOX_MESSAGE_LINES and must not use that clip.
+		 */
+		final Widget splitPrivateRoot = client.getWidget(InterfaceID.PmChat.CONTAINER);
 
-        /*
-         * ABOVE_WIDGETS is not automatically obscured by interfaces covering chat, so
-         * respect RuneScape's native no-click-through regions explicitly.
-         */
-        final Rectangle interactionBounds =
-                unionInteractionBounds(
-                        hitboxes,
-                        localHighlights);
+		/*
+		 * ABOVE_WIDGETS is not automatically obscured by interfaces covering chat, so
+		 * respect RuneScape's native no-click-through regions explicitly.
+		 */
+		final Rectangle interactionBounds = unionInteractionBounds(hitboxes, localHighlights);
 
-		final List<Rectangle> blockingBounds =
-				collectBlockingWidgetBounds(
-						chatboxArea,
-						splitPrivateRoot,
-						interactionBounds);
+		final List<Rectangle> blockingBounds = collectBlockingWidgetBounds(
+				chatboxArea, splitPrivateRoot,
+				interactionBounds);
 
-        final List<ReferenceHitbox> visibleHitboxes =
-                new ArrayList<>();
+		final List<ReferenceHitbox> visibleHitboxes = new ArrayList<>();
 
-        for (ReferenceHitbox hitbox : hitboxes)
-        {
-            if (hitbox == null
-                    || hitbox.getBounds() == null)
-            {
-                continue;
-            }
+		for (ReferenceHitbox hitbox : hitboxes) {
+			if (hitbox == null || hitbox.getBounds() == null) {
+				continue;
+			}
 
-            Rectangle visibleBounds =
-                    new Rectangle(
-                            hitbox.getBounds());
+			Rectangle visibleBounds = new Rectangle(hitbox.getBounds());
 
-            switch (hitbox.getSurface())
-            {
-                case CHATBOX:
-                    if (!hasVisibleChatbox
-                            || !chatScrollBounds.intersects(
-                            visibleBounds))
-                    {
-                        continue;
-                    }
+			switch (hitbox.getSurface()) {
+				case CHATBOX:
+					if (!hasVisibleChatbox || !chatScrollBounds.intersects(visibleBounds)) {
+						continue;
+					}
 
-                    visibleBounds =
-                            chatScrollBounds.intersection(
-                                    visibleBounds);
-                    break;
+					visibleBounds = chatScrollBounds.intersection(visibleBounds);
+					break;
 
-                case SPLIT_PRIVATE:
-                    break;
+				case SPLIT_PRIVATE:
+					break;
 
-                default:
-                    continue;
-            }
+				default:
+					continue;
+			}
 
-            if (visibleBounds.isEmpty())
-            {
-                continue;
-            }
+			if (visibleBounds.isEmpty()) {
+				continue;
+			}
 
-            /*
-             * Preserve visible fragments when an interface
-             * obscures only part of a reference.
-             */
-            for (Rectangle fragment
-                    : subtractBlockingBounds(
-                    visibleBounds,
-                    blockingBounds))
-            {
-                if (fragment == null
-                        || fragment.isEmpty())
-                {
-                    continue;
-                }
+			/*
+			 * Preserve visible fragments when an interface
+			 * obscures only part of a reference.
+			 */
+			for (Rectangle fragment : subtractBlockingBounds(visibleBounds, blockingBounds)) {
+				if (fragment == null || fragment.isEmpty()) {
+					continue;
+				}
 
-                visibleHitboxes.add(
-                        new ReferenceHitbox(
-                                hitbox.getMessageId(),
-                                fragment,
-                                hitbox.getReference(),
-                                hitbox.getSurface()));
-            }
-        }
+				visibleHitboxes.add(new ReferenceHitbox(
+						hitbox.getMessageId(), fragment, hitbox.getReference(),
+						hitbox.getSurface()));
+			}
+		}
 
-        registry.replace(visibleHitboxes);
+		registry.replace(visibleHitboxes);
 
-        final Player localPlayer =
-                client.getLocalPlayer();
+		final Player localPlayer = client.getLocalPlayer();
 
-        final String localPlayerName =
-                localPlayer != null
-                        ? localPlayer.getName()
-                        : null;
+		final String localPlayerName = localPlayer != null
+				? localPlayer.getName()
+				: null;
 
-        final Color originalColor =
-                graphics.getColor();
+		final Color originalColor = graphics.getColor();
 
-        final Shape originalClip =
-                graphics.getClip();
+		final Shape originalClip = graphics.getClip();
 
-        final Shape unobscuredClip =
-                buildUnobscuredClip(
-                        originalClip,
-                        blockingBounds);
+		final Shape unobscuredClip = buildUnobscuredClip(originalClip, blockingBounds);
 
-        try
-        {
-            /*
-             * Draw non-clickable local/self backgrounds before clickable reference
-             * decorations so reference decoration remains visually above them.
-             */
-            drawLocalHighlights(
-                    graphics,
-                    localHighlights,
-                    chatScrollBounds,
-                    hasVisibleChatbox,
-                    unobscuredClip);
+		try {
+			/*
+			 * Draw non-clickable local/self backgrounds before clickable reference
+			 * decorations so reference decoration remains visually above them.
+			 */
+			drawLocalHighlights(graphics, localHighlights, chatScrollBounds, hasVisibleChatbox, unobscuredClip);
 
-            graphics.setColor(
-                    originalColor);
+			graphics.setColor(originalColor);
 
-            /*
-             * Render each reference independently because CHATBOX
-             * and SPLIT_PRIVATE use different clipping rules.
-             */
-            for (ReferenceHitbox hitbox : visibleHitboxes)
-            {
-                final PlayerReference reference =
-                        hitbox.getReference();
+			/*
+			 * Render each reference independently because CHATBOX
+			 * and SPLIT_PRIVATE use different clipping rules.
+			 */
+			for (ReferenceHitbox hitbox : visibleHitboxes) {
+				final PlayerReference reference = hitbox.getReference();
 
-                if (reference == null)
-                {
-                    continue;
-                }
+				if (reference == null) {
+					continue;
+				}
 
-                graphics.setClip(unobscuredClip);
+				graphics.setClip(unobscuredClip);
 
-                if (hitbox.getSurface()
-                        == ReferenceLayoutService.Surface.CHATBOX)
-                {
-                    /*
-                     * Clip CHATBOX decorations so ABOVE_WIDGETS rendering
-                     * cannot escape the visible chat history.
-                     */
-                    graphics.clip(chatScrollBounds);
-                }
+				if (hitbox.getSurface() == ReferenceLayoutService.Surface.CHATBOX) {
+					/*
+					 * Clip CHATBOX decorations so ABOVE_WIDGETS rendering
+					 * cannot escape the visible chat history.
+					 */
+					graphics.clip(chatScrollBounds);
+				}
 
-                /*
-                 * SENDER is an interaction target, not a semantic mention,
-                 * so clickable sender names must not receive mention highlighting.
-                 */
-                if (reference.getType() != ReferenceType.SENDER
-                        && config.highlightBackground())
-                {
-                    drawReferenceBackground(
-                            graphics,
-                            hitbox,
-                            localPlayerName);
-                }
+				/*
+				 * SENDER is an interaction target, not a semantic mention,
+				 * so clickable sender names must not receive mention highlighting.
+				 */
+				if (reference.getType() != ReferenceType.SENDER && config.highlightBackground()) {
+					drawReferenceBackground(graphics, hitbox, localPlayerName);
+				}
 
 				/*
 				 * Mention underlines are rendered over the final chat presentation.
@@ -268,752 +212,465 @@ public class ChatReferenceOverlay extends Overlay
 				 * Unresolved tags retain their dotted underline while
 				 * resolved references receive a solid underline.
 				 */
-				if (config.underlineMentions()
-						&& reference.getType() != ReferenceType.SENDER)
-				{
-					final LocalMentionMatch localMatch =
-							localMentionMatcher.match(
-									reference,
-									localPlayerName);
+				if (config.underlineMentions() && reference.getType() != ReferenceType.SENDER) {
+					final LocalMentionMatch localMatch = localMentionMatcher.match(reference, localPlayerName);
 
-					final Color underlineColor =
-							localMatch.isMatchesLocalPlayer()
-									? config.selfMentionColor()
-									: config.otherMentionColor();
+					final Color underlineColor = localMatch.isMatchesLocalPlayer()
+							? config.selfMentionColor()
+							: config.otherMentionColor();
 
-					if (reference.getType() == ReferenceType.TAG
-							&& !reference.isLocallyResolved())
-					{
-						drawDottedUnderline(
-								graphics,
-								hitbox.getBounds(),
-								underlineColor);
-					}
-					else
-					{
-						drawSolidUnderline(
-								graphics,
-								hitbox.getBounds(),
-								underlineColor);
+					if (reference.getType() == ReferenceType.TAG && !reference.isLocallyResolved()) {
+						drawDottedUnderline(graphics, hitbox.getBounds(), underlineColor);
+					} else {
+						drawSolidUnderline(graphics, hitbox.getBounds(), underlineColor);
 					}
 				}
-            }
-        }
-        finally
-        {
-            /*
-             * Always restore Graphics2D state because RuneLite shares this
-             * graphics context with other overlay rendering.
-             */
-            graphics.setClip(originalClip);
-            graphics.setColor(originalColor);
-        }
+			}
+		} finally {
+			/*
+			 * Always restore Graphics2D state because RuneLite shares this
+			 * graphics context with other overlay rendering.
+			 */
+			graphics.setClip(originalClip);
+			graphics.setColor(originalColor);
+		}
 
-        return null;
-    }
+		return null;
+	}
 
-    /**
-     * Build the smallest canvas region needed for RuneTags chat rendering and
-     * interaction so native widget traversal can ignore unrelated interfaces.
-     */
-    private static Rectangle unionInteractionBounds(
-            List<ReferenceHitbox> hitboxes,
-            List<LocalHighlight> localHighlights)
-    {
-        Rectangle result =
-                null;
+	/**
+	 * Build the smallest canvas region needed for RuneTags chat rendering and
+	 * interaction so native widget traversal can ignore unrelated interfaces.
+	 */
+	private static Rectangle unionInteractionBounds(
+			List<ReferenceHitbox> hitboxes,
+			List<LocalHighlight> localHighlights) {
+		Rectangle result = null;
 
-        if (hitboxes != null)
-        {
-            for (ReferenceHitbox hitbox : hitboxes)
-            {
-                if (hitbox == null
-                        || hitbox.getBounds() == null
-                        || hitbox.getBounds().isEmpty())
-                {
-                    continue;
-                }
+		if (hitboxes != null) {
+			for (ReferenceHitbox hitbox : hitboxes) {
+				if (hitbox == null || hitbox.getBounds() == null || hitbox.getBounds().isEmpty()) {
+					continue;
+				}
 
-                result =
-                        result == null
-                                ? new Rectangle(
-                                hitbox.getBounds())
-                                : result.union(
-                                hitbox.getBounds());
-            }
-        }
+				result = result == null
+						? new Rectangle(hitbox.getBounds())
+						: result.union(hitbox.getBounds());
+			}
+		}
 
-        if (localHighlights != null)
-        {
-            for (LocalHighlight highlight : localHighlights)
-            {
-                if (highlight == null
-                        || highlight.getBounds() == null
-                        || highlight.getBounds().isEmpty())
-                {
-                    continue;
-                }
+		if (localHighlights != null) {
+			for (LocalHighlight highlight : localHighlights) {
+				if (highlight == null || highlight.getBounds() == null || highlight.getBounds().isEmpty()) {
+					continue;
+				}
 
-                result =
-                        result == null
-                                ? new Rectangle(
-                                highlight.getBounds())
-                                : result.union(
-                                highlight.getBounds());
-            }
-        }
+				result = result == null
+						? new Rectangle(highlight.getBounds())
+						: result.union(highlight.getBounds());
+			}
+		}
 
-        if (result != null)
-        {
-            result.grow(
-                    BACKGROUND_HORIZONTAL_PADDING,
-                    BACKGROUND_VERTICAL_PADDING);
-        }
+		if (result != null) {
+			result.grow(BACKGROUND_HORIZONTAL_PADDING, BACKGROUND_VERTICAL_PADDING);
+		}
 
-        return result;
-    }
+		return result;
+	}
 
-    /**
-     * Find visible native widgets that prevent interaction with widgets beneath
-     * them, excluding the chat surfaces RuneTags deliberately decorates.
-     */
+	/**
+	 * Find visible native widgets that prevent interaction with widgets beneath
+	 * them, excluding the chat surfaces RuneTags deliberately decorates.
+	 */
 	private List<Rectangle> collectBlockingWidgetBounds(
 			Widget chatboxArea,
 			Widget splitPrivateRoot,
-			Rectangle interactionBounds)
-    {
-        if (interactionBounds == null
-                || interactionBounds.isEmpty())
-        {
-            return Collections.emptyList();
-        }
+			Rectangle interactionBounds) {
+		if (interactionBounds == null || interactionBounds.isEmpty()) {
+			return Collections.emptyList();
+		}
 
-        final Widget[] roots =
-                client.getWidgetRoots();
+		final Widget[] roots = client.getWidgetRoots();
 
-        if (roots == null
-                || roots.length == 0)
-        {
-            return Collections.emptyList();
-        }
+		if (roots == null || roots.length == 0) {
+			return Collections.emptyList();
+		}
 
-        final List<Rectangle> blockingBounds =
-                new ArrayList<>();
+		final List<Rectangle> blockingBounds = new ArrayList<>();
 
-        final Set<Widget> visited =
-                Collections.newSetFromMap(
-                        new IdentityHashMap<>());
+		final Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
 
-        for (Widget root : roots)
-        {
-            collectBlockingWidgetBounds(
-                    root,
-					chatboxArea,
-                    splitPrivateRoot,
-                    interactionBounds,
-                    blockingBounds,
-                    visited,
-                    0);
-        }
+		for (Widget root : roots) {
+			collectBlockingWidgetBounds(
+					root, chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited,
+					0);
+		}
 
-        return blockingBounds;
-    }
-
-    private void collectBlockingWidgetBounds(
-            Widget widget,
-            Widget chatboxArea,
-            Widget splitPrivateRoot,
-            Rectangle interactionBounds,
-            List<Rectangle> blockingBounds,
-            Set<Widget> visited,
-            int depth)
-    {
-        if (widget == null
-                || depth > MAX_OCCLUSION_WIDGET_DEPTH
-                || !visited.add(
-                widget)
-                || widget.isHidden())
-        {
-            return;
-        }
-
-        final Rectangle bounds =
-                widget.getBounds();
-
-        /*
-         * Prune widget subtrees outside the RuneTags interaction region.
-         */
-        if (bounds != null
-                && !bounds.isEmpty()
-                && !interactionBounds.intersects(
-                bounds))
-        {
-            return;
-        }
-
-        /*
-         * Once a no-click-through widget blocks this region,
-         * its descendants cannot expose the chat beneath it.
-         */
-        if (bounds != null
-                && !bounds.isEmpty()
-                && widget.getNoClickThrough()
-                && !belongsToChatPresentation(
-                widget,
-				chatboxArea,
-                splitPrivateRoot))
-        {
-            blockingBounds.add(
-                    interactionBounds.intersection(
-                            bounds));
-
-            return;
-        }
-
-        collectBlockingWidgetChildren(
-                widget.getChildren(),
-				chatboxArea,
-                splitPrivateRoot,
-                interactionBounds,
-                blockingBounds,
-                visited,
-                depth + 1);
-
-        collectBlockingWidgetChildren(
-                widget.getStaticChildren(),
-				chatboxArea,
-                splitPrivateRoot,
-                interactionBounds,
-                blockingBounds,
-                visited,
-                depth + 1);
-
-        collectBlockingWidgetChildren(
-                widget.getNestedChildren(),
-				chatboxArea,
-                splitPrivateRoot,
-                interactionBounds,
-                blockingBounds,
-                visited,
-                depth + 1);
-    }
-
-    private void collectBlockingWidgetChildren(
-            Widget[] children,
-            Widget chatboxArea,
-            Widget splitPrivateRoot,
-            Rectangle interactionBounds,
-            List<Rectangle> blockingBounds,
-            Set<Widget> visited,
-            int depth)
-    {
-        if (children == null)
-        {
-            return;
-        }
-
-        for (Widget child : children)
-        {
-            collectBlockingWidgetBounds(
-                    child,
-					chatboxArea,
-                    splitPrivateRoot,
-                    interactionBounds,
-                    blockingBounds,
-                    visited,
-                    depth);
-        }
-    }
-
-    /**
-     * A no-click-through Widget belonging to either native chat presentation must
-     * not hide RuneTags from the very chat surface it is decorating.
-     */
-	private static boolean belongsToChatPresentation(
-			Widget widget,
-			Widget chatboxArea,
-			Widget splitPrivateRoot)
-	{
-		return sharesWidgetBranch(
-				widget,
-				chatboxArea)
-				|| sharesWidgetBranch(
-				widget,
-				splitPrivateRoot);
+		return blockingBounds;
 	}
 
-    private static boolean sharesWidgetBranch(
-            Widget first,
-            Widget second)
-    {
-        if (first == null
-                || second == null)
-        {
-            return false;
-        }
-
-        return isAncestorOrSelf(
-                first,
-                second)
-                || isAncestorOrSelf(
-                second,
-                first);
-    }
-
-    private static boolean isAncestorOrSelf(
-            Widget ancestor,
-            Widget widget)
-    {
-        for (Widget current = widget;
-             current != null;
-             current = current.getParent())
-        {
-            if (current == ancestor)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Build the RuneTags paint region by subtracting native no-click-through
-     * interface bounds from the current graphics clip.
-     */
-    private Shape buildUnobscuredClip(
-            Shape originalClip,
-            List<Rectangle> blockingBounds)
-    {
-        final Area visibleArea =
-                originalClip != null
-                        ? new Area(
-                        originalClip)
-                        : new Area(
-                        new Rectangle(
-                                0,
-                                0,
-                                client.getCanvasWidth(),
-                                client.getCanvasHeight()));
-
-        if (blockingBounds != null)
-        {
-            for (Rectangle blocker : blockingBounds)
-            {
-                if (blocker == null
-                        || blocker.isEmpty())
-                {
-                    continue;
-                }
-
-                visibleArea.subtract(
-                        new Area(
-                                blocker));
-            }
-        }
-
-        return visibleArea;
-    }
-
-    /**
-     * Remove native interface regions from one clickable reference rectangle.
-     *
-     * Rectangle fragments are retained individually because ChatHitboxRegistry
-     * stores rectangular hit targets.
-     */
-    private static List<Rectangle> subtractBlockingBounds(
-            Rectangle source,
-            List<Rectangle> blockingBounds)
-    {
-        if (source == null
-                || source.isEmpty())
-        {
-            return Collections.emptyList();
-        }
-
-        List<Rectangle> fragments =
-                new ArrayList<>();
-
-        fragments.add(
-                new Rectangle(
-                        source));
-
-        if (blockingBounds == null
-                || blockingBounds.isEmpty())
-        {
-            return fragments;
-        }
-
-        for (Rectangle blocker : blockingBounds)
-        {
-            if (blocker == null
-                    || blocker.isEmpty()
-                    || fragments.isEmpty())
-            {
-                continue;
-            }
-
-            final List<Rectangle> next =
-                    new ArrayList<>();
-
-            for (Rectangle fragment : fragments)
-            {
-                subtractRectangle(
-                        fragment,
-                        blocker,
-                        next);
-            }
-
-            fragments =
-                    next;
-        }
-
-        return fragments;
-    }
-
-    private static void subtractRectangle(
-            Rectangle source,
-            Rectangle blocker,
-            List<Rectangle> output)
-    {
-        if (source == null
-                || blocker == null
-                || output == null)
-        {
-            return;
-        }
-
-        final Rectangle intersection =
-                source.intersection(
-                        blocker);
-
-        if (intersection.isEmpty())
-        {
-            output.add(
-                    source);
-            return;
-        }
-
-        final int sourceRight =
-                source.x
-                        + source.width;
-
-        final int sourceBottom =
-                source.y
-                        + source.height;
-
-        final int intersectionRight =
-                intersection.x
-                        + intersection.width;
-
-        final int intersectionBottom =
-                intersection.y
-                        + intersection.height;
-
-        /*
-         * Area above the blocker.
-         */
-        if (intersection.y > source.y)
-        {
-            output.add(
-                    new Rectangle(
-                            source.x,
-                            source.y,
-                            source.width,
-                            intersection.y
-                                    - source.y));
-        }
-
-        /*
-         * Area below the blocker.
-         */
-        if (intersectionBottom < sourceBottom)
-        {
-            output.add(
-                    new Rectangle(
-                            source.x,
-                            intersectionBottom,
-                            source.width,
-                            sourceBottom
-                                    - intersectionBottom));
-        }
-
-        /*
-         * Area left of the blocker within the blocker's vertical band.
-         */
-        if (intersection.x > source.x)
-        {
-            output.add(
-                    new Rectangle(
-                            source.x,
-                            intersection.y,
-                            intersection.x
-                                    - source.x,
-                            intersection.height));
-        }
-
-        /*
-         * Area right of the blocker within the blocker's vertical band.
-         */
-        if (intersectionRight < sourceRight)
-        {
-            output.add(
-                    new Rectangle(
-                            intersectionRight,
-                            intersection.y,
-                            sourceRight
-                                    - intersectionRight,
-                            intersection.height));
-        }
-    }
-
-    private void drawLocalHighlights(
-            Graphics2D graphics,
-            List<LocalHighlight> highlights,
-            Rectangle chatScrollBounds,
-            boolean hasVisibleChatbox,
-            Shape unobscuredClip)
-    {
-		if (highlights == null
-				|| highlights.isEmpty())
-		{
+	private void collectBlockingWidgetBounds(
+			Widget widget,
+			Widget chatboxArea,
+			Widget splitPrivateRoot,
+			Rectangle interactionBounds,
+			List<Rectangle> blockingBounds,
+			Set<Widget> visited,
+			int depth) {
+		if (widget == null || depth > MAX_OCCLUSION_WIDGET_DEPTH || !visited.add(widget) || widget.isHidden()) {
 			return;
 		}
 
-		final Color backgroundColor =
-				config.selfBackgroundColor();
+		final Rectangle bounds = widget.getBounds();
 
-		final boolean drawBackground =
-				config.highlightBackground()
-						&& backgroundColor != null
-						&& backgroundColor.getAlpha() > 0;
-
-		final boolean drawUnderline =
-				config.underlineMentions();
-
-		if (!drawBackground
-				&& !drawUnderline)
-		{
+		/*
+		 * Prune widget subtrees outside the RuneTags interaction region.
+		 */
+		if (bounds != null && !bounds.isEmpty() && !interactionBounds.intersects(bounds)) {
 			return;
 		}
 
-        for (LocalHighlight highlight : highlights)
-        {
-            if (highlight == null
-                    || highlight.getBounds() == null)
-            {
-                continue;
-            }
+		/*
+		 * Once a no-click-through widget blocks this region,
+		 * its descendants cannot expose the chat beneath it.
+		 */
+		if (bounds != null && !bounds.isEmpty() && widget.getNoClickThrough() && !belongsToChatPresentation(
+				widget,
+				chatboxArea, splitPrivateRoot)) {
+			blockingBounds.add(interactionBounds.intersection(bounds));
 
-            graphics.setClip(
-                    unobscuredClip);
+			return;
+		}
 
-            Rectangle visibleBounds =
-                    highlight.getBounds();
+		collectBlockingWidgetChildren(
+				widget.getChildren(), chatboxArea, splitPrivateRoot, interactionBounds,
+				blockingBounds, visited, depth + 1);
 
-            switch (highlight.getSurface())
-            {
-                case CHATBOX:
-                    if (!hasVisibleChatbox
-                            || !chatScrollBounds.intersects(
-                            visibleBounds))
-                    {
-                        continue;
-                    }
+		collectBlockingWidgetChildren(
+				widget.getStaticChildren(), chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited,
+				depth + 1);
 
-                    graphics.clip(
-                            chatScrollBounds);
+		collectBlockingWidgetChildren(
+				widget.getNestedChildren(), chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited,
+				depth + 1);
+	}
 
-                    visibleBounds =
-                            chatScrollBounds.intersection(
-                                    visibleBounds);
+	private void collectBlockingWidgetChildren(
+			Widget[] children,
+			Widget chatboxArea,
+			Widget splitPrivateRoot,
+			Rectangle interactionBounds,
+			List<Rectangle> blockingBounds,
+			Set<Widget> visited,
+			int depth) {
+		if (children == null) {
+			return;
+		}
 
-                    if (visibleBounds.isEmpty())
-                    {
-                        continue;
-                    }
+		for (Widget child : children) {
+			collectBlockingWidgetBounds(
+					child, chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds,
+					visited, depth);
+		}
+	}
 
-                    break;
+	/**
+	 * A no-click-through Widget belonging to either native chat presentation must
+	 * not hide RuneTags from the very chat surface it is decorating.
+	 */
+	private static boolean belongsToChatPresentation(Widget widget, Widget chatboxArea, Widget splitPrivateRoot) {
+		return sharesWidgetBranch(widget, chatboxArea) || sharesWidgetBranch(widget, splitPrivateRoot);
+	}
 
-                case SPLIT_PRIVATE:
-                    break;
+	private static boolean sharesWidgetBranch(Widget first, Widget second) {
+		if (first == null || second == null) {
+			return false;
+		}
 
-                default:
-                    continue;
-            }
+		return isAncestorOrSelf(first, second) || isAncestorOrSelf(second, first);
+	}
 
-			if (drawBackground)
-			{
-				graphics.setColor(
-						backgroundColor);
+	private static boolean isAncestorOrSelf(Widget ancestor, Widget widget) {
+		for (Widget current = widget; current != null; current = current.getParent()) {
+			if (current == ancestor) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Build the RuneTags paint region by subtracting native no-click-through
+	 * interface bounds from the current graphics clip.
+	 */
+	private Shape buildUnobscuredClip(Shape originalClip, List<Rectangle> blockingBounds) {
+		final Area visibleArea = originalClip != null
+				? new Area(originalClip)
+				: new Area(new Rectangle(0, 0, client.getCanvasWidth(), client.getCanvasHeight()));
+
+		if (blockingBounds != null) {
+			for (Rectangle blocker : blockingBounds) {
+				if (blocker == null || blocker.isEmpty()) {
+					continue;
+				}
+
+				visibleArea.subtract(new Area(blocker));
+			}
+		}
+
+		return visibleArea;
+	}
+
+	/**
+	 * Remove native interface regions from one clickable reference rectangle.
+	 *
+	 * Rectangle fragments are retained individually because ChatHitboxRegistry
+	 * stores rectangular hit targets.
+	 */
+	private static List<Rectangle> subtractBlockingBounds(Rectangle source, List<Rectangle> blockingBounds) {
+		if (source == null || source.isEmpty()) {
+			return Collections.emptyList();
+		}
+
+		List<Rectangle> fragments = new ArrayList<>();
+
+		fragments.add(new Rectangle(source));
+
+		if (blockingBounds == null || blockingBounds.isEmpty()) {
+			return fragments;
+		}
+
+		for (Rectangle blocker : blockingBounds) {
+			if (blocker == null || blocker.isEmpty() || fragments.isEmpty()) {
+				continue;
+			}
+
+			final List<Rectangle> next = new ArrayList<>();
+
+			for (Rectangle fragment : fragments) {
+				subtractRectangle(fragment, blocker, next);
+			}
+
+			fragments = next;
+		}
+
+		return fragments;
+	}
+
+	private static void subtractRectangle(Rectangle source, Rectangle blocker, List<Rectangle> output) {
+		if (source == null || blocker == null || output == null) {
+			return;
+		}
+
+		final Rectangle intersection = source.intersection(blocker);
+
+		if (intersection.isEmpty()) {
+			output.add(source);
+			return;
+		}
+
+		final int sourceRight = source.x + source.width;
+
+		final int sourceBottom = source.y + source.height;
+
+		final int intersectionRight = intersection.x + intersection.width;
+
+		final int intersectionBottom = intersection.y + intersection.height;
+
+		/*
+		 * Area above the blocker.
+		 */
+		if (intersection.y > source.y) {
+			output.add(new Rectangle(source.x, source.y, source.width, intersection.y - source.y));
+		}
+
+		/*
+		 * Area below the blocker.
+		 */
+		if (intersectionBottom < sourceBottom) {
+			output.add(new Rectangle(source.x, intersectionBottom, source.width, sourceBottom - intersectionBottom));
+		}
+
+		/*
+		 * Area left of the blocker within the blocker's vertical band.
+		 */
+		if (intersection.x > source.x) {
+			output.add(new Rectangle(source.x, intersection.y, intersection.x - source.x, intersection.height));
+		}
+
+		/*
+		 * Area right of the blocker within the blocker's vertical band.
+		 */
+		if (intersectionRight < sourceRight) {
+			output.add(new Rectangle(
+					intersectionRight, intersection.y, sourceRight - intersectionRight,
+					intersection.height));
+		}
+	}
+
+	private void drawLocalHighlights(
+			Graphics2D graphics,
+			List<LocalHighlight> highlights,
+			Rectangle chatScrollBounds,
+			boolean hasVisibleChatbox,
+			Shape unobscuredClip) {
+		if (highlights == null || highlights.isEmpty()) {
+			return;
+		}
+
+		final Color backgroundColor = config.selfBackgroundColor();
+
+		final boolean drawBackground = config.highlightBackground()
+				&& backgroundColor != null
+				&& backgroundColor.getAlpha() > 0;
+
+		final boolean drawUnderline = config.underlineMentions();
+
+		if (!drawBackground && !drawUnderline) {
+			return;
+		}
+
+		for (LocalHighlight highlight : highlights) {
+			if (highlight == null || highlight.getBounds() == null) {
+				continue;
+			}
+
+			graphics.setClip(unobscuredClip);
+
+			Rectangle visibleBounds = highlight.getBounds();
+
+			switch (highlight.getSurface()) {
+				case CHATBOX:
+					if (!hasVisibleChatbox || !chatScrollBounds.intersects(visibleBounds)) {
+						continue;
+					}
+
+					graphics.clip(chatScrollBounds);
+
+					visibleBounds = chatScrollBounds.intersection(visibleBounds);
+
+					if (visibleBounds.isEmpty()) {
+						continue;
+					}
+
+					break;
+
+				case SPLIT_PRIVATE:
+					break;
+
+				default:
+					continue;
+			}
+
+			if (drawBackground) {
+				graphics.setColor(backgroundColor);
 
 				graphics.fillRect(
-						visibleBounds.x
-								- BACKGROUND_HORIZONTAL_PADDING,
-						visibleBounds.y
-								- BACKGROUND_VERTICAL_PADDING,
-						visibleBounds.width
-								+ (BACKGROUND_HORIZONTAL_PADDING * 2),
-						visibleBounds.height
-								+ (BACKGROUND_VERTICAL_PADDING * 2));
+						visibleBounds.x - BACKGROUND_HORIZONTAL_PADDING, visibleBounds.y - BACKGROUND_VERTICAL_PADDING,
+						visibleBounds.width + (BACKGROUND_HORIZONTAL_PADDING * 2),
+						visibleBounds.height + (BACKGROUND_VERTICAL_PADDING * 2));
 			}
 
-			if (drawUnderline)
-			{
-				drawSolidUnderline(
-						graphics,
-						visibleBounds,
-						config.selfMentionColor());
+			if (drawUnderline) {
+				drawSolidUnderline(graphics, visibleBounds, config.selfMentionColor());
 			}
-        }
+		}
 
-        graphics.setClip(
-                unobscuredClip);
-    }
+		graphics.setClip(unobscuredClip);
+	}
 
-    private void drawReferenceBackground(
-            Graphics2D graphics,
-            ReferenceHitbox hitbox,
-            String localPlayerName)
-    {
-        final PlayerReference reference =
-                hitbox.getReference();
+	private void drawReferenceBackground(Graphics2D graphics, ReferenceHitbox hitbox, String localPlayerName) {
+		final PlayerReference reference = hitbox.getReference();
 
-        final Rectangle bounds =
-                hitbox.getBounds();
+		final Rectangle bounds = hitbox.getBounds();
 
-        if (reference == null || bounds == null)
-        {
-            return;
-        }
-
-        final LocalMentionMatch localMatch =
-                localMentionMatcher.match(
-                        reference,
-                        localPlayerName);
-
-        final boolean isSelf =
-                localMatch.isMatchesLocalPlayer();
-
-        /*
-         * Reference backgrounds are independent from foreground mention coloring and
-         * apply only to the exact mention/tag hitbox. Mention Whole Message therefore
-         * does not affect this path.
-         */
-        final Color backgroundColor =
-                isSelf
-                        ? config.selfBackgroundColor()
-                        : config.otherBackgroundColor();
-
-        /*
-         * A fully transparent color disables this reference background.
-         */
-        if (backgroundColor == null
-                || backgroundColor.getAlpha() == 0)
-        {
-            return;
-        }
-
-        final Color previousColor =
-                graphics.getColor();
-
-        try
-        {
-            graphics.setColor(backgroundColor);
-
-            graphics.fillRect(
-                    bounds.x - BACKGROUND_HORIZONTAL_PADDING,
-                    bounds.y - BACKGROUND_VERTICAL_PADDING,
-                    bounds.width + (BACKGROUND_HORIZONTAL_PADDING * 2),
-                    bounds.height + (BACKGROUND_VERTICAL_PADDING * 2));
-        }
-        finally
-        {
-            graphics.setColor(previousColor);
-        }
-    }
-
-	private static void drawSolidUnderline(
-			Graphics2D graphics,
-			Rectangle bounds,
-			Color color)
-	{
-		if (bounds == null || bounds.width <= 0)
-		{
+		if (reference == null || bounds == null) {
 			return;
 		}
 
-		final Color previousColor =
-				graphics.getColor();
+		final LocalMentionMatch localMatch = localMentionMatcher.match(reference, localPlayerName);
 
-		try
-		{
-			if (color != null)
-			{
-				graphics.setColor(color);
-			}
+		final boolean isSelf = localMatch.isMatchesLocalPlayer();
 
-			final int y =
-					bounds.y + bounds.height - 2;
+		/*
+		 * Reference backgrounds are independent from foreground mention coloring and
+		 * apply only to the exact mention/tag hitbox. Mention Whole Message therefore
+		 * does not affect this path.
+		 */
+		final Color backgroundColor = isSelf
+				? config.selfBackgroundColor()
+				: config.otherBackgroundColor();
 
-			graphics.drawLine(
-					bounds.x,
-					y,
-					bounds.x + bounds.width - 1,
-					y);
+		/*
+		 * A fully transparent color disables this reference background.
+		 */
+		if (backgroundColor == null || backgroundColor.getAlpha() == 0) {
+			return;
 		}
-		finally
-		{
+
+		final Color previousColor = graphics.getColor();
+
+		try {
+			graphics.setColor(backgroundColor);
+
+			graphics.fillRect(
+					bounds.x - BACKGROUND_HORIZONTAL_PADDING, bounds.y - BACKGROUND_VERTICAL_PADDING,
+					bounds.width + (BACKGROUND_HORIZONTAL_PADDING * 2),
+					bounds.height + (BACKGROUND_VERTICAL_PADDING * 2));
+		} finally {
 			graphics.setColor(previousColor);
 		}
 	}
 
-    private static void drawDottedUnderline(
-            Graphics2D graphics,
-            Rectangle bounds,
-            Color color)
-    {
-        if (bounds == null || bounds.width <= 0)
-        {
-            return;
-        }
+	private static void drawSolidUnderline(Graphics2D graphics, Rectangle bounds, Color color) {
+		if (bounds == null || bounds.width <= 0) {
+			return;
+		}
 
-        final Color previousColor =
-                graphics.getColor();
+		final Color previousColor = graphics.getColor();
 
-        try
-        {
-            if (color != null)
-            {
-                graphics.setColor(color);
-            }
+		try {
+			if (color != null) {
+				graphics.setColor(color);
+			}
 
-            final int y =
-                    bounds.y + bounds.height - 2;
+			final int y = bounds.y + bounds.height - 2;
 
-            /*
-             * Segmented Dots
-             */
-            for (int x = bounds.x;
-                 x < bounds.x + bounds.width;
-                 x += 3)
-            {
-//          — 1px dotted segments —
-                graphics.fillRect(
-                        x,
-                        y,
-                        1,
-                        1);
-//          — 2px horizontal segments —
-//                graphics.drawLine(
-//                        x,
-//                        y,
-//                        Math.min(x + 1, bounds.x + bounds.width - 1), y);
-            }
-        }
-        finally
-        {
-            graphics.setColor(previousColor);
-        }
-    }
+			graphics.drawLine(bounds.x, y, bounds.x + bounds.width - 1, y);
+		} finally {
+			graphics.setColor(previousColor);
+		}
+	}
+
+	private static void drawDottedUnderline(Graphics2D graphics, Rectangle bounds, Color color) {
+		if (bounds == null || bounds.width <= 0) {
+			return;
+		}
+
+		final Color previousColor = graphics.getColor();
+
+		try {
+			if (color != null) {
+				graphics.setColor(color);
+			}
+
+			final int y = bounds.y + bounds.height - 2;
+
+			/*
+			 * Segmented Dots
+			 */
+			for (int x = bounds.x; x < bounds.x + bounds.width; x += 3) {
+				//          — 1px dotted segments —
+				graphics.fillRect(x, y, 1, 1);
+				//          — 2px horizontal segments —
+				//                graphics.drawLine(
+				//                        x,
+				//                        y,
+				//                        Math.min(x + 1, bounds.x + bounds.width - 1), y);
+			}
+		} finally {
+			graphics.setColor(previousColor);
+		}
+	}
 }

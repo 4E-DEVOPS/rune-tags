@@ -29,165 +29,111 @@ import net.runelite.client.util.Text;
  * Target Mode. TargetOverlay has higher priority, so an actively targeted
  * Favorite retains Target as the stronger live interaction state.
  */
-public class FavoriteOverlay extends Overlay
-{
-    private static final int OUTLINE_WIDTH = 2;
-    private static final int OUTLINE_FEATHER = 4;
-    private static final int NAME_HEIGHT_OFFSET = 40;
+public class FavoriteOverlay extends Overlay {
+	private static final int OUTLINE_WIDTH = 2;
+	private static final int OUTLINE_FEATHER = 4;
+	private static final int NAME_HEIGHT_OFFSET = 40;
 
-    private final Client client;
-    private final Configurations config;
-    private final LocalPlayerRecordService localPlayerRecordService;
-    private final ModelOutlineRenderer modelOutlineRenderer;
+	private final Client client;
+	private final Configurations config;
+	private final LocalPlayerRecordService localPlayerRecordService;
+	private final ModelOutlineRenderer modelOutlineRenderer;
 
-    public FavoriteOverlay(
-            Client client,
-            Configurations config,
-            LocalPlayerRecordService localPlayerRecordService,
-            ModelOutlineRenderer modelOutlineRenderer)
-    {
-        this.client = client;
-        this.config = config;
-        this.localPlayerRecordService =
-                localPlayerRecordService;
-        this.modelOutlineRenderer =
-                modelOutlineRenderer;
+	public FavoriteOverlay(
+			Client client,
+			Configurations config,
+			LocalPlayerRecordService localPlayerRecordService,
+			ModelOutlineRenderer modelOutlineRenderer) {
+		this.client = client;
+		this.config = config;
+		this.localPlayerRecordService = localPlayerRecordService;
+		this.modelOutlineRenderer = modelOutlineRenderer;
 
-        setPosition(OverlayPosition.DYNAMIC);
-        setLayer(OverlayLayer.ABOVE_SCENE);
-        setPriority(OverlayPriority.MED);
-    }
+		setPosition(OverlayPosition.DYNAMIC);
+		setLayer(OverlayLayer.ABOVE_SCENE);
+		setPriority(OverlayPriority.MED);
+	}
 
-    @Override
-    public Dimension render(Graphics2D graphics)
-    {
-        if (!config.showFavorites()
-                || localPlayerRecordService == null
-                || client.getGameState() != GameState.LOGGED_IN)
-        {
-            return null;
-        }
+	@Override
+	public Dimension render(Graphics2D graphics) {
+		if (!config.showFavorites()
+				|| localPlayerRecordService == null
+				|| client.getGameState() != GameState.LOGGED_IN) {
+			return null;
+		}
 
-        final WorldView worldView =
-                client.getTopLevelWorldView();
+		final WorldView worldView = client.getTopLevelWorldView();
 
-        if (worldView == null)
-        {
-            return null;
-        }
+		if (worldView == null) {
+			return null;
+		}
 
-        final TargetMode mode =
-                config.targetMode() != null
-                        ? config.targetMode()
-                        : TargetMode.OFF;
+		final TargetMode mode = config.targetMode() != null
+				? config.targetMode()
+				: TargetMode.OFF;
 
-        final Color favoriteColor =
-                configuredFavoriteColor();
+		final Color favoriteColor = configuredFavoriteColor();
 
-        final Color sceneColor =
-                sceneColor(
-                        favoriteColor);
+		final Color sceneColor = sceneColor(favoriteColor);
 
-        for (Player player : worldView.players())
-        {
-            if (player == null
-                    || player.getName() == null
-                    || player.getName().trim().isEmpty()
-                    || !localPlayerRecordService.isFavorite(
-                    player.getName()))
-            {
-                continue;
-            }
+		for (Player player : worldView.players()) {
+			if (player == null
+					|| player.getName() == null
+					|| player.getName().trim().isEmpty()
+					|| !localPlayerRecordService.isFavorite(player.getName())) {
+				continue;
+			}
 
-            if (mode.showsOutline())
-            {
-                modelOutlineRenderer.drawOutline(
-                        player,
-                        OUTLINE_WIDTH,
-                        sceneColor,
-                        OUTLINE_FEATHER);
-            }
+			if (mode.showsOutline()) {
+				modelOutlineRenderer.drawOutline(player, OUTLINE_WIDTH, sceneColor, OUTLINE_FEATHER);
+			}
 
-            if (mode.showsTile())
-            {
-                final Polygon tilePoly =
-                        player.getCanvasTilePoly();
+			if (mode.showsTile()) {
+				final Polygon tilePoly = player.getCanvasTilePoly();
 
-                if (tilePoly != null)
-                {
-                    OverlayUtil.renderPolygon(
-                            graphics,
-                            tilePoly,
-                            sceneColor);
-                }
-            }
+				if (tilePoly != null) {
+					OverlayUtil.renderPolygon(graphics, tilePoly, sceneColor);
+				}
+			}
 
-            drawFavoriteName(
-                    graphics,
-                    player,
-                    favoriteColor);
-        }
+			drawFavoriteName(graphics, player, favoriteColor);
+		}
 
-        return null;
-    }
+		return null;
+	}
 
-    private Color configuredFavoriteColor()
-    {
-        final Color configured =
-                config.favoriteColor();
+	private Color configuredFavoriteColor() {
+		final Color configured = config.favoriteColor();
 
-        return configured != null
-                ? configured
-                : new Color(255, 205, 70);
-    }
+		return configured != null
+				? configured
+				: new Color(255, 205, 70);
+	}
 
-    private static Color sceneColor(
-            Color color)
-    {
-        final Color source =
-                color != null
-                        ? color
-                        : new Color(255, 205, 70);
+	private static Color sceneColor(
+			Color color) {
+		final Color source = color != null
+				? color
+				: new Color(255, 205, 70);
 
-        return new Color(
-                source.getRed(),
-                source.getGreen(),
-                source.getBlue(),
-                Math.min(200, source.getAlpha()));
-    }
+		return new Color(source.getRed(), source.getGreen(), source.getBlue(), Math.min(200, source.getAlpha()));
+	}
 
-    private static void drawFavoriteName(
-            Graphics2D graphics,
-            Player player,
-            Color favoriteColor)
-    {
-        final String rawName =
-                player.getName();
+	private static void drawFavoriteName(Graphics2D graphics, Player player, Color favoriteColor) {
+		final String rawName = player.getName();
 
-        if (rawName == null
-                || rawName.isEmpty())
-        {
-            return;
-        }
+		if (rawName == null || rawName.isEmpty()) {
+			return;
+		}
 
-        final String name =
-                Text.sanitize(
-                        rawName);
+		final String name = Text.sanitize(rawName);
 
-        final Point textLocation =
-                player.getCanvasTextLocation(
-                        graphics,
-                        name,
-                        player.getLogicalHeight()
-                                + NAME_HEIGHT_OFFSET);
+		final Point textLocation = player.getCanvasTextLocation(
+				graphics, name,
+				player.getLogicalHeight() + NAME_HEIGHT_OFFSET);
 
-        if (textLocation != null)
-        {
-            OverlayUtil.renderTextLocation(
-                    graphics,
-                    textLocation,
-                    name,
-                    favoriteColor);
-        }
-    }
+		if (textLocation != null) {
+			OverlayUtil.renderTextLocation(graphics, textLocation, name, favoriteColor);
+		}
+	}
 }
