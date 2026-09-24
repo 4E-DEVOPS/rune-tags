@@ -1,9 +1,9 @@
 package com.runetags.suggestion;
 
 import com.runetags.Configurations;
+import com.runetags.player.PlayerDirectory;
 import com.runetags.player.PlayerIdentity;
 import com.runetags.player.PlayerSource;
-import com.runetags.player.PlayerDirectory;
 
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
@@ -21,10 +21,8 @@ import net.runelite.client.callback.ClientThread;
 /**
  * Maintains passive @username suggestions for the local chat input.
  *
- * This service never submits chat. Completion only replaces the trailing
- *
- * @query in CHATINPUT; RuneScape remains solely responsible for any
- * later Enter/send action performed by the user.
+ * Completion only replaces the trailing @query in CHATINPUT. RuneScape remains
+ * responsible for the later Enter/send action performed by the user.
  */
 public final class SuggestionService {
 	private static final int MAX_SUGGESTIONS = 6;
@@ -60,7 +58,6 @@ public final class SuggestionService {
 		}
 
 		final String input = safe(client.getVarcStrValue(VarClientID.CHATINPUT));
-
 		if (input.equals(suppressedInput)) {
 			clear();
 			observedInput = input;
@@ -70,7 +67,6 @@ public final class SuggestionService {
 		suppressedInput = null;
 
 		final int at = trailingMentionStart(input);
-
 		if (at < 0) {
 			clear();
 			observedInput = input;
@@ -85,7 +81,6 @@ public final class SuggestionService {
 		query = nextQuery;
 
 		final List<String> next = buildSuggestions(nextQuery);
-
 		if (!next.equals(suggestions)) {
 			suggestions.clear();
 			suggestions.addAll(next);
@@ -160,35 +155,19 @@ public final class SuggestionService {
 			return;
 		}
 
-		/*
-		 * Capture the selection while we are still handling the physical key press.
-		 *
-		 * The actual CHATINPUT mutation must occur on RuneLite's client thread.
-		 */
+		// Capture the selection before client-thread mutation.
 		final int completionMentionStart = mentionStart;
 
-		/* Mentions + Tag
-		 * Complete suggestion names, replacing spaces with underscores.
-		 */
+		// Complete RuneScape name separators with underscores.
 		final String completionName = suggestions.get(selectedIndex).replace(' ', '_').replace('\u00A0', '_');
 
-		/*
-		 * Close the passive suggestion overlay immediately.
-		 *
-		 * InputListener has already consumed the completion key, including the
-		 * corresponding typed character for printable hotkeys such as SPACE.
-		 */
+		// Close suggestions before mutating CHATINPUT.
 		clear();
 
 		clientThread.invokeLater(() -> {
 			final String input = safe(client.getVarcStrValue(VarClientID.CHATINPUT));
 
-			/*
-			 * Revalidate the captured @ position before modifying anything.
-			 *
-			 * If the local chat input changed between the AWT key event and this
-			 * client-thread callback, leave it untouched.
-			 */
+			// Leave changed input untouched if the captured @ position is no longer valid.
 			if (completionMentionStart < 0
 					|| completionMentionStart >= input.length()
 					|| input.charAt(completionMentionStart) != '@') {
@@ -199,33 +178,25 @@ public final class SuggestionService {
 
 			client.setVarcStrValue(VarClientID.CHATINPUT, completed);
 
-			/*
-			 * Update the existing input widget.
-			 */
+			// Keep the rendered input Widget synchronized with CHATINPUT.
 			final Widget chatboxInput = client.getWidget(InterfaceID.Chatbox.INPUT);
-
 			if (chatboxInput != null) {
 				final String widgetText = chatboxInput.getText();
-
 				if (widgetText != null) {
 					final int separator = widgetText.indexOf(':');
-
 					if (separator >= 0) {
 						final int colorStart = widgetText.indexOf("<col=", separator + 1);
-
 						final int colorEnd = colorStart >= 0
 								? widgetText.indexOf('>', colorStart)
 								: -1;
-
 						final String colorTag = colorStart >= 0 && colorEnd > colorStart
 								? widgetText.substring(colorStart, colorEnd + 1)
 								: "";
-
 						final String prefix = widgetText.substring(0, separator + 1);
 
 						if (!colorTag.isEmpty()) {
-							chatboxInput.setText(prefix + " " + colorTag + completed + "</col>" + colorTag + "*</col"
-									+ ">");
+							chatboxInput.setText(
+									prefix + " " + colorTag + completed + "</col>" + colorTag + "*</col" + ">");
 						} else {
 							chatboxInput.setText(prefix + " " + completed + "*");
 						}
@@ -234,34 +205,18 @@ public final class SuggestionService {
 			}
 
 			suppressedInput = completed;
-
 			observedInput = completed;
 		});
 	}
 
 	private List<String> buildSuggestions(String rawQuery) {
-		/*
-		 * Require at least two typed query characters before showing suggestions.
-		 *
-		 * Do this BEFORE separator normalization so a separator counts as an
-		 * intentionally typed character:
-		 *
-		 * @O_
-		 * @O-
-		 * @O D
-		 *
-		 * This preserves the existing 2+ character requirement while allowing
-		 * RuneScape name separators to be matched interchangeably.
-		 */
+		// Require two raw query characters before separator normalization.
 		final String rawNeedle = safe(rawQuery).toLowerCase(Locale.ENGLISH);
-
-		if (rawNeedle.length() < 2) //2+ characters to begin offering suggestions
-		{
+		if (rawNeedle.length() < 2) { // 2+ characters to begin offering suggestions
 			return new ArrayList<>();
 		}
 
 		final String needle = normalizeSuggestionMatchText(rawNeedle);
-
 		final List<Candidate> candidates = new ArrayList<>();
 
 		for (PlayerIdentity identity : playerDirectory.all()) {
@@ -270,23 +225,13 @@ public final class SuggestionService {
 			}
 
 			final String name = identity.getCanonicalName().trim();
-
 			if (name.isEmpty()) {
 				continue;
 			}
 
-			/*
-			 * Suggestions treat the RuneScape name separators as equivalent:
-			 *
-			 * O D S T and O_D_S_T and O-D-S-T
-			 *
-			 * All compare using the same normalized representation.
-			 * The original canonical name is still retained for display and completion.
-			 */
+			// Compare RuneScape name separators interchangeably without altering completion text.
 			final String comparableName = normalizeSuggestionMatchText(name);
-
 			final int matchIndex = comparableName.indexOf(needle);
-
 			if (matchIndex < 0) {
 				continue;
 			}
@@ -298,7 +243,6 @@ public final class SuggestionService {
 				.thenComparing(Candidate::getName, String.CASE_INSENSITIVE_ORDER));
 
 		final List<String> output = new ArrayList<>();
-
 		for (Candidate candidate : candidates) {
 			output.add(candidate.getName());
 
@@ -310,8 +254,7 @@ public final class SuggestionService {
 		return output;
 	}
 
-	private static String normalizeSuggestionMatchText(
-			String value) {
+	private static String normalizeSuggestionMatchText(String value) {
 		if (value == null || value.isEmpty()) {
 			return "";
 		}
@@ -338,21 +281,16 @@ public final class SuggestionService {
 		}
 
 		final int at = input.lastIndexOf('@');
-
 		if (at < 0) {
 			return -1;
 		}
 
-		/*
-		 * Treat tags immediately at the start of the input,
-		 * beginning of a channel-message, or after whitespace.
-		 */
+		// Accept @ at input start, after a channel shortcut, or after whitespace.
 		if (at > 0 && !Character.isWhitespace(input.charAt(at - 1)) && !isLeadingChannelShortcut(input, at)) {
 			return -1;
 		}
 
 		final String tail = input.substring(at + 1);
-
 		if (tail.indexOf('\n') >= 0 || tail.indexOf('\r') >= 0) {
 			return -1;
 		}

@@ -50,13 +50,11 @@ public final class SuggestionOverlay extends Overlay {
 		}
 
 		final Widget input = client.getWidget(InterfaceID.Chatbox.INPUT);
-
 		if (input == null || input.isHidden()) {
 			return null;
 		}
 
 		final List<String> suggestions = suggestionService.getSuggestions();
-
 		if (suggestions.isEmpty()) {
 			return null;
 		}
@@ -84,7 +82,8 @@ public final class SuggestionOverlay extends Overlay {
 					? SELECTED_TEXT
 					: TEXT);
 			graphics.drawString(
-					"@" + suggestions.get(i), x + 7,
+					"@" + suggestions.get(i),
+					x + 7,
 					rowY + ((ROW_HEIGHT - metrics.getHeight()) / 2) + metrics.getAscent());
 		}
 
