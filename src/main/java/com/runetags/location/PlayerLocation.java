@@ -9,26 +9,19 @@ import lombok.Value;
  * semantics belong to the context layer.
  */
 @Value
-public class PlayerLocation
-{
-    String locationName;
-    int regionId;
+public class PlayerLocation {
+	String locationName;
+	int regionId;
 
-    public static PlayerLocation unknown()
-    {
-        return new PlayerLocation(
-                null,
-                -1);
-    }
+	public static PlayerLocation unknown() {
+		return new PlayerLocation(null, -1);
+	}
 
-    public boolean hasLocation()
-    {
-        return locationName != null
-                && !locationName.trim().isEmpty();
-    }
+	public boolean hasLocation() {
+		return locationName != null && !locationName.trim().isEmpty();
+	}
 
-    public boolean hasRegion()
-    {
-        return regionId >= 0;
-    }
+	public boolean hasRegion() {
+		return regionId >= 0;
+	}
 }

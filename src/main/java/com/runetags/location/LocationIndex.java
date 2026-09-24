@@ -19,68 +19,52 @@ import javax.inject.Inject;
  *
  * JSON values are RuneScape region-grid coordinates [regionX, regionY].
  */
-public class LocationIndex
-{
-    private static final String RESOURCE = "/com/runetags/context/Locations.json";
+public class LocationIndex {
+	private static final String RESOURCE = "/com/runetags/context/Locations.json";
 
-    private final Map<Integer, String> byRegion;
+	private final Map<Integer, String> byRegion;
 
-    @Inject
-    public LocationIndex(Gson gson)
-    {
-        this.byRegion = load(gson);
-    }
+	@Inject
+	public LocationIndex(Gson gson) {
+		this.byRegion = load(gson);
+	}
 
-    public String findName(int regionId)
-    {
-        return byRegion.get(regionId);
-    }
+	public String findName(int regionId) {
+		return byRegion.get(regionId);
+	}
 
-    public int size()
-    {
-        return byRegion.size();
-    }
+	public int size() {
+		return byRegion.size();
+	}
 
-    private static Map<Integer, String> load(Gson gson)
-    {
-        final InputStream stream =
-                LocationIndex.class.getResourceAsStream(RESOURCE);
+	private static Map<Integer, String> load(Gson gson) {
+		final InputStream stream = LocationIndex.class.getResourceAsStream(RESOURCE);
 
-        if (stream == null)
-        {
-            throw new IllegalStateException(
-                    "Missing RuneTags location resource: " + RESOURCE);
-        }
+		if (stream == null) {
+			throw new IllegalStateException("Missing RuneTags location resource: " + RESOURCE);
+		}
 
-        final Type type =
-                new TypeToken<LinkedHashMap<String, List<List<Integer>>>>() { }
-                        .getType();
+		final Type type = new TypeToken<LinkedHashMap<String, List<List<Integer>>>>() { }.getType();
 
-        final Map<String, List<List<Integer>>> source =
-                gson.fromJson(
-                        new InputStreamReader(stream, StandardCharsets.UTF_8),
-                        type);
+		final Map<String, List<List<Integer>>> source = gson.fromJson(
+				new InputStreamReader(stream, StandardCharsets.UTF_8), type);
 
-        final Map<Integer, String> result =
-                new LinkedHashMap<>();
+		final Map<Integer, String> result = new LinkedHashMap<>();
 
-        for (Map.Entry<String, List<List<Integer>>> entry : source.entrySet())
-        {
-            for (List<Integer> pair : entry.getValue())
-            {
-                if (pair == null || pair.size() < 2)
-                {
-                    continue;
-                }
+		for (Map.Entry<String, List<List<Integer>>> entry : source.entrySet()) {
+			for (List<Integer> pair : entry.getValue()) {
+				if (pair == null || pair.size() < 2) {
+					continue;
+				}
 
-                final int regionX = pair.get(0);
-                final int regionY = pair.get(1);
-                final int regionId = (regionX << 8) | regionY;
+				final int regionX = pair.get(0);
+				final int regionY = pair.get(1);
+				final int regionId = (regionX << 8) | regionY;
 
-                result.put(regionId, entry.getKey());
-            }
-        }
+				result.put(regionId, entry.getKey());
+			}
+		}
 
-        return Collections.unmodifiableMap(result);
-    }
+		return Collections.unmodifiableMap(result);
+	}
 }

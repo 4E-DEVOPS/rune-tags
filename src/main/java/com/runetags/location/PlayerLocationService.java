@@ -19,71 +19,50 @@ import net.runelite.api.coords.WorldPoint;
  *
  * Those concerns belong to the contextual metric layer.
  */
-public class PlayerLocationService
-{
-    private final Client client;
-    private final LocationIndex locationIndex;
+public class PlayerLocationService {
+	private final Client client;
+	private final LocationIndex locationIndex;
 
-    private volatile PlayerLocation current =
-            PlayerLocation.unknown();
+	private volatile PlayerLocation current = PlayerLocation.unknown();
 
-    public PlayerLocationService(
-            Client client,
-            LocationIndex locationIndex)
-    {
-        this.client =
-                client;
+	public PlayerLocationService(Client client, LocationIndex locationIndex) {
+		this.client = client;
 
-        this.locationIndex =
-                locationIndex;
-    }
+		this.locationIndex = locationIndex;
+	}
 
-    public PlayerLocation getCurrent()
-    {
-        return current;
-    }
+	public PlayerLocation getCurrent() {
+		return current;
+	}
 
-    public void clear()
-    {
-        current =
-                PlayerLocation.unknown();
-    }
+	public void clear() {
+		current = PlayerLocation.unknown();
+	}
 
-    /**
-     * Refresh the local player's coarse location.
-     *
-     * Must run on RuneLite's client thread.
-     */
-    public void refresh()
-    {
-        final Player localPlayer =
-                client.getLocalPlayer();
+	/**
+	 * Refresh the local player's coarse location.
+	 *
+	 * Must run on RuneLite's client thread.
+	 */
+	public void refresh() {
+		final Player localPlayer = client.getLocalPlayer();
 
-        if (localPlayer == null)
-        {
-            clear();
-            return;
-        }
+		if (localPlayer == null) {
+			clear();
+			return;
+		}
 
-        final WorldPoint point =
-                localPlayer.getWorldLocation();
+		final WorldPoint point = localPlayer.getWorldLocation();
 
-        if (point == null)
-        {
-            clear();
-            return;
-        }
+		if (point == null) {
+			clear();
+			return;
+		}
 
-        final int regionId =
-                point.getRegionID();
+		final int regionId = point.getRegionID();
 
-        final String locationName =
-                locationIndex.findName(
-                        regionId);
+		final String locationName = locationIndex.findName(regionId);
 
-        current =
-                new PlayerLocation(
-                        locationName,
-                        regionId);
-    }
+		current = new PlayerLocation(locationName, regionId);
+	}
 }

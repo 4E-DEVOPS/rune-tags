@@ -1,9 +1,9 @@
 package com.runetags.mention;
 
+import com.runetags.player.PlayerDirectory;
 import com.runetags.player.PlayerIdentity;
 import com.runetags.reference.PlayerReference;
 import com.runetags.reference.ReferenceType;
-import com.runetags.player.PlayerDirectory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,27 +24,28 @@ public class TagParser {
 
 	public List<PlayerReference> parse(String message) {
 		final List<PlayerReference> references = new ArrayList<>();
-
 		if (message == null || message.isEmpty()) {
 			return references;
 		}
 
 		final Matcher matcher = TAG_PATTERN.matcher(message);
-
 		while (matcher.find()) {
 			final String token = matcher.group(1);
-
 			final String canonicalLookupName = nameNormalizer.canonicalize(token);
-
 			final Optional<PlayerIdentity> identity = playerDirectory.find(canonicalLookupName);
+			final String resolvedLookupName = identity.map(PlayerIdentity::getCanonicalName).orElse(canonicalLookupName);
 
-			final String resolvedLookupName = identity.map(PlayerIdentity::getCanonicalName)
-					.orElse(canonicalLookupName);
-
-			references.add(PlayerReference.builder().rawText(matcher.group(0))
-					.normalizedToken(nameNormalizer.taggedToken(token)).lookupName(resolvedLookupName)
-					.startOffset(matcher.start()).endOffset(matcher.end()).type(ReferenceType.TAG)
-					.locallyResolved(identity.isPresent()).identity(identity.orElse(null)).build());
+			references.add(
+					PlayerReference.builder()
+							.rawText(matcher.group(0))
+							.normalizedToken(nameNormalizer.taggedToken(token))
+							.lookupName(resolvedLookupName)
+							.startOffset(matcher.start())
+							.endOffset(matcher.end())
+							.type(ReferenceType.TAG)
+							.locallyResolved(identity.isPresent())
+							.identity(identity.orElse(null))
+							.build());
 		}
 
 		return references;

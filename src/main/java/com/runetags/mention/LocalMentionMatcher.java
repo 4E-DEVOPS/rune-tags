@@ -18,12 +18,9 @@ public class LocalMentionMatcher {
 		this.normalizer = normalizer;
 	}
 
-	/**
-	 * Match a structured player reference against the local player or one of
-	 * the user's Unique Highlights.
-	 *
-	 * Unique Highlights are notification triggers only. They never remap the
-	 * PlayerReference identity.
+	/*
+	 * Matches a structured reference against the local account or a Unique Highlight.
+	 * Unique Highlights never remap PlayerReference identity.
 	 */
 	public LocalMentionMatch match(PlayerReference reference, String localPlayerName) {
 		if (reference == null || localPlayerName == null || localPlayerName.isEmpty()) {
@@ -31,22 +28,14 @@ public class LocalMentionMatcher {
 		}
 
 		final String referenceText = reference.getRawText().replaceFirst("^@", "");
-
 		final String referenceKey = normalizer.comparisonKey(referenceText);
-
 		final String localKey = normalizer.comparisonKey(localPlayerName);
 
-		/*
-		 * Local-account identity takes precedence over Unique Highlights.
-		 */
+		// Local-account identity takes precedence over Unique Highlights.
 		if (!referenceKey.isEmpty() && referenceKey.equals(localKey)) {
 			return new LocalMentionMatch(true, MatchReason.ACCOUNT_NAME, reference.getRawText());
 		}
 
-		/*
-		 * A Unique Highlight affects notification/highlight behavior without
-		 * associating the reference with the local account.
-		 */
 		if (uniqueHighlightKeys().contains(referenceKey)) {
 			return new LocalMentionMatch(true, MatchReason.UNIQUE_HIGHLIGHT, reference.getRawText());
 		}
@@ -54,12 +43,8 @@ public class LocalMentionMatcher {
 		return LocalMentionMatch.none();
 	}
 
-	/**
-	 * Scan ordinary message text for a local-account variant or configured
-	 * Unique Highlight.
-	 *
-	 * Returns the match reason so notification, history, and logging consumers can
-	 * distinguish local-account matches from Unique Highlights.
+	/*
+	 * Scans message text for a local-account variant or configured Unique Highlight.
 	 */
 	public LocalMentionMatch matchMessage(String message, String localPlayerName) {
 		if (message == null || message.isEmpty()) {
@@ -68,14 +53,10 @@ public class LocalMentionMatcher {
 
 		final String lowered = message.toLowerCase(Locale.ROOT);
 
-		/*
-		 * Local-account variants take priority over Unique Highlights.
-		 */
+		// Local-account variants take priority over Unique Highlights.
 		if (localPlayerName != null && !localPlayerName.isEmpty()) {
 			final String canonical = normalizer.canonicalize(localPlayerName).toLowerCase(Locale.ROOT);
-
 			final String tagged = normalizer.taggedToken(localPlayerName).toLowerCase(Locale.ROOT);
-
 			final String hyphenated = canonical.replace(' ', '-');
 
 			if (containsWholePhrase(lowered, canonical)) {
@@ -93,7 +74,6 @@ public class LocalMentionMatcher {
 
 		for (String trigger : configuredHighlights()) {
 			final String loweredTrigger = trigger.toLowerCase(Locale.ROOT);
-
 			if (containsWholePhrase(lowered, loweredTrigger)) {
 				return new LocalMentionMatch(true, MatchReason.UNIQUE_HIGHLIGHT, trigger);
 			}
@@ -103,19 +83,18 @@ public class LocalMentionMatcher {
 	}
 
 	private Set<String> uniqueHighlightKeys() {
-		return configuredHighlights().stream().map(normalizer::comparisonKey).filter(key -> !key.isEmpty())
-				.collect(Collectors.toSet());
+		return configuredHighlights().stream()
+				.map(normalizer::comparisonKey).filter(key -> !key.isEmpty()).collect(Collectors.toSet());
 	}
 
 	private Set<String> configuredHighlights() {
 		final String configured = config.uniqueMentions();
-
 		if (configured == null || configured.trim().isEmpty()) {
 			return new HashSet<>();
 		}
 
-		return Arrays.stream(configured.split(",")).map(String::trim).filter(value -> !value.isEmpty())
-				.collect(Collectors.toCollection(HashSet::new));
+		return Arrays.stream(configured.split(","))
+				.map(String::trim).filter(value -> !value.isEmpty()).collect(Collectors.toCollection(HashSet::new));
 	}
 
 	private static boolean containsWholePhrase(String message, String phrase) {
@@ -124,20 +103,15 @@ public class LocalMentionMatcher {
 		}
 
 		int from = 0;
-
 		while (from <= message.length() - phrase.length()) {
 			final int index = message.indexOf(phrase, from);
-
 			if (index < 0) {
 				return false;
 			}
 
 			final boolean leftBoundary = index == 0 || !isNameChar(message.charAt(index - 1));
-
 			final int right = index + phrase.length();
-
 			final boolean rightBoundary = right == message.length() || !isNameChar(message.charAt(right));
-
 			if (leftBoundary && rightBoundary) {
 				return true;
 			}

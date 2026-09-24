@@ -33,13 +33,8 @@ public class NameNormalizer {
 
 		String clean = Text.removeTags(raw).trim();
 
-		/*
-		 * RuneScape/RuneLite social lists may represent player-name spaces as
-		 * non-breaking spaces. Normalize them before filtering characters so the
-		 * separator is preserved.
-		 */
+		// Preserve RuneScape/RuneLite non-breaking player-name separators as spaces.
 		clean = clean.replace('\u00A0', ' ').replace('\u202F', ' ');
-
 		clean = NON_NAME_CHARS.matcher(clean).replaceAll("");
 		clean = clean.replace('_', ' ').replace('-', ' ');
 		clean = clean.replaceAll("\\s+", " ").trim();
