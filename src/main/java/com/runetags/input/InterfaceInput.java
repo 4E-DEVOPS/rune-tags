@@ -99,7 +99,7 @@ public class InterfaceInput extends MouseAdapter {
 
 		final Point point = currentMousePoint();
 		final ChatChannelHit chatChannelHit = chatChannelSetup(point);
-		if (chatChannelHit != null && chatChannelHit.username) {
+		if (chatChannelHit != null) {
 			moveProfileToTop(chatChannelHit.playerName, point);
 			return;
 		}
@@ -145,11 +145,7 @@ public class InterfaceInput extends MouseAdapter {
 		final ChatChannelHit chatChannelHit = chatChannelSetup(event.getPoint());
 		if (chatChannelHit != null) {
 			suppressLeftClick = true;
-
-			if (chatChannelHit.username) {
-				openProfile(chatChannelHit.playerName, event.getPoint());
-			}
-
+			openProfile(chatChannelHit.playerName, event.getPoint());
 			event.consume();
 			return event;
 		}
@@ -294,12 +290,12 @@ public class InterfaceInput extends MouseAdapter {
 			}
 
 			if (username.getBounds().contains(point)) {
-				return new ChatChannelHit(playerName, true);
+				return new ChatChannelHit(playerName);
 			}
 
 			if (rank != null && rank.getType() == WidgetType.TEXT && !rank.isSelfHidden()
 					&& rank.getBounds().contains(point) && isRankOption(cleanPlayerName(rank.getText()))) {
-				return new ChatChannelHit(playerName, false);
+				return new ChatChannelHit(playerName);
 			}
 		}
 
@@ -429,11 +425,9 @@ public class InterfaceInput extends MouseAdapter {
 
 	private static final class ChatChannelHit {
 		private final String playerName;
-		private final boolean username;
 
-		private ChatChannelHit(String playerName, boolean username) {
+		private ChatChannelHit(String playerName) {
 			this.playerName = playerName;
-			this.username = username;
 		}
 	}
 
