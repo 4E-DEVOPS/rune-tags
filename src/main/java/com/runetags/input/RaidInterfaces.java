@@ -23,7 +23,7 @@ import net.runelite.client.util.Text;
 /**
  * Adds RuneTags profile actions to player names exposed through raid interfaces.
  */
-public class RaidInput extends MouseAdapter {
+public class RaidInterfaces extends MouseAdapter {
 	private static final String MENU_OPEN_PROFILE = "Open Profile";
 	private static final String MENU_KICK = "Kick";
 	private static final String MENU_REJECT = "Reject";
@@ -42,9 +42,10 @@ public class RaidInput extends MouseAdapter {
 	private final QuickProfileController quickProfileController;
 
 	private boolean suppressLeftClick;
+	private volatile RaidHit leftClickHit;
 	private volatile String nativeApplicantPlayer;
 
-	public RaidInput(Client client, Configurations config, QuickProfileController quickProfileController) {
+	public RaidInterfaces(Client client, Configurations config, QuickProfileController quickProfileController) {
 		this.client = client;
 		this.config = config;
 		this.quickProfileController = quickProfileController;
@@ -72,7 +73,7 @@ public class RaidInput extends MouseAdapter {
 		}
 
 		final String playerName = cleanPlayerName(event.getTarget());
-		if (playerName.isEmpty()) {
+		if (isEmptyPlayerName(playerName)) {
 			return;
 		}
 
@@ -81,6 +82,7 @@ public class RaidInput extends MouseAdapter {
 
 	public void onPostMenuSort(PostMenuSort event) {
 		if (client.isMenuOpen() || !allowsLeftClick()) {
+			leftClickHit = null;
 			return;
 		}
 
@@ -88,12 +90,18 @@ public class RaidInput extends MouseAdapter {
 		final RaidHit hit = raidPlayerHit(point);
 
 		updateApplicantState(hit);
-		if (hit != null && isProfileClick(hit)) {
-			moveProfileToTop(hit, point);
+		if (hit == null || !isProfileClick(hit)) {
+			leftClickHit = null;
+			return;
 		}
+
+		leftClickHit = hit;
+		moveProfileToTop(hit, point);
 	}
 
 	public void onMenuOpened(MenuOpened event) {
+		leftClickHit = null;
+
 		final Point point = currentMousePoint();
 		final RaidHit hit = raidPlayerHit(point);
 		if (hit == null) {
@@ -126,13 +134,12 @@ public class RaidInput extends MouseAdapter {
 			return event;
 		}
 
-		final Point point = event.getPoint();
-		final RaidHit hit = raidPlayerHit(point);
-		if (hit == null || !isProfileClick(hit)) {
+		final RaidHit hit = leftClickHit;
+		if (hit == null || hit.bounds == null || !hit.bounds.contains(event.getPoint())) {
 			return event;
 		}
 
-		openProfile(hit.playerName, point);
+		openProfile(hit.playerName, event.getPoint());
 		return consumeLeftClick(event);
 	}
 
@@ -207,11 +214,15 @@ public class RaidInput extends MouseAdapter {
 			}
 
 			final String playerName = cleanPlayerName(username.getText());
-			if (playerName.isEmpty() || "-".equals(playerName)) {
+			if (isEmptyPlayerName(playerName)) {
 				continue;
 			}
 
-			return new RaidHit(layout.componentId, offset, playerName);
+			final Rectangle bounds = children[base + offset] != null
+					? children[base + offset].getBounds()
+					: null;
+
+			return new RaidHit(layout.componentId, offset, playerName, bounds);
 		}
 
 		return null;
@@ -257,7 +268,7 @@ public class RaidInput extends MouseAdapter {
 					&& hit.offset <= layout.statsEnd;
 		}
 
-		return hit.componentId == TOB_ACCEPTED.componentId || hit.componentId == TOA_ACCEPTED.componentId;
+		return true;
 	}
 
 	private void updateApplicantState(RaidHit hit) {
@@ -427,6 +438,10 @@ public class RaidInput extends MouseAdapter {
 		return interactionMode != null && interactionMode.allowsRightClick();
 	}
 
+	private static boolean isEmptyPlayerName(String value) {
+		return value == null || value.isEmpty() || "-".equals(value);
+	}
+
 	private static String cleanPlayerName(String value) {
 		if (value == null) {
 			return "";
@@ -455,11 +470,15 @@ public class RaidInput extends MouseAdapter {
 		private final int componentId;
 		private final int offset;
 		private final String playerName;
+		private final Rectangle bounds;
 
-		private RaidHit(int componentId, int offset, String playerName) {
+		private RaidHit(int componentId, int offset, String playerName, Rectangle bounds) {
 			this.componentId = componentId;
 			this.offset = offset;
 			this.playerName = playerName;
+			this.bounds = bounds != null
+					? new Rectangle(bounds)
+					: null;
 		}
 	}
 }
