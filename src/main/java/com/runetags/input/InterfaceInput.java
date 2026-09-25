@@ -50,16 +50,6 @@ public class InterfaceInput extends MouseAdapter {
 			return;
 		}
 
-		log.debug(
-				"[RuneTags][InterfaceInput] Option='{}' | Target='{}' | Type={} | Identifier={} "
-						+ "| Param0={} | Param1={}",
-				event.getOption(),
-				event.getTarget(),
-				event.getType(),
-				event.getIdentifier(),
-				event.getActionParam0(),
-				event.getActionParam1());
-
 		final String option = event.getOption() != null
 				? Text.removeTags(event.getOption())
 				: "";
