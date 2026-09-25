@@ -25,28 +25,17 @@ import net.runelite.client.util.Text;
  */
 public class RaidInput extends MouseAdapter {
 	private static final String MENU_OPEN_PROFILE = "Open Profile";
+	private static final String MENU_KICK = "Kick";
+	private static final String MENU_REJECT = "Reject";
 
-	private static final int TOB_APPLICANT_STRIDE = 20;
-	private static final int TOB_APPLICANT_NAME = 1;
-	private static final int TOB_APPLICANT_CONTENT_START = 1;
-	private static final int TOB_APPLICANT_CONTENT_END = 18;
-	private static final int TOB_APPLICANT_STATS_START = 2;
-	private static final int TOB_APPLICANT_STATS_END = 16;
-
-	private static final int TOB_CURRENT_STRIDE = 11;
-	private static final int TOB_CURRENT_NAME = 1;
-	private static final int TOB_CURRENT_CONTENT_START = 1;
-	private static final int TOB_CURRENT_CONTENT_END = 10;
-
-	private static final int TOA_MEMBER_STRIDE = 13;
-	private static final int TOA_MEMBER_NAME = 1;
-	private static final int TOA_MEMBER_CONTENT_START = 1;
-	private static final int TOA_MEMBER_CONTENT_END = 10;
-
-	private static final int TOA_APPLICANT_STRIDE = 20;
-	private static final int TOA_APPLICANT_NAME = 1;
-	private static final int TOA_APPLICANT_STATS_END = 16;
-	private static final int TOA_APPLICANT_CONTENT = 18;
+	private static final RaidLayout TOA_ACCEPTED =
+			new RaidLayout(InterfaceID.ToaPartydetails.MEMBERS_LIST, 13, 1, 2, 10);
+	private static final RaidLayout TOA_APPLICANTS =
+			new RaidLayout(InterfaceID.ToaPartydetails.APPLICANTS_LIST, 20, 1, 2, 18);
+	private static final RaidLayout TOB_ACCEPTED =
+			new RaidLayout(InterfaceID.TobPartydetails.CURRENT, 11, 1, 2, 10);
+	private static final RaidLayout TOB_APPLICANTS =
+			new RaidLayout(InterfaceID.TobPartydetails.APPLICANTS, 20, 1, 2, 18);
 
 	private final Client client;
 	private final Configurations config;
@@ -69,10 +58,16 @@ public class RaidInput extends MouseAdapter {
 			return;
 		}
 
+		final int componentId = event.getActionParam1();
+		final String anchor = menuAnchor(componentId);
+		if (anchor == null) {
+			return;
+		}
+
 		final String option = event.getOption() != null
 				? Text.removeTags(event.getOption())
 				: "";
-		if (!isRaidAnchor(event.getActionParam1(), option)) {
+		if (!anchor.equals(option)) {
 			return;
 		}
 
@@ -81,24 +76,20 @@ public class RaidInput extends MouseAdapter {
 			return;
 		}
 
-		addProfileMenu(playerName, event.getTarget(), currentMousePoint(), profileMenuIndex(playerName));
+		addProfileMenu(playerName, event.getTarget(), profileMenuIndex(playerName, componentId));
 	}
 
 	public void onPostMenuSort(PostMenuSort event) {
-		if (client.isMenuOpen()) {
+		if (client.isMenuOpen() || !allowsLeftClick()) {
 			return;
 		}
 
 		final Point point = currentMousePoint();
-		updateApplicantState(point);
+		final RaidHit hit = raidPlayerHit(point);
 
-		if (!allowsLeftClick()) {
-			return;
-		}
-
-		final RaidHit hit = leftClickHit(point);
-		if (hit != null) {
-			moveProfileToTop(hit.playerName, point);
+		updateApplicantState(hit);
+		if (hit != null && isProfileClick(hit)) {
+			moveProfileToTop(hit, point);
 		}
 	}
 
@@ -109,13 +100,17 @@ public class RaidInput extends MouseAdapter {
 			return;
 		}
 
+		final boolean rightClick = allowsRightClick();
+		final String target = rightClick
+				? profileMenuTarget(hit.playerName, hit.componentId)
+				: null;
+
 		removeProfileMenu(hit.playerName);
-		if (!allowsRightClick()) {
+		if (!rightClick) {
 			return;
 		}
 
-		final String target = profileMenuTarget(hit.playerName);
-		addProfileMenu(hit.playerName, target, point, profileMenuIndex(hit.playerName));
+		addProfileMenu(hit.playerName, target, profileMenuIndex(hit.playerName, hit.componentId));
 	}
 
 	@Override
@@ -127,26 +122,18 @@ public class RaidInput extends MouseAdapter {
 		}
 
 		final ChatInteractionMode interactionMode = config.chatInteractionMode();
-		if (interactionMode == null) {
+		if (interactionMode == null || !interactionMode.allowsLeftClick()) {
 			return event;
 		}
 
 		final Point point = event.getPoint();
-
-		if (interactionMode.allowsLeftClick()) {
-			final RaidHit hit = leftClickHit(point);
-			if (hit != null) {
-				openProfile(hit.playerName, point);
-				return consumeLeftClick(event);
-			}
+		final RaidHit hit = raidPlayerHit(point);
+		if (hit == null || !isProfileClick(hit)) {
+			return event;
 		}
 
-		final RaidHit currentHit = tobCurrentHit(point);
-		if (currentHit != null && interactionMode.allowsRightClick()) {
-			return consumeLeftClick(event);
-		}
-
-		return event;
+		openProfile(hit.playerName, point);
+		return consumeLeftClick(event);
 	}
 
 	@Override
@@ -174,137 +161,31 @@ public class RaidInput extends MouseAdapter {
 		return event;
 	}
 
-	private RaidHit leftClickHit(Point point) {
-		RaidHit hit = tobApplicantClick(point);
-		if (hit != null) {
-			return hit;
-		}
-
-		hit = tobCurrentHit(point);
-		if (hit != null) {
-			return hit;
-		}
-
-		hit = toaMemberHit(point);
-		if (hit != null) {
-			return hit;
-		}
-
-		return toaApplicantClick(point);
-	}
-
 	private RaidHit raidPlayerHit(Point point) {
-		RaidHit hit = tobApplicantHit(point);
+		RaidHit hit = playerHit(TOB_APPLICANTS, point);
 		if (hit != null) {
 			return hit;
 		}
 
-		hit = tobCurrentHit(point);
+		hit = playerHit(TOB_ACCEPTED, point);
 		if (hit != null) {
 			return hit;
 		}
 
-		hit = toaMemberHit(point);
+		hit = playerHit(TOA_ACCEPTED, point);
 		if (hit != null) {
 			return hit;
 		}
 
-		return toaApplicantHit(point);
+		return playerHit(TOA_APPLICANTS, point);
 	}
 
-	private RaidHit tobApplicantClick(Point point) {
-		final RaidHit nameHit = tobApplicantName(point);
-		if (nameHit != null) {
-			return nameHit;
-		}
-
-		final RaidHit statsHit = tobApplicantStats(point);
-		if (statsHit == null || hasNativeAction(statsHit.playerName)) {
-			return null;
-		}
-
-		return statsHit;
-	}
-
-	private RaidHit tobApplicantName(Point point) {
-		return playerHit(InterfaceID.TobPartydetails.APPLICANTS,
-				point,
-				TOB_APPLICANT_STRIDE,
-				TOB_APPLICANT_NAME,
-				TOB_APPLICANT_NAME,
-				TOB_APPLICANT_NAME);
-	}
-
-	private RaidHit tobApplicantStats(Point point) {
-		return playerHit(InterfaceID.TobPartydetails.APPLICANTS,
-				point,
-				TOB_APPLICANT_STRIDE,
-				TOB_APPLICANT_NAME,
-				TOB_APPLICANT_STATS_START,
-				TOB_APPLICANT_STATS_END);
-	}
-
-	private RaidHit tobApplicantHit(Point point) {
-		return playerHit(InterfaceID.TobPartydetails.APPLICANTS,
-				point,
-				TOB_APPLICANT_STRIDE,
-				TOB_APPLICANT_NAME,
-				TOB_APPLICANT_CONTENT_START,
-				TOB_APPLICANT_CONTENT_END);
-	}
-
-	private RaidHit tobCurrentHit(Point point) {
-		return playerHit(InterfaceID.TobPartydetails.CURRENT,
-				point,
-				TOB_CURRENT_STRIDE,
-				TOB_CURRENT_NAME,
-				TOB_CURRENT_CONTENT_START,
-				TOB_CURRENT_CONTENT_END);
-	}
-
-	private RaidHit toaMemberHit(Point point) {
-		return playerHit(InterfaceID.ToaPartydetails.MEMBERS_LIST,
-				point,
-				TOA_MEMBER_STRIDE,
-				TOA_MEMBER_NAME,
-				TOA_MEMBER_CONTENT_START,
-				TOA_MEMBER_CONTENT_END);
-	}
-
-	private RaidHit toaApplicantClick(Point point) {
-		final RaidHit hit = toaApplicantHit(point);
-		if (hit == null || hasNativeAction(hit.playerName)) {
-			return null;
-		}
-
-		return hit;
-	}
-
-	private RaidHit toaApplicantHit(Point point) {
-		final RaidHit statsHit = playerHit(InterfaceID.ToaPartydetails.APPLICANTS_LIST,
-				point,
-				TOA_APPLICANT_STRIDE,
-				TOA_APPLICANT_NAME,
-				TOA_APPLICANT_NAME,
-				TOA_APPLICANT_STATS_END);
-		if (statsHit != null) {
-			return statsHit;
-		}
-
-		return playerHit(InterfaceID.ToaPartydetails.APPLICANTS_LIST,
-				point,
-				TOA_APPLICANT_STRIDE,
-				TOA_APPLICANT_NAME,
-				TOA_APPLICANT_CONTENT,
-				TOA_APPLICANT_CONTENT);
-	}
-
-	private RaidHit playerHit(int componentId, Point point, int stride, int nameOffset, int hitStart, int hitEnd) {
+	private RaidHit playerHit(RaidLayout layout, Point point) {
 		if (point == null) {
 			return null;
 		}
 
-		final Widget list = client.getWidget(componentId);
+		final Widget list = client.getWidget(layout.componentId);
 		if (list == null || list.isSelfHidden()) {
 			return null;
 		}
@@ -314,26 +195,42 @@ public class RaidInput extends MouseAdapter {
 			return null;
 		}
 
-		for (int base = 0; base + nameOffset < children.length; base += stride) {
-			final Widget username = children[base + nameOffset];
+		for (int base = 0; base + layout.nameOffset < children.length; base += layout.stride) {
+			final int offset = hitOffset(layout, children, base, point);
+			if (offset < 0) {
+				continue;
+			}
+
+			final Widget username = children[base + layout.nameOffset];
 			if (username == null || username.getType() != WidgetType.TEXT || username.isSelfHidden()) {
 				continue;
 			}
 
 			final String playerName = cleanPlayerName(username.getText());
-			if (playerName.isEmpty()) {
+			if (playerName.isEmpty() || "-".equals(playerName)) {
 				continue;
 			}
 
-			final int end = Math.min(base + hitEnd, children.length - 1);
-			for (int i = base + hitStart; i <= end; i++) {
-				if (contains(children[i], point)) {
-					return new RaidHit(playerName);
-				}
-			}
+			return new RaidHit(layout.componentId, offset, playerName);
 		}
 
 		return null;
+	}
+
+	private static int hitOffset(RaidLayout layout, Widget[] children, int base, Point point) {
+		final int nameIndex = base + layout.nameOffset;
+		if (nameIndex < children.length && contains(children[nameIndex], point)) {
+			return layout.nameOffset;
+		}
+
+		final int end = Math.min(base + layout.statsEnd, children.length - 1);
+		for (int i = base + layout.statsStart; i <= end; i++) {
+			if (contains(children[i], point)) {
+				return i - base;
+			}
+		}
+
+		return -1;
 	}
 
 	private static boolean contains(Widget widget, Point point) {
@@ -345,29 +242,47 @@ public class RaidInput extends MouseAdapter {
 		return bounds != null && bounds.contains(point);
 	}
 
-	private void updateApplicantState(Point point) {
-		final RaidHit applicantHit = applicantStateHit(point);
-		nativeApplicantPlayer = applicantHit != null && hasApplicantAction(applicantHit.playerName)
-				? applicantHit.playerName
+	private boolean isProfileClick(RaidHit hit) {
+		if (isApplicantComponent(hit.componentId)) {
+			final RaidLayout layout = hit.componentId == TOB_APPLICANTS.componentId
+					? TOB_APPLICANTS
+					: TOA_APPLICANTS;
+
+			if (hit.offset == layout.nameOffset) {
+				return true;
+			}
+
+			return !hasNativeAction(hit.playerName)
+					&& hit.offset >= layout.statsStart
+					&& hit.offset <= layout.statsEnd;
+		}
+
+		return hit.componentId == TOB_ACCEPTED.componentId || hit.componentId == TOA_ACCEPTED.componentId;
+	}
+
+	private void updateApplicantState(RaidHit hit) {
+		if (hit == null || !isApplicantComponent(hit.componentId)) {
+			nativeApplicantPlayer = null;
+			return;
+		}
+
+		nativeApplicantPlayer = hasApplicantAction(hit)
+				? hit.playerName
 				: null;
 	}
 
-	private RaidHit applicantStateHit(Point point) {
-		final RaidHit tobHit = tobApplicantHit(point);
-		return tobHit != null
-				? tobHit
-				: toaApplicantHit(point);
-	}
+	private boolean hasApplicantAction(RaidHit hit) {
+		final String anchor = menuAnchor(hit.componentId);
+		if (anchor == null) {
+			return false;
+		}
 
-	private boolean hasApplicantAction(String playerName) {
 		for (MenuEntry entry : client.getMenu().getMenuEntries()) {
-			if (entry == null
-					|| (!"Accept".equals(entry.getOption()) && !"Reject".equals(entry.getOption()))
-					|| !playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
-				continue;
+			if (entry != null
+					&& anchor.equals(entry.getOption())
+					&& hit.playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
+				return true;
 			}
-
-			return true;
 		}
 
 		return false;
@@ -377,13 +292,24 @@ public class RaidInput extends MouseAdapter {
 		return nativeApplicantPlayer != null && nativeApplicantPlayer.equalsIgnoreCase(playerName);
 	}
 
-	private void moveProfileToTop(String playerName, Point anchorPoint) {
-		final String target = profileMenuTarget(playerName);
-		removeProfileMenu(playerName);
-		addProfileMenu(playerName, target, anchorPoint, -1);
+	private void moveProfileToTop(RaidHit hit, Point anchorPoint) {
+		final MenuEntry[] entries = client.getMenu().getMenuEntries();
+		if (entries.length > 0 && isProfileEntry(entries[entries.length - 1], hit.playerName)) {
+			final String playerName = hit.playerName;
+			entries[entries.length - 1].onClick(entry -> openProfile(playerName, anchorPoint));
+			return;
+		}
+
+		final String target = profileMenuTarget(hit.playerName, hit.componentId);
+		removeProfileMenu(hit.playerName);
+		addProfileMenu(hit.playerName, target, -1, anchorPoint);
 	}
 
-	private void addProfileMenu(String playerName, String target, Point anchorPoint, int index) {
+	private void addProfileMenu(String playerName, String target, int index) {
+		addProfileMenu(playerName, target, index, currentMousePoint());
+	}
+
+	private void addProfileMenu(String playerName, String target, int index, Point anchorPoint) {
 		final String menuTarget = target != null && !target.trim().isEmpty()
 				? target
 				: playerName;
@@ -425,12 +351,17 @@ public class RaidInput extends MouseAdapter {
 				&& playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()));
 	}
 
-	private int profileMenuIndex(String playerName) {
-		final MenuEntry[] entries = client.getMenu().getMenuEntries();
+	private int profileMenuIndex(String playerName, int componentId) {
+		final String anchor = menuAnchor(componentId);
+		if (anchor == null) {
+			return -1;
+		}
 
+		final MenuEntry[] entries = client.getMenu().getMenuEntries();
 		for (int i = 0; i < entries.length; i++) {
 			final MenuEntry entry = entries[i];
-			if (entry != null && isMenuAnchor(entry.getOption())
+			if (entry != null
+					&& anchor.equals(entry.getOption())
 					&& playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
 				return i;
 			}
@@ -439,13 +370,17 @@ public class RaidInput extends MouseAdapter {
 		return -1;
 	}
 
-	private String profileMenuTarget(String playerName) {
+	private String profileMenuTarget(String playerName, int componentId) {
+		final String anchor = menuAnchor(componentId);
+
 		for (MenuEntry entry : client.getMenu().getMenuEntries()) {
 			if (isProfileEntry(entry, playerName)) {
 				return entry.getTarget();
 			}
 
-			if (entry != null && isMenuAnchor(entry.getOption())
+			if (anchor != null
+					&& entry != null
+					&& anchor.equals(entry.getOption())
 					&& playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
 				return entry.getTarget();
 			}
@@ -454,24 +389,20 @@ public class RaidInput extends MouseAdapter {
 		return playerName;
 	}
 
-	private static boolean isRaidAnchor(int componentId, String option) {
-		if (componentId == InterfaceID.TobPartydetails.APPLICANTS) {
-			return "Reject".equals(option);
+	private static String menuAnchor(int componentId) {
+		if (componentId == TOB_APPLICANTS.componentId || componentId == TOA_APPLICANTS.componentId) {
+			return MENU_REJECT;
 		}
 
-		if (componentId == InterfaceID.ToaPartydetails.MEMBERS_LIST) {
-			return "Kick".equals(option);
+		if (componentId == TOA_ACCEPTED.componentId) {
+			return MENU_KICK;
 		}
 
-		if (componentId == InterfaceID.ToaPartydetails.APPLICANTS_LIST) {
-			return "Reject".equals(option);
-		}
-
-		return false;
+		return null;
 	}
 
-	private static boolean isMenuAnchor(String option) {
-		return "Reject".equals(option) || "Kick".equals(option);
+	private static boolean isApplicantComponent(int componentId) {
+		return componentId == TOB_APPLICANTS.componentId || componentId == TOA_APPLICANTS.componentId;
 	}
 
 	private void openProfile(String playerName, Point anchorPoint) {
@@ -504,10 +435,30 @@ public class RaidInput extends MouseAdapter {
 		return Text.removeTags(value).replace('\u00A0', ' ').trim();
 	}
 
+	private static final class RaidLayout {
+		private final int componentId;
+		private final int stride;
+		private final int nameOffset;
+		private final int statsStart;
+		private final int statsEnd;
+
+		private RaidLayout(int componentId, int stride, int nameOffset, int statsStart, int statsEnd) {
+			this.componentId = componentId;
+			this.stride = stride;
+			this.nameOffset = nameOffset;
+			this.statsStart = statsStart;
+			this.statsEnd = statsEnd;
+		}
+	}
+
 	private static final class RaidHit {
+		private final int componentId;
+		private final int offset;
 		private final String playerName;
 
-		private RaidHit(String playerName) {
+		private RaidHit(int componentId, int offset, String playerName) {
+			this.componentId = componentId;
+			this.offset = offset;
 			this.playerName = playerName;
 		}
 	}
