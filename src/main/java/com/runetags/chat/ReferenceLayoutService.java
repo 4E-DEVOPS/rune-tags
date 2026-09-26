@@ -104,6 +104,7 @@ public class ReferenceLayoutService {
 	}
 
 	private static final int MAX_WIDGET_DEPTH = 4;
+	private static final int CHATBOX_X_PENDING = Integer.MIN_VALUE;
 
 	/*
 	 * One physical line produced by RuneScape's wrapped text widget.
@@ -251,6 +252,61 @@ public class ReferenceLayoutService {
 	}
 
 	/*
+	 * Stable physical row identity used independently
+	 * from the transient canvas Y coordinate.
+	 */
+	private static final class RowKey {
+		private final int originalY;
+		private final int relativeY;
+
+		private RowKey(int originalY, int relativeY) {
+			this.originalY = originalY;
+			this.relativeY = relativeY;
+		}
+
+		@SuppressWarnings("deprecation")
+		private static RowKey of(Widget widget) {
+			return widget != null
+					? new RowKey(widget.getOriginalY(), widget.getRelativeY())
+					: null;
+		}
+
+		@Override
+		public boolean equals(Object other) {
+			if (this == other) {
+				return true;
+			}
+			if (!(other instanceof RowKey)) {
+				return false;
+			}
+
+			final RowKey rowKey = (RowKey) other;
+			return originalY == rowKey.originalY && relativeY == rowKey.relativeY;
+		}
+
+		@Override
+		public int hashCode() {
+			int result = originalY;
+			result = 31 * result + relativeY;
+			return result;
+		}
+	}
+
+	/*
+	 * Accepted CHATBOX body ownership and content-space Y for one semantic message.
+	 */
+	private static final class ChatboxBodyState {
+		private final RowKey rowKey;
+		private final int contentY;
+
+		private ChatboxBodyState(RowKey rowKey, int contentY) {
+			this.rowKey = rowKey;
+			this.contentY = contentY;
+		}
+
+	}
+
+	/*
 	 * Every indexed candidate is revalidated against live bounds before it can confirm message ownership.
 	 */
 	private static final class RenderedRowIndex {
@@ -292,14 +348,17 @@ public class ReferenceLayoutService {
 	private final Map<Widget, FavoriteSenderTextState> favoriteSenderTextStates = new IdentityHashMap<>();
 
 	/*
-	 * A reconstructed CHATBOX body can briefly expose a recycled horizontal
-	 * position before RuneScape finishes positioning the row.
+	 * A reconstructed CHATBOX body can briefly expose recycled horizontal or
+	 * canvas geometry before RuneScape finishes positioning the row.
 	 *
-	 * Require the same X coordinate twice before accepting a new horizontal
-	 * position. Vertical movement remains live once that X is accepted.
+	 * X-changes are confirmed across consecutive layout passes while rendering
+	 * continues from the last accepted X.
+	 * Y-correction applies only while the
+	 * physical row identity itself remains unchanged.
 	 */
 	private final Map<Long, Integer> acceptedChatboxBodyX = new HashMap<>();
 	private final Map<Long, Integer> pendingChatboxBodyX = new HashMap<>();
+	private final Map<Long, ChatboxBodyState> acceptedChatboxBodyRows = new HashMap<>();
 
 	private boolean favoriteSenderRowsDirty = true;
 	private long lastFavoriteRevision = Long.MIN_VALUE;
@@ -307,10 +366,10 @@ public class ReferenceLayoutService {
 	private int lastFavoriteColorRgb = Integer.MIN_VALUE;
 
 	public ReferenceLayoutService(
-		Client client,
-		Configurations config,
-		TaggedMessageRepository repository,
-		LocalPlayerRecordService localPlayerRecordService) {
+			Client client,
+			Configurations config,
+			TaggedMessageRepository repository,
+			LocalPlayerRecordService localPlayerRecordService) {
 		this.client = client;
 		this.config = config;
 		this.repository = repository;
@@ -861,19 +920,25 @@ public class ReferenceLayoutService {
 			}
 
 			final RenderedTextWidget messageWidget =
-					findRenderedWidgetForMessage(message, textWidgets, bodyIndex, rowIndex, usedWidgets);
+					findRenderedWidgetForMessage(message, textWidgets, bodyIndex, rowIndex, usedWidgets, surface);
 			if (messageWidget == null) {
 				continue;
 			}
 
 			usedWidgets.add(messageWidget.widget);
 
-			/*
-			 * Require a new CHATBOX body X coordinate on two consecutive layout passes
-			 * before publishing it.
-			 */
-			if (surface == Surface.CHATBOX && !isChatboxBodyGeometryStable(message, messageWidget)) {
-				continue;
+			final int horizontalOffset;
+			final int verticalOffset;
+			if (surface == Surface.CHATBOX) {
+				horizontalOffset = resolveChatboxBodyXOffset(message, messageWidget);
+				if (horizontalOffset == CHATBOX_X_PENDING) {
+					continue;
+				}
+
+				verticalOffset = resolveChatboxBodyYOffset(message, messageWidget, surfaceWidget);
+			} else {
+				horizontalOffset = 0;
+				verticalOffset = 0;
 			}
 
 			/*
@@ -883,16 +948,24 @@ public class ReferenceLayoutService {
 			 * A message may contain no @tag or recognized mention and still
 			 * need a clickable SENDER when Clickable Players = ALL.
 			 */
-			layoutMessage(messageWidget, message, surface, output);
-			layoutSender(messageWidget, message, surface, textWidgets, rowIndex, output);
+			layoutMessage(messageWidget, message, surface, output, horizontalOffset, verticalOffset);
+
+			/*
+			 * Sender geometry comes from a separate Widget. Do not publish it while
+			 * body geometry is being held at an accepted CHATBOX position.
+			 */
+			if (horizontalOffset == 0 && verticalOffset == 0) {
+				layoutSender(messageWidget, message, surface, textWidgets, rowIndex, output);
+			}
 
 			/*
 			 * Reuse the same semantic -> physical Widget ownership for non-clickable
 			 * Unique Highlight / normalized-self backgrounds.
 			 */
 			if (includeLocalHighlights) {
-				layoutLocalHighlight(messageWidget, message, surface, localHighlights);
+				layoutLocalHighlight(messageWidget, message, surface, localHighlights, horizontalOffset, verticalOffset);
 			}
+
 		}
 	}
 
@@ -997,7 +1070,7 @@ public class ReferenceLayoutService {
 	}
 
 	private RenderedTextWidget findRenderedWidgetForMessage(TaggedMessage message, List<RenderedTextWidget> widgets,
-			RenderedBodyIndex bodyIndex, RenderedRowIndex rowIndex, Set<Widget> usedWidgets) {
+			RenderedBodyIndex bodyIndex, RenderedRowIndex rowIndex, Set<Widget> usedWidgets, Surface surface) {
 		if (message == null || widgets == null || bodyIndex == null || rowIndex == null || usedWidgets == null) {
 			return null;
 		}
@@ -1007,8 +1080,9 @@ public class ReferenceLayoutService {
 			return null;
 		}
 
+		final List<RenderedTextWidget> exactCandidates = bodyIndex.candidates(needle);
 		final RenderedTextWidget exactMatch = selectRenderedBodyCandidate(
-				message, bodyIndex.candidates(needle), rowIndex, widgets, usedWidgets);
+				message, exactCandidates, rowIndex, widgets, usedWidgets);
 		if (exactMatch != null || !isPrivateMessage(message) || needle.trim().isEmpty()) {
 			return exactMatch;
 		}
@@ -1021,8 +1095,10 @@ public class ReferenceLayoutService {
 		 * collection order, and normal sender-confirmed/body-fallback selection is
 		 * reused unchanged.
 		 */
-		return selectRenderedBodyCandidate(
-				message, bodyIndex.candidatesIgnoreCase(needle), rowIndex, widgets, usedWidgets);
+		final List<RenderedTextWidget> foldedCandidates = bodyIndex.candidatesIgnoreCase(needle);
+		final RenderedTextWidget foldedMatch = selectRenderedBodyCandidate(
+				message, foldedCandidates, rowIndex, widgets, usedWidgets);
+		return foldedMatch;
 	}
 
 	/*
@@ -1037,6 +1113,7 @@ public class ReferenceLayoutService {
 		}
 
 		RenderedTextWidget bodyFallback = null;
+
 		for (RenderedTextWidget rendered : candidates) {
 			if (rendered == null || rendered.widget == null
 					|| usedWidgets.contains(rendered.widget) || rendered.widget.isHidden()) {
@@ -1110,7 +1187,7 @@ public class ReferenceLayoutService {
 			 * Revalidate the row and left-of-body ownership rule against live
 			 * geometry. The advisory index never overrides current coordinates.
 			 */
-			if (candidateBounds.y != messageBounds.y || candidateBounds.x > messageBounds.x) {
+			if (!sameRenderedRow(candidate.widget, messageWidget.widget) || candidateBounds.x > messageBounds.x) {
 				continue;
 			}
 
@@ -1243,7 +1320,7 @@ public class ReferenceLayoutService {
 			/*
 			 * Sender and body must occupy the same rendered chat row.
 			 */
-			if (candidateBounds.y != messageBounds.y) {
+			if (!sameRenderedRow(candidate, messageWidget)) {
 				continue;
 			}
 
@@ -1280,8 +1357,8 @@ public class ReferenceLayoutService {
 	 * One PlayerReference may legitimately produce more than one physical
 	 * ReferenceHitbox if the reference itself crosses a visual line break.
 	 */
-	private void layoutMessage(
-			RenderedTextWidget renderedWidget, TaggedMessage message, Surface surface, List<ReferenceHitbox> output) {
+	private void layoutMessage(RenderedTextWidget renderedWidget, TaggedMessage message, Surface surface,
+			List<ReferenceHitbox> output, int horizontalOffset, int verticalOffset) {
 		final Widget widget = renderedWidget != null
 				? renderedWidget.widget
 				: null;
@@ -1291,7 +1368,7 @@ public class ReferenceLayoutService {
 		}
 
 		final FontTypeFace font = widget.getFont();
-		final Rectangle widgetBounds = widget.getBounds();
+		final Rectangle widgetBounds = offsetBounds(widget.getBounds(), horizontalOffset, verticalOffset);
 		final String rawWidgetText = renderedWidget.rawText;
 		final String semanticWidgetText = renderedWidget.semanticText;
 		if (font == null || widgetBounds == null || widgetBounds.width <= 0 || widgetBounds.height <= 0
@@ -1442,7 +1519,7 @@ public class ReferenceLayoutService {
 				if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0) {
 					continue;
 				}
-				if (candidateBounds.y != messageBounds.y || candidateBounds.x > messageBounds.x) {
+				if (!sameRenderedRow(candidate.widget, messageWidget.widget) || candidateBounds.x > messageBounds.x) {
 					continue;
 				}
 
@@ -1520,7 +1597,7 @@ public class ReferenceLayoutService {
 				 * Revalidate the row and left-of-body rule against current
 				 * geometry instead of trusting the advisory index.
 				 */
-				if (candidateBounds.y != messageBounds.y || candidateBounds.x > messageBounds.x) {
+				if (!sameRenderedRow(candidate.widget, messageWidget.widget) || candidateBounds.x > messageBounds.x) {
 					continue;
 				}
 
@@ -1543,14 +1620,14 @@ public class ReferenceLayoutService {
 				message.getId(), senderReference, surface, output);
 	}
 
-	private boolean isChatboxBodyGeometryStable(TaggedMessage message, RenderedTextWidget renderedWidget) {
+	private int resolveChatboxBodyXOffset(TaggedMessage message, RenderedTextWidget renderedWidget) {
 		if (message == null || renderedWidget == null || renderedWidget.widget == null) {
-			return false;
+			return CHATBOX_X_PENDING;
 		}
 
 		final Rectangle bounds = renderedWidget.widget.getBounds();
 		if (bounds == null || bounds.width <= 0 || bounds.height <= 0) {
-			return false;
+			return CHATBOX_X_PENDING;
 		}
 
 		final long messageId = message.getId();
@@ -1558,35 +1635,106 @@ public class ReferenceLayoutService {
 		final Integer acceptedX = acceptedChatboxBodyX.get(messageId);
 
 		/*
-		 * Once this horizontal body position has been accepted, ordinary
-		 * vertical movement remains live.
+		 * A temporary reconstructed X keeps rendering at the last accepted position.
 		 */
 		if (acceptedX != null && acceptedX == currentX) {
 			pendingChatboxBodyX.remove(messageId);
-			return true;
+			return 0;
 		}
 
 		final Integer pendingX = pendingChatboxBodyX.get(messageId);
-
-		/*
-		 * A new horizontal position becomes authoritative only after RuneScape
-		 * exposes the same X coordinate on two consecutive layout passes.
-		 */
 		if (pendingX != null && pendingX == currentX) {
 			pendingChatboxBodyX.remove(messageId);
 			acceptedChatboxBodyX.put(messageId, currentX);
-			return true;
+			return 0;
 		}
+
 		pendingChatboxBodyX.put(messageId, currentX);
-		return false;
+		return acceptedX != null
+				? acceptedX - currentX
+				: CHATBOX_X_PENDING;
+	}
+
+	private int resolveChatboxBodyYOffset(
+			TaggedMessage message, RenderedTextWidget renderedWidget, Widget surfaceWidget) {
+		final ChatboxBodyState currentState = chatboxBodyState(renderedWidget, surfaceWidget);
+		if (message == null || currentState == null) {
+			return 0;
+		}
+
+		final long messageId = message.getId();
+		final ChatboxBodyState stableState = stableChatboxBodyState(currentState);
+		final ChatboxBodyState acceptedState = acceptedChatboxBodyRows.get(messageId);
+		if (acceptedState == null) {
+			acceptedChatboxBodyRows.put(messageId, stableState);
+			return stableState.contentY - currentState.contentY;
+		}
+
+		/*
+		 * Keep correcting a stale canvas Y only while RuneScape still reports the
+		 * same physical row identity. A genuine OriginalY/RelativeY row move is
+		 * accepted immediately so the overlay follows the chat text without lag.
+		 */
+		if (acceptedState.rowKey != null && acceptedState.rowKey.equals(currentState.rowKey)) {
+			return acceptedState.contentY - currentState.contentY;
+		}
+
+		acceptedChatboxBodyRows.put(messageId, stableState);
+		return stableState.contentY - currentState.contentY;
+	}
+
+	private ChatboxBodyState chatboxBodyState(RenderedTextWidget renderedWidget, Widget surfaceWidget) {
+		if (renderedWidget == null || renderedWidget.widget == null || surfaceWidget == null) {
+			return null;
+		}
+
+		final Widget widget = renderedWidget.widget;
+		final Rectangle bounds = widget.getBounds();
+		final Rectangle surfaceBounds = surfaceWidget.getBounds();
+		final RowKey rowKey = RowKey.of(widget);
+		if (bounds == null || bounds.width <= 0 || bounds.height <= 0
+				|| surfaceBounds == null || surfaceBounds.height <= 0 || rowKey == null) {
+			return null;
+		}
+
+		final int contentY = bounds.y - surfaceBounds.y + surfaceWidget.getScrollY();
+		return new ChatboxBodyState(rowKey, contentY);
+	}
+
+	private static ChatboxBodyState stableChatboxBodyState(ChatboxBodyState state) {
+		if (state == null || state.rowKey == null) {
+			return state;
+		}
+
+		return new ChatboxBodyState(state.rowKey, state.rowKey.originalY);
+	}
+
+	private static boolean sameRenderedRow(Widget left, Widget right) {
+		if (left == null || right == null) {
+			return false;
+		}
+
+		final Rectangle leftBounds = left.getBounds();
+		final Rectangle rightBounds = right.getBounds();
+		return leftBounds != null && rightBounds != null && leftBounds.y == rightBounds.y;
+	}
+
+	private static Rectangle offsetBounds(Rectangle bounds, int horizontalOffset, int verticalOffset) {
+		if (bounds == null || (horizontalOffset == 0 && verticalOffset == 0)) {
+			return bounds;
+		}
+
+		final Rectangle adjusted = new Rectangle(bounds);
+		adjusted.x += horizontalOffset;
+		adjusted.y += verticalOffset;
+		return adjusted;
 	}
 
 	/*
-	 * Prunes horizontal stabilization state only for messages no longer retained
-	 * by RuneTags.
+	 * Prunes CHATBOX geometry state only for messages no longer retained by RuneTags.
 	 */
 	private void pruneChatboxBodyXState(List<TaggedMessage> messages) {
-		if (acceptedChatboxBodyX.isEmpty() && pendingChatboxBodyX.isEmpty()) {
+		if (acceptedChatboxBodyX.isEmpty() && pendingChatboxBodyX.isEmpty() && acceptedChatboxBodyRows.isEmpty()) {
 			return;
 		}
 
@@ -1604,11 +1752,13 @@ public class ReferenceLayoutService {
 
 		acceptedChatboxBodyX.keySet().removeIf(messageId -> !retainedMessageIds.contains(messageId));
 		pendingChatboxBodyX.keySet().removeIf(messageId -> !retainedMessageIds.contains(messageId));
+		acceptedChatboxBodyRows.keySet().removeIf(messageId -> !retainedMessageIds.contains(messageId));
 	}
 
 	public void clearChatboxBodyXState() {
 		acceptedChatboxBodyX.clear();
 		pendingChatboxBodyX.clear();
+		acceptedChatboxBodyRows.clear();
 	}
 
 	/*
@@ -1697,8 +1847,8 @@ public class ReferenceLayoutService {
 	 *
 	 * The physical message Widget has already been resolved by layoutSurface().
 	 */
-	private void layoutLocalHighlight(
-			RenderedTextWidget renderedWidget, TaggedMessage message, Surface surface, List<LocalHighlight> output) {
+	private void layoutLocalHighlight(RenderedTextWidget renderedWidget, TaggedMessage message, Surface surface,
+			List<LocalHighlight> output, int horizontalOffset, int verticalOffset) {
 		final Widget widget = renderedWidget != null
 				? renderedWidget.widget
 				: null;
@@ -1750,7 +1900,7 @@ public class ReferenceLayoutService {
 			final int end = start + loweredToken.length();
 			if (hasBoundaries(loweredMessage, start, end) && !overlapsPlayerReference(start, end, message)) {
 				final List<Rectangle> rectangles = layoutSemanticSpan(widget, rawWidgetText, semanticWidgetText,
-						messageStart + start, messageStart + end);
+						messageStart + start, messageStart + end, horizontalOffset, verticalOffset);
 				for (Rectangle bounds : rectangles) {
 					if (bounds == null || bounds.width <= 0 || bounds.height <= 0) {
 						continue;
@@ -1821,7 +1971,7 @@ public class ReferenceLayoutService {
 		}
 
 		final String semanticWidgetText = ChatText.toSemanticPlain(rawWidgetText);
-		return layoutSemanticSpan(widget, rawWidgetText, semanticWidgetText, semanticStart, semanticEnd);
+		return layoutSemanticSpan(widget, rawWidgetText, semanticWidgetText, semanticStart, semanticEnd, 0, 0);
 	}
 
 	/*
@@ -1829,7 +1979,7 @@ public class ReferenceLayoutService {
 	 * live reads so no reconstruction geometry is frozen in the semantic cache.
 	 */
 	private List<Rectangle> layoutSemanticSpan(Widget widget, String rawWidgetText, String semanticWidgetText,
-			int semanticStart, int semanticEnd) {
+			int semanticStart, int semanticEnd, int horizontalOffset, int verticalOffset) {
 		final List<Rectangle> output = new ArrayList<>();
 
 		if (widget == null || rawWidgetText == null || semanticWidgetText == null
@@ -1837,7 +1987,7 @@ public class ReferenceLayoutService {
 			return output;
 		}
 
-		final Rectangle widgetBounds = widget.getBounds();
+		final Rectangle widgetBounds = offsetBounds(widget.getBounds(), horizontalOffset, verticalOffset);
 		final FontTypeFace font = widget.getFont();
 		if (widgetBounds == null || widgetBounds.width <= 0 || widgetBounds.height <= 0 || font == null) {
 			return output;
