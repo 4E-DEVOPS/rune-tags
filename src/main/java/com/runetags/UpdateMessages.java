@@ -22,7 +22,7 @@ public final class UpdateMessages {
 			+ " Report any issues you find to Github.";
 	private static final String UNINSTALL_MESSAGE = "Thank you for using RuneTags!"
 			+ " Please submit a review/issue report on Github of your experience.";
-	private static final String UPDATE_MESSAGE = "Added Open Profile menu options to Friends List, Friends Chat, Clan Chat, GIM Chat, Guest Clan Chat, Raids (TOA+TOB), and Barbarian Assault interfaces!";
+	private static final String UPDATE_MESSAGE = "Stabilized the X/Y chat overlay references and layout for tags/mentions with the <shad=ffffff>ChatXL</shad> plugin.";
 
 	private final Client client;
 	private final ClientThread clientThread;
