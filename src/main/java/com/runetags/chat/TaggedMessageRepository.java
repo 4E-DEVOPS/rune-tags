@@ -89,9 +89,11 @@ public class TaggedMessageRepository {
 	}
 
 	/*
-	 * Returns only retained semantic messages which can match one of the
+	 * Returns retained semantic candidates whose bodies can match one of the
 	 * currently rendered physical bodies. Results remain newest-first.
 	 *
+	 * Body indexing narrows the candidate set only; ReferenceLayoutService still
+	 * confirms sender ownership before a player-authored row is assigned.
 	 * Exact bodies apply to every chat type. Case-folded candidates are private
 	 * only, matching ReferenceLayoutService's existing compatibility fallback.
 	 */

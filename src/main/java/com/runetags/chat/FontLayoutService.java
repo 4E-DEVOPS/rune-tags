@@ -5,8 +5,10 @@ import com.runetags.config.MentionFont;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.runelite.api.Client;
 import net.runelite.api.FontID;
@@ -50,6 +52,12 @@ public class FontLayoutService {
 	 */
 	private final Map<Integer, FontTypeFace> fontCache = new HashMap<>();
 
+	/*
+	 * Semantic occurrences already consumed by the current native reconstruction
+	 * batch. This preserves newest-to-newest ownership for repeated sender/body pairs.
+	 */
+	private final Set<Long> constructedMessageIds = new HashSet<>();
+
 	public FontLayoutService(
 			Client client,
 			Configurations config,
@@ -84,6 +92,7 @@ public class FontLayoutService {
 		fontsDirty = false;
 
 		referenceLayoutService.syncMentionFonts();
+		constructedMessageIds.clear();
 
 		return true;
 	}
@@ -94,6 +103,10 @@ public class FontLayoutService {
 	public void onScriptPreFired(ScriptPreFired event) {
 		if (event == null || !isSupportedConstructionScript(event.getScriptId())) {
 			return;
+		}
+
+		if (!fontsDirty) {
+			constructedMessageIds.clear();
 		}
 
 		/*
@@ -258,8 +271,8 @@ public class FontLayoutService {
 	 * newest-first and identical body text can legitimately occur multiple
 	 * times.
 	 *
-	 * Sender/prefix matching is used when possible to disambiguate identical
-	 * message bodies across players/channels.
+	 * Player-authored messages require sender/prefix confirmation. Repeated
+	 * sender/body pairs are consumed newest-first within one reconstruction batch.
 	 */
 	private TaggedMessage findTaggedMessage(
 			String semanticBody, Object[] objectStack, int objectStackSize, List<TaggedMessage> messages) {
@@ -267,34 +280,35 @@ public class FontLayoutService {
 			return null;
 		}
 
-		TaggedMessage bodyFallback = null;
+		TaggedMessage senderlessFallback = null;
 
 		for (int i = messages.size() - 1; i >= 0; i--) {
 			final TaggedMessage message = messages.get(i);
-			if (message == null
-				|| message.getOriginalMessage() == null || !message.getOriginalMessage().equals(semanticBody)) {
+			if (message == null || constructedMessageIds.contains(message.getId())
+					|| message.getOriginalMessage() == null
+					|| !message.getOriginalMessage().equals(semanticBody)) {
 				continue;
-			}
-
-			if (!hasMentionFontTreatment(message)) {
-				continue;
-			}
-
-			if (bodyFallback == null) {
-				bodyFallback = message;
 			}
 
 			final String sender = message.getCanonicalSender();
 			if (sender == null || sender.isEmpty()) {
-				return message;
+				if (senderlessFallback == null) {
+					senderlessFallback = message;
+				}
+				continue;
 			}
 
 			if (prefixContainsSender(objectStack, objectStackSize, semanticBody, sender)) {
+				constructedMessageIds.add(message.getId());
 				return message;
 			}
 		}
 
-		return bodyFallback;
+		if (senderlessFallback != null) {
+			constructedMessageIds.add(senderlessFallback.getId());
+		}
+
+		return senderlessFallback;
 	}
 
 	private boolean prefixContainsSender(Object[] stack, int size, String semanticBody, String sender) {
