@@ -97,6 +97,13 @@ public class FontLayoutService {
 		}
 
 		/*
+		 * Invalidate cached physical row membership before RuneScape rebuilds the
+		 * supported chat surface. The next synchronization/layout pass rediscovers
+		 * membership while final geometry remains live every render.
+		 */
+		referenceLayoutService.invalidateRenderedWidgetCaches();
+
+		/*
 		 * Supported row reconstruction invalidates RuneTags font ownership and Favorite
 		 * sender presentation.
 		 */

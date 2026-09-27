@@ -126,19 +126,22 @@ public class ReferenceLayoutService {
 	}
 
 	/*
-	 * Pass-local semantic text snapshot for one rendered Widget.
+	 * Pass-local semantic text and bounds snapshot for one rendered Widget.
 	 *
-	 * Bounds and FontTypeFace remain live reads during geometry.
+	 * Cached bounds drive indexing only. Final ownership and output geometry still
+	 * revalidate against the live Widget so reconstruction races remain observable.
 	 */
 	private static final class RenderedTextWidget {
 		private final Widget widget;
 		private final String rawText;
 		private final String semanticText;
+		private final Rectangle bounds;
 
-		private RenderedTextWidget(Widget widget, String rawText, String semanticText) {
+		private RenderedTextWidget(Widget widget, String rawText, String semanticText, Rectangle bounds) {
 			this.widget = widget;
 			this.rawText = rawText;
 			this.semanticText = semanticText;
+			this.bounds = bounds;
 		}
 	}
 
@@ -197,6 +200,8 @@ public class ReferenceLayoutService {
 		private final Map<String, List<RenderedTextWidget>> bodyIndex = new HashMap<>();
 		private final Map<String, List<RenderedTextWidget>> caseFoldedBodyIndex = new HashMap<>();
 		private final List<RenderedTextWidget> whitespaceBodies = new ArrayList<>();
+		private final Set<String> exactBodies = new HashSet<>();
+		private final Set<String> foldedBodies = new HashSet<>();
 
 		private RenderedBodyIndex(List<RenderedTextWidget> widgets) {
 			if (widgets == null) {
@@ -212,16 +217,18 @@ public class ReferenceLayoutService {
 				if (semantic == null || semantic.isEmpty()) {
 					continue;
 				}
+
+				exactBodies.add(semantic);
 				if (semantic.trim().isEmpty()) {
 					whitespaceBodies.add(rendered);
-
 					continue;
 				}
 
 				bodyIndex.computeIfAbsent(semantic, ignored -> new ArrayList<>()).add(rendered);
 
-				caseFoldedBodyIndex.computeIfAbsent(
-						semantic.toLowerCase(Locale.ROOT), ignored -> new ArrayList<>()).add(rendered);
+				final String folded = semantic.toLowerCase(Locale.ROOT);
+				foldedBodies.add(folded);
+				caseFoldedBodyIndex.computeIfAbsent(folded, ignored -> new ArrayList<>()).add(rendered);
 			}
 		}
 
@@ -249,10 +256,18 @@ public class ReferenceLayoutService {
 					? candidates
 					: Collections.emptyList();
 		}
+
+		private Set<String> exactBodies() {
+			return exactBodies;
+		}
+
+		private Set<String> foldedBodies() {
+			return foldedBodies;
+		}
 	}
 
 	/*
-	 * Stable physical row identity used independently
+	 * Stable physical row identity used by RuneScape/Big Bold Chat independently
 	 * from the transient canvas Y coordinate.
 	 */
 	private static final class RowKey {
@@ -307,10 +322,60 @@ public class ReferenceLayoutService {
 	}
 
 	/*
+	 * Cross-frame semantic ownership cache. Final geometry is never cached.
+	 *
+	 * Cached ownership is reused only while the same physical Widget still
+	 * exposes the same semantic body and stable RowKey. A rebuilt/recycled row
+	 * falls back to normal live correlation immediately.
+	 */
+	private static final class CachedOwnership {
+		private final Widget widget;
+		private final String semanticBody;
+		private final RowKey rowKey;
+
+		private CachedOwnership(Widget widget, String semanticBody, RowKey rowKey) {
+			this.widget = widget;
+			this.semanticBody = semanticBody;
+			this.rowKey = rowKey;
+		}
+	}
+
+	/*
+	 * One reusable text-bearing Widget discovered beneath a chat surface.
+	 *
+	 * Membership is stable across ordinary render frames. Raw/semantic text remains
+	 * mutable because RuneScape recycles the same Widget for newer chat rows.
+	 */
+	private static final class CachedRenderedWidget {
+		private final Widget widget;
+		private String rawText;
+		private String semanticText;
+
+		private CachedRenderedWidget(Widget widget) {
+			this.widget = widget;
+		}
+	}
+
+	/*
+	 * Cross-frame text-Widget membership cache for one physical chat surface.
+	 *
+	 * Native reconstruction and repository revision changes both force rediscovery,
+	 * while bounds, hidden state, RowKey, and final geometry remain live every pass.
+	 */
+	private static final class RenderedSurfaceCache {
+		private Widget root;
+		private final List<CachedRenderedWidget> widgets = new ArrayList<>();
+		private int topologySignature;
+		private long repositoryRevision = Long.MIN_VALUE;
+		private boolean dirty = true;
+	}
+
+	/*
 	 * Every indexed candidate is revalidated against live bounds before it can confirm message ownership.
 	 */
 	private static final class RenderedRowIndex {
 		private final Map<Integer, List<RenderedTextWidget>> rowIndex = new HashMap<>();
+		private final Map<Widget, RenderedTextWidget> widgetIndex = new IdentityHashMap<>();
 
 		private RenderedRowIndex(List<RenderedTextWidget> widgets) {
 			if (widgets == null) {
@@ -318,16 +383,12 @@ public class ReferenceLayoutService {
 			}
 
 			for (RenderedTextWidget rendered : widgets) {
-				if (rendered == null || rendered.widget == null || rendered.widget.isHidden()) {
+				if (rendered == null || rendered.widget == null || rendered.bounds == null) {
 					continue;
 				}
 
-				final Rectangle bounds = rendered.widget.getBounds();
-				if (bounds == null || bounds.width <= 0 || bounds.height <= 0) {
-					continue;
-				}
-
-				rowIndex.computeIfAbsent(bounds.y, ignored -> new ArrayList<>()).add(rendered);
+				rowIndex.computeIfAbsent(rendered.bounds.y, ignored -> new ArrayList<>()).add(rendered);
+				widgetIndex.put(rendered.widget, rendered);
 			}
 		}
 
@@ -336,6 +397,10 @@ public class ReferenceLayoutService {
 			return candidates != null
 					? candidates
 					: Collections.emptyList();
+		}
+
+		private RenderedTextWidget rendered(Widget widget) {
+			return widgetIndex.get(widget);
 		}
 	}
 
@@ -351,14 +416,20 @@ public class ReferenceLayoutService {
 	 * A reconstructed CHATBOX body can briefly expose recycled horizontal or
 	 * canvas geometry before RuneScape finishes positioning the row.
 	 *
-	 * X-changes are confirmed across consecutive layout passes while rendering
-	 * continues from the last accepted X.
-	 * Y-correction applies only while the
+	 * X changes are confirmed across consecutive layout passes while rendering
+	 * continues from the last accepted X. Y correction applies only while the
 	 * physical row identity itself remains unchanged.
 	 */
 	private final Map<Long, Integer> acceptedChatboxBodyX = new HashMap<>();
 	private final Map<Long, Integer> pendingChatboxBodyX = new HashMap<>();
 	private final Map<Long, ChatboxBodyState> acceptedChatboxBodyRows = new HashMap<>();
+
+	private final Map<Long, CachedOwnership> chatboxOwnershipCache = new HashMap<>();
+	private final Map<Long, CachedOwnership> splitPrivateOwnershipCache = new HashMap<>();
+	private final RenderedSurfaceCache chatboxRenderedSurfaceCache = new RenderedSurfaceCache();
+	private final RenderedSurfaceCache splitPrivateRenderedSurfaceCache = new RenderedSurfaceCache();
+	private long lastGeometryPruneRevision = Long.MIN_VALUE;
+
 
 	private boolean favoriteSenderRowsDirty = true;
 	private long lastFavoriteRevision = Long.MIN_VALUE;
@@ -374,6 +445,16 @@ public class ReferenceLayoutService {
 		this.config = config;
 		this.repository = repository;
 		this.localPlayerRecordService = localPlayerRecordService;
+	}
+
+	/*
+	 * Native chat reconstruction can replace or recycle descendants while preserving
+	 * the same surface root. Invalidate membership before the construction script runs
+	 * so the next synchronization/layout pass rediscovers the physical row Widgets.
+	 */
+	public void invalidateRenderedWidgetCaches() {
+		chatboxRenderedSurfaceCache.dirty = true;
+		splitPrivateRenderedSurfaceCache.dirty = true;
 	}
 
 	/*
@@ -475,14 +556,13 @@ public class ReferenceLayoutService {
 		}
 
 		final List<RenderedTextWidget> textWidgets = new ArrayList<>();
-		final Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
 
 		/*
 		 * Use a null viewport just like font synchronization. Retained off-screen
 		 * rows can later scroll into view without native reconstruction, so their
 		 * Favorite sender color must already be correct.
 		 */
-		collectRenderedTextWidgets(chatbox, Surface.CHATBOX, null, textWidgets, visited, 0);
+		collectRenderedTextWidgets(chatbox, Surface.CHATBOX, null, textWidgets);
 		if (textWidgets.isEmpty()) {
 			return;
 		}
@@ -727,8 +807,7 @@ public class ReferenceLayoutService {
 		}
 
 		final List<RenderedTextWidget> textWidgets = new ArrayList<>();
-		final Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-		collectRenderedTextWidgets(surfaceWidget, surface, null, textWidgets, visited, 0);
+		collectRenderedTextWidgets(surfaceWidget, surface, null, textWidgets);
 
 		final RenderedBodyIndex bodyIndex = new RenderedBodyIndex(textWidgets);
 		final RenderedRowIndex rowIndex = new RenderedRowIndex(textWidgets);
@@ -799,12 +878,15 @@ public class ReferenceLayoutService {
 		}
 
 		RenderedTextWidget bodyFallback = null;
+		int unusedCandidateCount = 0;
+
 		for (RenderedTextWidget rendered : candidates) {
 			if (rendered == null || rendered.widget == null
 					|| usedWidgets.contains(rendered.widget) || rendered.widget.isHidden()) {
 				continue;
 			}
 
+			unusedCandidateCount++;
 			if (bodyFallback == null) {
 				bodyFallback = rendered;
 			}
@@ -814,7 +896,16 @@ public class ReferenceLayoutService {
 			}
 		}
 
-		return bodyFallback;
+		/*
+		 * Body-only fallback is safe only when one unused physical body remains,
+		 * or when this semantic message has no sender to disambiguate.
+		 *
+		 * Never guess between identical bodies from different players.
+		 */
+		final String sender = message.getCanonicalSender();
+		return bodyFallback != null && (unusedCandidateCount == 1 || sender == null || sender.isEmpty())
+				? bodyFallback
+				: null;
 	}
 
 	/*
@@ -823,21 +914,15 @@ public class ReferenceLayoutService {
 	 * A TaggedMessage may resolve independently on CHATBOX and SPLIT_PRIVATE.
 	 */
 	public LayoutResult layout() {
-		final List<TaggedMessage> messages = new ArrayList<>(repository.snapshot());
-		pruneChatboxBodyXState(messages);
 
 		final List<ReferenceHitbox> hitboxes = new ArrayList<>();
 		final List<LocalHighlight> localHighlights = new ArrayList<>();
 
-		if (messages.isEmpty()) {
+		pruneGeometryStateIfRepositoryChanged();
+
+		if (repository.size() == 0) {
 			return new LayoutResult(hitboxes, localHighlights);
 		}
-
-		/*
-		 * Visible RuneScape chat is newest-first, so search semantic messages
-		 * in the same direction.
-		 */
-		Collections.reverse(messages);
 
 		final boolean includeLocalHighlights = shouldLayoutLocalHighlights();
 
@@ -846,10 +931,8 @@ public class ReferenceLayoutService {
 		 *
 		 * One TaggedMessage may legitimately resolve on both.
 		 */
-		layoutSurface(client.getWidget(InterfaceID.PmChat.CONTAINER), Surface.SPLIT_PRIVATE, messages, hitboxes,
-				localHighlights, includeLocalHighlights);
-		layoutSurface(client.getWidget(InterfaceID.Chatbox.SCROLLAREA), Surface.CHATBOX, messages, hitboxes,
-				localHighlights, includeLocalHighlights);
+		layoutSurface(client.getWidget(InterfaceID.PmChat.CONTAINER), Surface.SPLIT_PRIVATE, hitboxes, localHighlights, includeLocalHighlights);
+		layoutSurface(client.getWidget(InterfaceID.Chatbox.SCROLLAREA), Surface.CHATBOX, hitboxes, localHighlights, includeLocalHighlights);
 
 		return new LayoutResult(hitboxes, localHighlights);
 	}
@@ -857,19 +940,17 @@ public class ReferenceLayoutService {
 	/*
 	 * Layout semantic messages against one physical RuneScape chat surface.
 	 *
-	 * Widget ownership is unique only within this surface pass. The same
-	 * TaggedMessage may therefore resolve independently against another
-	 * physical surface.
+	 * Visible physical body text seeds the semantic candidate list, so retained
+	 * messages which cannot possibly own a current row never enter correlation.
+	 * Widget ownership remains unique only within this surface pass.
 	 */
-	private void layoutSurface(Widget surfaceWidget, Surface surface,
-			List<TaggedMessage> messages, List<ReferenceHitbox> output,
+	private void layoutSurface(Widget surfaceWidget, Surface surface, List<ReferenceHitbox> output,
 			List<LocalHighlight> localHighlights, boolean includeLocalHighlights) {
 		if (surfaceWidget == null || surfaceWidget.isHidden()) {
 			return;
 		}
 
 		final List<RenderedTextWidget> textWidgets = new ArrayList<>();
-
 		Rectangle visibleBounds = null;
 
 		/*
@@ -878,54 +959,44 @@ public class ReferenceLayoutService {
 		 */
 		if (surface == Surface.CHATBOX) {
 			visibleBounds = surfaceWidget.getBounds();
-
 			if (visibleBounds == null || visibleBounds.width <= 0 || visibleBounds.height <= 0) {
 				return;
 			}
 		}
 
-		final Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-		collectRenderedTextWidgets(surfaceWidget, surface, visibleBounds, textWidgets, visited, 0);
+		collectRenderedTextWidgets(surfaceWidget, surface, visibleBounds, textWidgets);
 		if (textWidgets.isEmpty()) {
 			return;
 		}
 
 		final RenderedBodyIndex bodyIndex = new RenderedBodyIndex(textWidgets);
-
-		/*
-		 * Reuse the advisory row index for body sender confirmation and sender-hitbox lookup.
-		 * Indexed candidates are always revalidated against live geometry.
-		 */
 		final RenderedRowIndex rowIndex = new RenderedRowIndex(textWidgets);
 
-		/*
-		 * One physical text widget may represent only one TaggedMessage
-		 * during this surface pass.
-		 *
-		 * This is intentionally surface-local. A semantic message may have a
-		 * separate physical widget on another surface.
-		 */
+		final List<TaggedMessage> messages = repository.snapshotMatchingBodies(
+				bodyIndex.exactBodies(), bodyIndex.foldedBodies(), surface == Surface.SPLIT_PRIVATE);
+		if (messages.isEmpty()) {
+			return;
+		}
+
 		final Set<Widget> usedWidgets = Collections.newSetFromMap(new IdentityHashMap<>());
+		final Map<Long, CachedOwnership> ownershipCache = ownershipCache(surface);
 
 		for (TaggedMessage message : messages) {
 			if (message == null) {
 				continue;
 			}
 
-			/*
-			 * Restrict SPLIT_PRIVATE ownership to private-message semantic records.
-			 */
-			if (surface == Surface.SPLIT_PRIVATE && !isPrivateMessage(message)) {
-				continue;
-			}
-
-			final RenderedTextWidget messageWidget =
-					findRenderedWidgetForMessage(message, textWidgets, bodyIndex, rowIndex, usedWidgets, surface);
+			RenderedTextWidget messageWidget = findCachedOwnership(message, rowIndex, textWidgets, usedWidgets, ownershipCache);
 			if (messageWidget == null) {
+				messageWidget = findRenderedWidgetForMessage(message, textWidgets, bodyIndex, rowIndex, usedWidgets, surface);
+			}
+			if (messageWidget == null || !isLiveRenderedCandidate(messageWidget)) {
 				continue;
 			}
 
 			usedWidgets.add(messageWidget.widget);
+			final RowKey ownershipRow = RowKey.of(messageWidget.widget);
+			ownershipCache.put(message.getId(), new CachedOwnership(messageWidget.widget, messageWidget.semanticText, ownershipRow));
 
 			final int horizontalOffset;
 			final int verticalOffset;
@@ -941,33 +1012,92 @@ public class ReferenceLayoutService {
 				verticalOffset = 0;
 			}
 
-			/*
-			 * Body references and sender interaction are deliberately laid
-			 * out independently.
-			 *
-			 * A message may contain no @tag or recognized mention and still
-			 * need a clickable SENDER when Clickable Players = ALL.
-			 */
 			layoutMessage(messageWidget, message, surface, output, horizontalOffset, verticalOffset);
 
-			/*
-			 * Sender geometry comes from a separate Widget. Do not publish it while
-			 * body geometry is being held at an accepted CHATBOX position.
-			 */
 			if (horizontalOffset == 0 && verticalOffset == 0) {
 				layoutSender(messageWidget, message, surface, textWidgets, rowIndex, output);
 			}
 
-			/*
-			 * Reuse the same semantic -> physical Widget ownership for non-clickable
-			 * Unique Highlight / normalized-self backgrounds.
-			 */
 			if (includeLocalHighlights) {
 				layoutLocalHighlight(messageWidget, message, surface, localHighlights, horizontalOffset, verticalOffset);
 			}
-
 		}
+
 	}
+
+	private RenderedTextWidget findCachedOwnership(TaggedMessage message, RenderedRowIndex rowIndex,
+			List<RenderedTextWidget> allWidgets, Set<Widget> usedWidgets, Map<Long, CachedOwnership> ownershipCache) {
+		if (message == null || rowIndex == null || usedWidgets == null || ownershipCache == null) {
+			return null;
+		}
+
+		final CachedOwnership cached = ownershipCache.get(message.getId());
+		if (cached == null || cached.widget == null || usedWidgets.contains(cached.widget)) {
+			return null;
+		}
+
+		final RenderedTextWidget rendered = rowIndex.rendered(cached.widget);
+		final RowKey currentRowKey = rendered != null ? RowKey.of(rendered.widget) : null;
+		if (rendered == null || currentRowKey == null || !currentRowKey.equals(cached.rowKey)) {
+			return null;
+		}
+		if (!sameSemanticBody(message, rendered.semanticText, cached.semanticBody)) {
+			return null;
+		}
+
+		final String sender = message.getCanonicalSender();
+		if (sender != null && !sender.isEmpty() && !hasRenderedSenderOnRow(rendered, message, rowIndex, allWidgets)) {
+			return null;
+		}
+
+		return rendered;
+	}
+
+	private static boolean sameSemanticBody(TaggedMessage message, String currentBody, String cachedBody) {
+		if (message == null || currentBody == null || cachedBody == null || !currentBody.equals(cachedBody)) {
+			return false;
+		}
+
+		final String original = message.getOriginalMessage();
+		if (original == null) {
+			return false;
+		}
+		if (original.equals(currentBody)) {
+			return true;
+		}
+
+		return isPrivateMessage(message) && original.equalsIgnoreCase(currentBody);
+	}
+
+	private static boolean isLiveRenderedCandidate(RenderedTextWidget rendered) {
+		if (rendered == null || rendered.widget == null || rendered.widget.isHidden()) {
+			return false;
+		}
+
+		final Rectangle bounds = rendered.widget.getBounds();
+		return bounds != null && bounds.width > 0 && bounds.height > 0;
+	}
+
+	private Map<Long, CachedOwnership> ownershipCache(Surface surface) {
+		return surface == Surface.SPLIT_PRIVATE
+				? splitPrivateOwnershipCache
+				: chatboxOwnershipCache;
+	}
+
+	private void pruneGeometryStateIfRepositoryChanged() {
+		final long revision = repository.getRevision();
+		if (revision == lastGeometryPruneRevision) {
+			return;
+		}
+
+		final Set<Long> retainedMessageIds = repository.snapshotRetainedIds();
+		pruneChatboxBodyXState(retainedMessageIds);
+		chatboxOwnershipCache.keySet().removeIf(messageId -> !retainedMessageIds.contains(messageId));
+		splitPrivateOwnershipCache.keySet().removeIf(messageId -> !retainedMessageIds.contains(messageId));
+		lastGeometryPruneRevision = revision;
+	}
+
+
 
 	/*
 	 * Apply the configured mention font to one owned physical message Widget.
@@ -1113,6 +1243,7 @@ public class ReferenceLayoutService {
 		}
 
 		RenderedTextWidget bodyFallback = null;
+		int unusedCandidateCount = 0;
 
 		for (RenderedTextWidget rendered : candidates) {
 			if (rendered == null || rendered.widget == null
@@ -1120,6 +1251,7 @@ public class ReferenceLayoutService {
 				continue;
 			}
 
+			unusedCandidateCount++;
 			if (bodyFallback == null) {
 				bodyFallback = rendered;
 			}
@@ -1129,46 +1261,89 @@ public class ReferenceLayoutService {
 			}
 		}
 
-		return bodyFallback;
+		/*
+		 * When multiple unused Widgets expose the same body text and a sender is known,
+		 * require sender confirmation instead of assigning whichever body appears first.
+		 *
+		 * During transient reconstruction this may skip one pass, which is safer than
+		 * publishing another player's sender/reference ownership.
+		 */
+		final String sender = message.getCanonicalSender();
+		return bodyFallback != null && (unusedCandidateCount == 1 || sender == null || sender.isEmpty())
+				? bodyFallback
+				: null;
 	}
 
 	/*
 	 * Confirm sender ownership using same-row candidates when possible.
 	 *
-	 * Candidate bounds are re-read live. If the advisory row index cannot confirm
-	 * the sender, fall back to the complete semantic Widget list so transient
-	 * reconstruction cannot invalidate ownership.
+	 * The indexed path uses pass-local bounds and revalidates only a sender match.
+	 * If that cannot confirm ownership, the complete semantic Widget list remains
+	 * the live reconstruction fallback.
 	 */
 	private boolean hasRenderedSenderOnRow(RenderedTextWidget messageWidget, TaggedMessage message,
 			RenderedRowIndex rowIndex, List<RenderedTextWidget> widgets) {
-		if (messageWidget == null || messageWidget.widget == null || message == null || rowIndex == null
-				|| widgets == null) {
+		if (messageWidget == null || messageWidget.widget == null || message == null || rowIndex == null || widgets == null) {
 			return false;
 		}
 
-		final Rectangle messageBounds = messageWidget.widget.getBounds();
+		final Rectangle messageBounds = messageWidget.bounds;
 		final String sender = message.getCanonicalSender();
-		if (messageBounds == null || messageBounds.width <= 0 || messageBounds.height <= 0 || sender == null
-				|| sender.isEmpty()) {
+		if (messageBounds == null || sender == null || sender.isEmpty()) {
 			return false;
 		}
 
 		final List<RenderedTextWidget> indexedCandidates = rowIndex.candidates(messageBounds.y);
-		if (hasRenderedSenderInCandidates(messageWidget, messageBounds, sender, indexedCandidates)) {
+		if (hasRenderedSenderInIndexedCandidates(messageWidget, messageBounds, sender, indexedCandidates)) {
 			return true;
 		}
 
 		/*
-		 * The row index is advisory only. If RuneScape moved a sender Widget after
-		 * index construction, fall back to the complete semantic Widget list.
+		 * The pass-local row index handles the normal path without repeated Widget
+		 * reads. Retain the original full live scan only as a reconstruction safety
+		 * fallback when the indexed snapshot cannot confirm ownership.
 		 */
-		return hasRenderedSenderInCandidates(messageWidget, messageBounds, sender, widgets);
+		return hasRenderedSenderInLiveCandidates(messageWidget, sender, widgets);
 	}
 
-	private boolean hasRenderedSenderInCandidates(RenderedTextWidget messageWidget, Rectangle messageBounds,
+	private static boolean hasRenderedSenderInIndexedCandidates(RenderedTextWidget messageWidget, Rectangle messageBounds,
 			String sender, List<RenderedTextWidget> candidates) {
-		if (messageWidget == null || messageWidget.widget == null || messageBounds == null || sender == null
+		if (messageWidget == null || messageBounds == null || sender == null
 				|| sender.isEmpty() || candidates == null || candidates.isEmpty()) {
+			return false;
+		}
+
+		for (RenderedTextWidget candidate : candidates) {
+			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget
+					|| candidate.bounds == null || candidate.bounds.x > messageBounds.x) {
+				continue;
+			}
+			if (indexOfName(candidate.semanticText, sender) < 0) {
+				continue;
+			}
+
+			final Rectangle liveMessageBounds = messageWidget.widget.getBounds();
+			final Rectangle liveCandidateBounds = candidate.widget.getBounds();
+			if (liveMessageBounds != null && liveCandidateBounds != null
+					&& liveCandidateBounds.y == liveMessageBounds.y
+					&& liveCandidateBounds.x <= liveMessageBounds.x
+					&& !candidate.widget.isHidden()) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static boolean hasRenderedSenderInLiveCandidates(
+			RenderedTextWidget messageWidget, String sender, List<RenderedTextWidget> candidates) {
+		if (messageWidget == null || messageWidget.widget == null || sender == null
+				|| sender.isEmpty() || candidates == null || candidates.isEmpty()) {
+			return false;
+		}
+
+		final Rectangle messageBounds = messageWidget.widget.getBounds();
+		if (messageBounds == null || messageBounds.width <= 0 || messageBounds.height <= 0) {
 			return false;
 		}
 
@@ -1179,15 +1354,8 @@ public class ReferenceLayoutService {
 			}
 
 			final Rectangle candidateBounds = candidate.widget.getBounds();
-			if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0) {
-				continue;
-			}
-
-			/*
-			 * Revalidate the row and left-of-body ownership rule against live
-			 * geometry. The advisory index never overrides current coordinates.
-			 */
-			if (!sameRenderedRow(candidate.widget, messageWidget.widget) || candidateBounds.x > messageBounds.x) {
+			if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0
+					|| candidateBounds.y != messageBounds.y || candidateBounds.x > messageBounds.x) {
 				continue;
 			}
 
@@ -1252,6 +1420,8 @@ public class ReferenceLayoutService {
 
 		final boolean whitespaceOnly = needle.trim().isEmpty();
 		Widget bodyFallback = null;
+		int unusedCandidateCount = 0;
+
 		for (Widget widget : widgets) {
 			if (widget == null || usedWidgets.contains(widget) || widget.isHidden()) {
 				continue;
@@ -1277,6 +1447,7 @@ public class ReferenceLayoutService {
 				continue;
 			}
 
+			unusedCandidateCount++;
 			if (bodyFallback == null) {
 				bodyFallback = widget;
 			}
@@ -1286,7 +1457,10 @@ public class ReferenceLayoutService {
 			}
 		}
 
-		return bodyFallback;
+		final String sender = message.getCanonicalSender();
+		return bodyFallback != null && (unusedCandidateCount == 1 || sender == null || sender.isEmpty())
+				? bodyFallback
+				: null;
 	}
 
 	/*
@@ -1478,67 +1652,82 @@ public class ReferenceLayoutService {
 	private RenderedSenderMatch findChatboxSender(RenderedTextWidget messageWidget, String sender,
 			List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex) {
 		if (messageWidget == null || messageWidget.widget == null || sender == null || sender.isEmpty()
-				|| textWidgets == null || rowIndex == null) {
+				|| textWidgets == null || rowIndex == null || messageWidget.bounds == null) {
 			return null;
 		}
 
-		final Rectangle messageBounds = messageWidget.widget.getBounds();
-		if (messageBounds == null) {
-			return null;
-		}
-
-		/*
-		 * Prefer only Widgets observed on the body's current Y row. The row
-		 * index is advisory: every candidate is revalidated against live bounds.
-		 *
-		 * If no sender is found, retry against the complete semantic Widget list
-		 * so transient native reconstruction cannot create an ownership failure.
-		 */
 		RenderedTextWidget senderWidget = null;
 		int senderStart = -1;
+		int bestCandidateX = Integer.MIN_VALUE;
 
-		final List<RenderedTextWidget> indexedCandidates = rowIndex.candidates(messageBounds.y);
-		for (int pass = 0; pass < 2 && senderWidget == null; pass++) {
-			final List<RenderedTextWidget> candidates = pass == 0
-					? indexedCandidates
-					: textWidgets;
-
-			if (candidates == null || candidates.isEmpty()) {
+		final List<RenderedTextWidget> indexedCandidates = rowIndex.candidates(messageWidget.bounds.y);
+		for (RenderedTextWidget candidate : indexedCandidates) {
+			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget
+					|| candidate.bounds == null || candidate.bounds.x > messageWidget.bounds.x) {
 				continue;
 			}
 
-			int bestCandidateX = Integer.MIN_VALUE;
-
-			for (RenderedTextWidget candidate : candidates) {
-				if (candidate == null || candidate.widget == null
-						|| candidate.widget == messageWidget.widget || candidate.widget.isHidden()) {
-					continue;
-				}
-
-				final Rectangle candidateBounds = candidate.widget.getBounds();
-				if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0) {
-					continue;
-				}
-				if (!sameRenderedRow(candidate.widget, messageWidget.widget) || candidateBounds.x > messageBounds.x) {
-					continue;
-				}
-
-				final int candidateSenderStart = indexOfName(candidate.semanticText, sender);
-				if (candidateSenderStart < 0) {
-					continue;
-				}
-
-				if (senderWidget == null || candidateBounds.x > bestCandidateX) {
-					senderWidget = candidate;
-					senderStart = candidateSenderStart;
-					bestCandidateX = candidateBounds.x;
-				}
+			final int candidateSenderStart = indexOfName(candidate.semanticText, sender);
+			if (candidateSenderStart < 0 || candidate.bounds.x <= bestCandidateX) {
+				continue;
 			}
+
+			senderWidget = candidate;
+			senderStart = candidateSenderStart;
+			bestCandidateX = candidate.bounds.x;
+		}
+
+		if (senderWidget != null && senderStart >= 0 && isLiveSenderCandidate(senderWidget, messageWidget)) {
+			return new RenderedSenderMatch(senderWidget, senderStart);
+		}
+
+		senderWidget = null;
+		senderStart = -1;
+		bestCandidateX = Integer.MIN_VALUE;
+
+		final Rectangle liveMessageBounds = messageWidget.widget.getBounds();
+		if (liveMessageBounds == null) {
+			return null;
+		}
+
+		for (RenderedTextWidget candidate : textWidgets) {
+			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget
+					|| candidate.widget.isHidden()) {
+				continue;
+			}
+
+			final Rectangle candidateBounds = candidate.widget.getBounds();
+			if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0
+					|| candidateBounds.y != liveMessageBounds.y || candidateBounds.x > liveMessageBounds.x) {
+				continue;
+			}
+
+			final int candidateSenderStart = indexOfName(candidate.semanticText, sender);
+			if (candidateSenderStart < 0 || candidateBounds.x <= bestCandidateX) {
+				continue;
+			}
+
+			senderWidget = candidate;
+			senderStart = candidateSenderStart;
+			bestCandidateX = candidateBounds.x;
 		}
 
 		return senderWidget != null && senderStart >= 0
 				? new RenderedSenderMatch(senderWidget, senderStart)
 				: null;
+	}
+
+	private static boolean isLiveSenderCandidate(RenderedTextWidget senderWidget, RenderedTextWidget messageWidget) {
+		if (senderWidget == null || senderWidget.widget == null || messageWidget == null
+				|| messageWidget.widget == null || senderWidget.widget.isHidden()) {
+			return false;
+		}
+
+		final Rectangle senderBounds = senderWidget.widget.getBounds();
+		final Rectangle messageBounds = messageWidget.widget.getBounds();
+		return senderBounds != null && messageBounds != null
+				&& senderBounds.width > 0 && senderBounds.height > 0
+				&& senderBounds.y == messageBounds.y && senderBounds.x <= messageBounds.x;
 	}
 
 	/*
@@ -1548,15 +1737,9 @@ public class ReferenceLayoutService {
 	 * Matching does not depend on fixed child indices, account-name length,
 	 * or message X position.
 	 */
-	private void layoutSplitPrivateSender(
-			RenderedTextWidget messageWidget, TaggedMessage message, PlayerReference senderReference, Surface surface,
-			List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex, List<ReferenceHitbox> output) {
-		if (messageWidget == null || messageWidget.widget == null || rowIndex == null) {
-			return;
-		}
-
-		final Rectangle messageBounds = messageWidget.widget.getBounds();
-		if (messageBounds == null) {
+	private void layoutSplitPrivateSender(RenderedTextWidget messageWidget, TaggedMessage message, PlayerReference senderReference,
+			Surface surface, List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex, List<ReferenceHitbox> output) {
+		if (messageWidget == null || messageWidget.widget == null || rowIndex == null || messageWidget.bounds == null) {
 			return;
 		}
 
@@ -1565,39 +1748,41 @@ public class ReferenceLayoutService {
 			return;
 		}
 
-		/*
-		 * Prefer advisory same-row candidates while preserving SPLIT_PRIVATE's
-		 * native-order first-match behavior. Every candidate is checked against live
-		 * geometry, with the complete semantic list as a fallback.
-		 */
 		RenderedTextWidget senderWidget = null;
 		int senderStart = -1;
 
-		final List<RenderedTextWidget> indexedCandidates = rowIndex.candidates(messageBounds.y);
-		for (int pass = 0; pass < 2 && senderWidget == null; pass++) {
-			final List<RenderedTextWidget> candidates = pass == 0
-					? indexedCandidates
-					: textWidgets;
-			if (candidates == null || candidates.isEmpty()) {
+		final List<RenderedTextWidget> indexedCandidates = rowIndex.candidates(messageWidget.bounds.y);
+		for (RenderedTextWidget candidate : indexedCandidates) {
+			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget
+					|| candidate.bounds == null || candidate.bounds.x > messageWidget.bounds.x) {
 				continue;
 			}
 
-			for (RenderedTextWidget candidate : candidates) {
+			final int candidateSenderStart = indexOfName(candidate.semanticText, sender);
+			if (candidateSenderStart < 0 || !isLiveSenderCandidate(candidate, messageWidget)) {
+				continue;
+			}
+
+			senderWidget = candidate;
+			senderStart = candidateSenderStart;
+			break;
+		}
+
+		if (senderWidget == null) {
+			final Rectangle liveMessageBounds = messageWidget.widget.getBounds();
+			if (liveMessageBounds == null) {
+				return;
+			}
+
+			for (RenderedTextWidget candidate : textWidgets) {
 				if (candidate == null || candidate.widget == null
 						|| candidate.widget == messageWidget.widget || candidate.widget.isHidden()) {
 					continue;
 				}
 
 				final Rectangle candidateBounds = candidate.widget.getBounds();
-				if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0) {
-					continue;
-				}
-
-				/*
-				 * Revalidate the row and left-of-body rule against current
-				 * geometry instead of trusting the advisory index.
-				 */
-				if (!sameRenderedRow(candidate.widget, messageWidget.widget) || candidateBounds.x > messageBounds.x) {
+				if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0
+						|| candidateBounds.y != liveMessageBounds.y || candidateBounds.x > liveMessageBounds.x) {
 					continue;
 				}
 
@@ -1605,6 +1790,7 @@ public class ReferenceLayoutService {
 				if (candidateSenderStart < 0) {
 					continue;
 				}
+
 				senderWidget = candidate;
 				senderStart = candidateSenderStart;
 				break;
@@ -1733,21 +1919,14 @@ public class ReferenceLayoutService {
 	/*
 	 * Prunes CHATBOX geometry state only for messages no longer retained by RuneTags.
 	 */
-	private void pruneChatboxBodyXState(List<TaggedMessage> messages) {
+	private void pruneChatboxBodyXState(Set<Long> retainedMessageIds) {
 		if (acceptedChatboxBodyX.isEmpty() && pendingChatboxBodyX.isEmpty() && acceptedChatboxBodyRows.isEmpty()) {
 			return;
 		}
 
-		if (messages == null || messages.isEmpty()) {
+		if (retainedMessageIds == null || retainedMessageIds.isEmpty()) {
 			clearChatboxBodyXState();
 			return;
-		}
-
-		final Set<Long> retainedMessageIds = new HashSet<>(messages.size());
-		for (TaggedMessage message : messages) {
-			if (message != null) {
-				retainedMessageIds.add(message.getId());
-			}
 		}
 
 		acceptedChatboxBodyX.keySet().removeIf(messageId -> !retainedMessageIds.contains(messageId));
@@ -1759,6 +1938,9 @@ public class ReferenceLayoutService {
 		acceptedChatboxBodyX.clear();
 		pendingChatboxBodyX.clear();
 		acceptedChatboxBodyRows.clear();
+		chatboxOwnershipCache.clear();
+		splitPrivateOwnershipCache.clear();
+		lastGeometryPruneRevision = Long.MIN_VALUE;
 	}
 
 	/*
@@ -2342,48 +2524,152 @@ public class ReferenceLayoutService {
 	/*
 	 * Collects pass-local semantic text for eligible rendered Widgets.
 	 *
-	 * CHATBOX candidate inclusion is viewport-aware without pruning child traversal.
-	 * SPLIT_PRIVATE collects its complete populated surface. Bounds and fonts remain live.
+	 * Cache only text-bearing Widget membership instead of every font-capable
+	 * descendant. Native reconstruction or semantic repository revision changes
+	 * force rediscovery, while text, visibility, and geometry remain live reads.
 	 */
-	private void collectRenderedTextWidgets(Widget widget, Surface surface, Rectangle visibleBounds,
-			List<RenderedTextWidget> output, Set<Widget> visited, int depth) {
-		if (widget == null || depth > MAX_WIDGET_DEPTH || !visited.add(widget)) {
+	private void collectRenderedTextWidgets(Widget surfaceWidget, Surface surface, Rectangle visibleBounds,
+			List<RenderedTextWidget> output) {
+		if (surfaceWidget == null || surface == null || output == null) {
 			return;
 		}
 
-		/*
-		 * Cache semantic ownership state only; resolve FontTypeFace later from the live Widget.
-		 */
-		if (!widget.isHidden()) {
-			final String rawText = widget.getText();
-			if (rawText != null && !rawText.isEmpty()) {
-				final Rectangle bounds = widget.getBounds();
-				if (bounds != null && bounds.width > 0 && bounds.height > 0) {
-					final boolean visibleForLayout = surface != Surface.CHATBOX
-							|| visibleBounds == null || visibleBounds.intersects(bounds);
+		final RenderedSurfaceCache cache = renderedSurfaceCache(surface);
+		final int topologySignature = surfaceTopologySignature(surfaceWidget);
+		final long repositoryRevision = repository.getRevision();
+		final boolean requiresRebuild = cache.root != surfaceWidget || cache.dirty
+				|| cache.topologySignature != topologySignature || cache.repositoryRevision != repositoryRevision;
 
-					if (visibleForLayout && widget.getFontId() != -1) {
-						final String semanticText = ChatText.toSemanticPlain(rawText);
-						output.add(new RenderedTextWidget(widget, rawText, semanticText));
-					}
+		boolean staleMembership = false;
+		if (!requiresRebuild) {
+			for (CachedRenderedWidget cached : cache.widgets) {
+				if (cached == null || cached.widget == null || !isDescendantOrSelf(surfaceWidget, cached.widget)) {
+					staleMembership = true;
+					break;
 				}
 			}
 		}
 
-		collectRenderedTextChildren(widget.getChildren(), surface, visibleBounds, output, visited, depth + 1);
-		collectRenderedTextChildren(widget.getStaticChildren(), surface, visibleBounds, output, visited, depth + 1);
-		collectRenderedTextChildren(widget.getNestedChildren(), surface, visibleBounds, output, visited, depth + 1);
+		if (requiresRebuild || staleMembership) {
+			rebuildRenderedSurfaceCache(cache, surfaceWidget, topologySignature, repositoryRevision);
+		}
+
+
+		for (CachedRenderedWidget cached : cache.widgets) {
+			addCachedRenderedTextWidget(cached, surface, visibleBounds, output);
+		}
 	}
 
-	private void collectRenderedTextChildren(Widget[] children, Surface surface, Rectangle visibleBounds,
-			List<RenderedTextWidget> output, Set<Widget> visited, int depth) {
+	private void addCachedRenderedTextWidget(CachedRenderedWidget cached, Surface surface, Rectangle visibleBounds,
+			List<RenderedTextWidget> output) {
+		if (cached == null || cached.widget == null || cached.widget.isHidden() || cached.widget.getFont() == null) {
+			return;
+		}
+
+		final String rawText = cached.widget.getText();
+		if (rawText == null || rawText.isEmpty()) {
+			return;
+		}
+
+		final Rectangle bounds = cached.widget.getBounds();
+		if (bounds == null || bounds.width <= 0 || bounds.height <= 0) {
+			return;
+		}
+
+		if (surface == Surface.CHATBOX && visibleBounds != null && !visibleBounds.intersects(bounds)) {
+			return;
+		}
+
+		final String semanticText;
+		if (rawText.equals(cached.rawText) && cached.semanticText != null) {
+			semanticText = cached.semanticText;
+		} else {
+			semanticText = ChatText.toSemanticPlain(rawText);
+			cached.rawText = rawText;
+			cached.semanticText = semanticText;
+		}
+
+		output.add(new RenderedTextWidget(cached.widget, rawText, semanticText, new Rectangle(bounds)));
+	}
+
+	private void rebuildRenderedSurfaceCache(RenderedSurfaceCache cache, Widget surfaceWidget, int topologySignature,
+			long repositoryRevision) {
+		cache.root = surfaceWidget;
+		cache.widgets.clear();
+
+		final Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+		discoverRenderedSurfaceWidgets(surfaceWidget, cache.widgets, visited, 0);
+
+		cache.topologySignature = topologySignature;
+		cache.repositoryRevision = repositoryRevision;
+		cache.dirty = false;
+	}
+
+	private void discoverRenderedSurfaceWidgets(Widget widget, List<CachedRenderedWidget> output, Set<Widget> visited, int depth) {
+		if (widget == null || depth > MAX_WIDGET_DEPTH || !visited.add(widget)) {
+			return;
+		}
+
+		final String rawText = widget.getText();
+		if (rawText != null && !rawText.isEmpty() && widget.getFont() != null) {
+			final CachedRenderedWidget cached = new CachedRenderedWidget(widget);
+			cached.rawText = rawText;
+			cached.semanticText = ChatText.toSemanticPlain(rawText);
+			output.add(cached);
+		}
+
+		discoverRenderedSurfaceChildren(widget.getChildren(), output, visited, depth + 1);
+		discoverRenderedSurfaceChildren(widget.getStaticChildren(), output, visited, depth + 1);
+		discoverRenderedSurfaceChildren(widget.getNestedChildren(), output, visited, depth + 1);
+	}
+
+	private void discoverRenderedSurfaceChildren(Widget[] children, List<CachedRenderedWidget> output, Set<Widget> visited, int depth) {
 		if (children == null) {
 			return;
 		}
 
 		for (Widget child : children) {
-			collectRenderedTextWidgets(child, surface, visibleBounds, output, visited, depth);
+			discoverRenderedSurfaceWidgets(child, output, visited, depth);
 		}
+	}
+
+	private RenderedSurfaceCache renderedSurfaceCache(Surface surface) {
+		return surface == Surface.SPLIT_PRIVATE
+				? splitPrivateRenderedSurfaceCache
+				: chatboxRenderedSurfaceCache;
+	}
+
+	private static int surfaceTopologySignature(Widget surfaceWidget) {
+		if (surfaceWidget == null) {
+			return 0;
+		}
+
+		int result = System.identityHashCode(surfaceWidget);
+		result = 31 * result + widgetArrayIdentitySignature(surfaceWidget.getChildren());
+		result = 31 * result + widgetArrayIdentitySignature(surfaceWidget.getStaticChildren());
+		result = 31 * result + widgetArrayIdentitySignature(surfaceWidget.getNestedChildren());
+		return result;
+	}
+
+	private static int widgetArrayIdentitySignature(Widget[] widgets) {
+		if (widgets == null || widgets.length == 0) {
+			return 0;
+		}
+
+		int result = widgets.length;
+		for (Widget widget : widgets) {
+			result = 31 * result + System.identityHashCode(widget);
+		}
+		return result;
+	}
+
+	private static boolean isDescendantOrSelf(Widget root, Widget widget) {
+		for (Widget current = widget; current != null; current = current.getParent()) {
+			if (current == root) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/*
