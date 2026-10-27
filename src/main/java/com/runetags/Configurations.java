@@ -108,7 +108,7 @@ public interface Configurations extends Config {
 
 	@ConfigItem(
 			keyName = "favoriteColor",
-			name = " └─ Color",
+			name = " ├─ Color",
 			description = "Color used for favorited player names and indicators.",
 			section = recordDetailsSection,
 			position = 2
@@ -118,11 +118,33 @@ public interface Configurations extends Config {
 	}
 
 	@ConfigItem(
+			keyName = "favoriteNameLocation",
+			name = " ├─ Name",
+			description = "Position of Favorite player names in the scene.",
+			section = recordDetailsSection,
+			position = 3
+	)
+	default FavoriteOptions.FavoriteNameLocation favoriteNameLocation() {
+		return FavoriteOptions.FavoriteNameLocation.ABOVE;
+	}
+
+	@ConfigItem(
+			keyName = "favoriteHighlightMode",
+			name = " └─ Highlight",
+			description = "Favorite tile and model-outline rendering mode.",
+			section = recordDetailsSection,
+			position = 4
+	)
+	default FavoriteOptions.FavoriteHighlightMode favoriteHighlightMode() {
+		return FavoriteOptions.FavoriteHighlightMode.BOTH;
+	}
+
+	@ConfigItem(
 			keyName = "showNotes",
 			name = "Notes",
 			description = "Enable player Notes within RuneTags profiles.",
 			section = recordDetailsSection,
-			position = 3
+			position = 5
 	)
 	default boolean showNotes() {
 		return true;
@@ -139,7 +161,7 @@ public interface Configurations extends Config {
 					+ "which is not controlled or verified by the RuneLite developers.<br>"
 					+ "<b>Do you want to enable this feature?</b></html>",
 			section = recordDetailsSection,
-			position = 4
+			position = 6
 	)
 	default boolean showReports() {
 		return false;

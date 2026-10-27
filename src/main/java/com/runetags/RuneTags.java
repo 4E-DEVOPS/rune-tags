@@ -33,6 +33,7 @@ import com.runetags.mention.TagParser;
 import com.runetags.notification.MentionNotificationService;
 import com.runetags.overlay.ChatReferenceOverlay;
 import com.runetags.overlay.FavoriteOverlay;
+import com.runetags.overlay.NameOverlay;
 import com.runetags.overlay.QuickProfileOverlay;
 import com.runetags.overlay.TargetMinimapOverlay;
 import com.runetags.overlay.TargetOverlay;
@@ -48,6 +49,8 @@ import com.runetags.target.PlayerVisibilityService;
 import com.runetags.target.TargetController;
 
 import java.awt.Point;
+import java.awt.Color;
+import java.util.Locale;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -102,6 +105,7 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.events.PartyChanged;
 import net.runelite.client.game.WorldService;
+import net.runelite.client.game.ChatIconManager;
 import net.runelite.client.game.chatbox.ChatboxPanelManager;
 import net.runelite.client.hiscore.HiscoreClient;
 import net.runelite.client.input.KeyManager;
@@ -123,6 +127,7 @@ import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
 import net.runelite.client.ui.overlay.tooltip.TooltipManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
+import net.runelite.client.util.ColorUtil;
 
 import okhttp3.OkHttpClient;
 
@@ -153,6 +158,8 @@ public class RuneTags extends Plugin {
 	private ClientToolbar clientToolbar;
 	@Inject
 	private ConfigManager configManager;
+	@Inject
+	private ChatIconManager chatIconManager;
 	@Inject
 	private Configurations config;
 	@Inject
@@ -257,6 +264,7 @@ public class RuneTags extends Plugin {
 	private QuickProfileOverlay quickProfileOverlay;
 
 	private FavoriteOverlay favoriteOverlay;
+	private NameOverlay nameOverlay;
 
 	/*
 	 * Targeting / player visibility.
@@ -319,74 +327,31 @@ public class RuneTags extends Plugin {
 		playerLookupService = new PlayerLookupService(config);
 		clanLookupService = new ClanLookupService();
 		reportCaseService = new ReportCaseService(okHttpClient, gson, clientThread, config);
-		quickProfileController = new QuickProfileController(
-				client,
-				clientThread,
-				playerDirectory,
-				hiscoreEnrichmentService,
-				efficiencyMetricService,
-				config,
-				playerContextService,
-				partyContextService,
-				profileMetricResolver,
-				targetController,
-				playerLookupService,
-				clanLookupService,
-				reportCaseService,
-				localPlayerRecordService,
-				chatboxPanelManager);
-		quickProfileOverlay = new QuickProfileOverlay(
-				client,
-				config,
-				runeLiteConfig,
-				quickProfileController,
-				tooltipManager);
-		favoriteOverlay = new FavoriteOverlay(client, config, localPlayerRecordService, modelOutlineRenderer);
-		targetOverlay = new TargetOverlay(client, config, targetController, modelOutlineRenderer);
+		quickProfileController = new QuickProfileController(client, clientThread, playerDirectory, hiscoreEnrichmentService, efficiencyMetricService, config, playerContextService, partyContextService, profileMetricResolver, targetController, playerLookupService, clanLookupService, reportCaseService, localPlayerRecordService, chatboxPanelManager);
+		quickProfileOverlay = new QuickProfileOverlay(client, config, runeLiteConfig, quickProfileController, tooltipManager);
+		favoriteOverlay = new FavoriteOverlay(client, config, localPlayerRecordService, targetController, modelOutlineRenderer, partyService);
+		targetOverlay = new TargetOverlay(client, config, targetController, modelOutlineRenderer, localPlayerRecordService, favoriteOverlay);
+		nameOverlay = new NameOverlay(client, config, localPlayerRecordService, targetController, favoriteOverlay, overlayManager, chatIconManager, partyService, configManager);
 		targetMinimapOverlay = new TargetMinimapOverlay(client, config, targetController);
 
 		// 4. Mention notifications / persistent history
 		mentionNotificationService = new MentionNotificationService(client, config, notifier);
 		mentionHistoryService.reload();
-		mentionHistoryPanel = new MentionHistoryPanel(
-				client,
-				config,
-				mentionHistoryService,
-				quickProfileController,
-				localPlayerRecordService);
+		mentionHistoryPanel = new MentionHistoryPanel(client, config, mentionHistoryService, quickProfileController, localPlayerRecordService);
 		final BufferedImage historyIcon = ImageUtil.loadImageResource(RuneTags.class, "sidebar_icon.png");
-		mentionHistoryNavigation = NavigationButton.builder()
-				.tooltip("RuneTags")
-				.icon(historyIcon)
-				.priority(8)
-				.panel(mentionHistoryPanel)
-				.build();
+		mentionHistoryNavigation = NavigationButton.builder().tooltip("RuneTags").icon(historyIcon).priority(8).panel(mentionHistoryPanel).build();
 
 		// 5. Structured chat storage / geometry / interaction
 		messageRepository = new TaggedMessageRepository(MESSAGE_REPOSITORY_CAPACITY);
 		nativeBootstrapService = new NativeBootstrapService(client, playerDirectory, chatProcessor, messageRepository);
 		chatHitboxRegistry = new ChatHitboxRegistry();
-		referenceLayoutService = new ReferenceLayoutService(
-				client,
-				config,
-				messageRepository,
-				localPlayerRecordService);
+		referenceLayoutService = new ReferenceLayoutService(client, config, messageRepository, localPlayerRecordService);
 		// Font resolution depends on finalized message ownership and layout state.
 		fontLayoutService = new FontLayoutService(client, config, messageRepository, referenceLayoutService);
-		chatReferenceOverlay = new ChatReferenceOverlay(
-				referenceLayoutService,
-				chatHitboxRegistry,
-				client,
-				config,
-				localMentionMatcher);
+		chatReferenceOverlay = new ChatReferenceOverlay(referenceLayoutService, chatHitboxRegistry, client, config, localMentionMatcher);
 		suggestionService = new SuggestionService(client, clientThread, config, playerDirectory);
 		suggestionOverlay = new SuggestionOverlay(client, suggestionService);
-		inputListener = new InputListener(
-				client,
-				config,
-				chatHitboxRegistry,
-				quickProfileController,
-				suggestionService);
+		inputListener = new InputListener(client, config, chatHitboxRegistry, quickProfileController, suggestionService);
 		interfaceInput = new InterfaceInput(client, config, quickProfileController);
 		minigameInput = new MinigameInput(client, config, quickProfileController);
 		raidInterfaces = new RaidInterfaces(client, config, quickProfileController);
@@ -449,6 +414,7 @@ public class RuneTags extends Plugin {
 		overlayManager.add(chatReferenceOverlay);
 		overlayManager.add(favoriteOverlay);
 		overlayManager.add(targetOverlay);
+		overlayManager.add(nameOverlay);
 		overlayManager.add(targetMinimapOverlay);
 		overlayManager.add(quickProfileOverlay);
 		overlayManager.add(suggestionOverlay);
@@ -522,6 +488,10 @@ public class RuneTags extends Plugin {
 
 		if (targetMinimapOverlay != null) {
 			overlayManager.remove(targetMinimapOverlay);
+		}
+
+		if (nameOverlay != null) {
+			overlayManager.remove(nameOverlay);
 		}
 
 		if (targetOverlay != null) {
@@ -615,6 +585,7 @@ public class RuneTags extends Plugin {
 		targetMinimapOverlay = null;
 		targetOverlay = null;
 		favoriteOverlay = null;
+		nameOverlay = null;
 
 		quickProfileController = null;
 
@@ -829,6 +800,9 @@ public class RuneTags extends Plugin {
 		if (referenceLayoutService != null) {
 			referenceLayoutService.syncFavoriteSenderColorsIfNeeded();
 		}
+
+		// Player Indicators colors menu targets during ClientTick; apply RuneTags afterward.
+		recolorPlayerMenuEntries(client.getMenuEntries());
 
 		if (localPlayerRecordService != null) {
 			final long favoriteUiRevision = localPlayerRecordService.getFavoriteRevision();
@@ -1379,6 +1353,105 @@ public class RuneTags extends Plugin {
 		if (inputListener != null) {
 			inputListener.onMenuOpened(event);
 		}
+
+		if (event != null) {
+			recolorPlayerMenuEntries(event.getMenuEntries());
+		}
+	}
+
+	/**
+	 * Recolors only the player-name target plus Follow (Favorite) / Trade (Target).
+	 * Leaves Report, Lookup, Open Profile, Walk, and every other action's label alone.
+	 * Keeps rank <img> tags and combat-level suffixes supplied by the client/PI.
+	 */
+	private void recolorPlayerMenuEntries(MenuEntry[] entries) {
+		if (entries == null || localPlayerRecordService == null) {
+			return;
+		}
+		for (MenuEntry entry : entries) {
+			if (entry == null || !isPlayerMenuType(entry.getType())) {
+				continue;
+			}
+			final Player player = entry.getPlayer();
+			if (player == null || player.getName() == null) {
+				continue;
+			}
+			final boolean isFavorite = config.showFavorites()
+					&& localPlayerRecordService.isFavorite(player.getName());
+			final boolean isTarget = config.targetPlayerOption() && targetController != null
+					&& targetController.isTargetingName(player.getName());
+			if (!isFavorite && !isTarget) {
+				continue;
+			}
+			final Color favoriteColor = config.favoriteColor() != null
+					? config.favoriteColor()
+					: new Color(255, 205, 70);
+			final Color targetColor = config.targetColor() != null
+					? config.targetColor()
+					: new Color(80, 100, 255);
+			entry.setTarget(recolorPlayerTarget(entry.getTarget(), isFavorite
+					? favoriteColor
+					: targetColor));
+			final String option = Text.removeTags(entry.getOption());
+			if (option == null) {
+				continue;
+			}
+			if (isTarget && (option.equalsIgnoreCase("Trade with") || option.equalsIgnoreCase("Trade"))) {
+				entry.setOption(ColorUtil.wrapWithColorTag(option, targetColor));
+			} else if (isFavorite && option.equalsIgnoreCase("Follow")) {
+				entry.setOption(ColorUtil.wrapWithColorTag(option, favoriteColor));
+			}
+		}
+	}
+
+	private static boolean isPlayerMenuType(MenuAction type) {
+		if (type == null) {
+			return false;
+		}
+		switch (type) {
+			case PLAYER_FIRST_OPTION:
+			case PLAYER_SECOND_OPTION:
+			case PLAYER_THIRD_OPTION:
+			case PLAYER_FOURTH_OPTION:
+			case PLAYER_FIFTH_OPTION:
+			case PLAYER_SIXTH_OPTION:
+			case PLAYER_SEVENTH_OPTION:
+			case PLAYER_EIGHTH_OPTION:
+			case RUNELITE_PLAYER:
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	private static String recolorPlayerTarget(String target, Color color) {
+		if (target == null || target.isEmpty() || color == null) {
+			return target;
+		}
+		final String hex = String.format(Locale.ROOT, "%02x%02x%02x",
+				color.getRed(), color.getGreen(), color.getBlue());
+		// PI generally inserts <img=rank><col=...>name<col=...> (level-n).
+		// Replace the first color tag rather than rebuilding the string: preserve
+		// all rank icons, suffixes, and subsequent client-supplied color tags.
+		final int colorStart = target.toLowerCase(Locale.ROOT).indexOf("<col=");
+		if (colorStart >= 0) {
+			final int colorEnd = target.indexOf('>', colorStart);
+			if (colorEnd > colorStart) {
+				return target.substring(0, colorStart) + "<col=" + hex + ">"
+						+ target.substring(colorEnd + 1);
+			}
+		}
+		// No color tag supplied: insert after any leading <img> decorations.
+		int insertion = 0;
+		while (target.regionMatches(true, insertion, "<img=", 0, 5)) {
+			final int imageEnd = target.indexOf('>', insertion);
+			if (imageEnd < 0) {
+				break;
+			}
+			insertion = imageEnd + 1;
+		}
+		return target.substring(0, insertion) + "<col=" + hex + ">"
+				+ target.substring(insertion);
 	}
 
 	@Subscribe

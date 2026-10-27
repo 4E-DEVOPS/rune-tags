@@ -2,6 +2,8 @@ package com.runetags.overlay;
 
 import com.runetags.Configurations;
 import com.runetags.config.TargetMode;
+import com.runetags.config.FavoriteOptions.FavoriteHighlightMode;
+import com.runetags.records.LocalPlayerRecordService;
 import com.runetags.target.TargetController;
 
 import java.awt.BasicStroke;
@@ -25,22 +27,27 @@ import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
 public class TargetOverlay extends Overlay {
 	private static final int OUTLINE_WIDTH = 2;
 	private static final int OUTLINE_FEATHER = 4;
-	private static final int NAME_HEIGHT_OFFSET = 40;
-
+	
 	private final Client client;
 	private final Configurations config;
 	private final TargetController targetController;
 	private final ModelOutlineRenderer modelOutlineRenderer;
+	private final LocalPlayerRecordService records;
+	private final FavoriteOverlay favoriteOverlay;
 
 	public TargetOverlay(
 			Client client,
 			Configurations config,
 			TargetController targetController,
-			ModelOutlineRenderer modelOutlineRenderer) {
+			ModelOutlineRenderer modelOutlineRenderer,
+			LocalPlayerRecordService records,
+			FavoriteOverlay favoriteOverlay) {
 		this.client = client;
 		this.config = config;
 		this.targetController = targetController;
 		this.modelOutlineRenderer = modelOutlineRenderer;
+		this.records = records;
+		this.favoriteOverlay = favoriteOverlay;
 
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
@@ -57,22 +64,36 @@ public class TargetOverlay extends Overlay {
 		if (target == null) {
 			return null;
 		}
-		final Color targetColor = config.targetColor();
-		final TargetMode targetMode = config.targetMode();
-		if (targetMode.showsOutline()) {
-			modelOutlineRenderer.drawOutline(target, OUTLINE_WIDTH, targetColor, OUTLINE_FEATHER);
+		final boolean favorite = config.showFavorites()
+				&& records != null && target.getName() != null
+				&& records.isFavorite(target.getName())
+				&& favoriteOverlay != null && favoriteOverlay.canHighlightFavorite(target);
+		final Color configuredColor = favorite ? config.favoriteColor() : config.targetColor();
+		final Color targetColor = configuredColor != null ? configuredColor
+				: (favorite ? new Color(255, 205, 70) : new Color(80, 100, 255, 200));
+		final TargetMode targetMode = config.targetMode() != null ? config.targetMode() : TargetMode.OFF;
+		final FavoriteHighlightMode favoriteMode = config.favoriteHighlightMode() != null
+				? config.favoriteHighlightMode() : FavoriteHighlightMode.BOTH;
+		final boolean outline = favorite ? favoriteMode.showsOutline() : targetMode.showsOutline();
+		final boolean tile = favorite ? favoriteMode.showsTile() : targetMode.showsTile();
+		if (outline) {
+			// Preserve FavoriteOverlay's scene alpha behavior for gold highlights.
+			final Color outlineColor = favorite
+					? new Color(targetColor.getRed(), targetColor.getGreen(), targetColor.getBlue(),
+						Math.min(200, targetColor.getAlpha())) : targetColor;
+			modelOutlineRenderer.drawOutline(target, OUTLINE_WIDTH, outlineColor, OUTLINE_FEATHER);
 		}
-		if (targetMode.showsTile()) {
+		if (tile) {
 			final Polygon tilePoly = target.getCanvasTilePoly();
 			if (tilePoly != null) {
-				OverlayUtil.renderPolygon(graphics, tilePoly, targetColor);
+				final Color tileColor = favorite
+						? new Color(targetColor.getRed(), targetColor.getGreen(), targetColor.getBlue(),
+							Math.min(200, targetColor.getAlpha())) : targetColor;
+				OverlayUtil.renderPolygon(graphics, tilePoly, tileColor);
 			}
 		}
 		if (config.targetLine()) {
 			drawTargetLine(graphics, target, targetColor);
-		}
-		if (config.targetName()) {
-			drawTargetName(graphics, target, targetColor);
 		}
 
 		return null;
@@ -109,17 +130,4 @@ public class TargetOverlay extends Overlay {
 		}
 	}
 
-	private static void drawTargetName(Graphics2D graphics, Player target, Color color) {
-		final String name = target.getName();
-		if (name == null || name.isEmpty()) {
-			return;
-		}
-
-		final Point textLocation = target.getCanvasTextLocation(
-				graphics, name,
-				target.getLogicalHeight() + NAME_HEIGHT_OFFSET);
-		if (textLocation != null) {
-			OverlayUtil.renderTextLocation(graphics, textLocation, name, color);
-		}
-	}
 }
