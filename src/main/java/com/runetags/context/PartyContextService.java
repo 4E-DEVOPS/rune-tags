@@ -11,8 +11,7 @@ import java.util.Map;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.client.party.PartyMember;
 import net.runelite.client.party.PartyService;
-import net.runelite.client.plugins.party.messages.LocationUpdate;
-import net.runelite.client.plugins.party.messages.StatusUpdate;
+import net.runelite.client.party.messages.PartyData;
 
 /**
  * Tracks recent RuneLite Party location context by stable member ID and normalized player name.
@@ -37,66 +36,51 @@ public class PartyContextService {
 		this.nameNormalizer = nameNormalizer;
 	}
 
-	public void onLocationUpdate(LocationUpdate event) {
+	/**
+	 * RuneLite 1.13.4 sends partial PartyData updates instead of the former
+	 * LocationUpdate/StatusUpdate messages. A name and a coordinate can arrive
+	 * independently; keep the existing location when only the name changes.
+	 */
+	public void onPartyData(PartyData event) {
 		if (event == null || partyService == null) {
 			return;
 		}
 
 		removeExpired();
 
-		final WorldPoint worldPoint = event.getWorldPoint();
-		if (worldPoint == null) {
-			return;
-		}
-
 		final long memberId = event.getMemberId();
 		final PartyMember member = partyService.getMemberById(memberId);
-		final PartyContext previous = contextsByMemberId.get(memberId);
-		final String memberName = canonicalPartyName(
-				member != null
-						? member.getDisplayName()
-						: null);
-		final String playerName = memberName != null
-				? memberName
-				: previous != null
-						? previous.getPlayerName()
-						: null;
-		final int regionId = worldPoint.getRegionID();
-		final String locationName = locationIndex != null
-				? locationIndex.findName(regionId)
-				: null;
-
-		putContext(new PartyContext(memberId, playerName, regionId, locationName, System.currentTimeMillis()));
-	}
-
-	/*
-	 * Binds a Party member ID to the character name supplied by StatusUpdate.
-	 */
-	public void onStatusUpdate(StatusUpdate event) {
-		if (event == null || event.getCharacterName() == null) {
+		if (member == null) {
 			return;
 		}
 
-		removeExpired();
-
-		final long memberId = event.getMemberId();
-		final String playerName = canonicalPartyName(event.getCharacterName());
-		if (playerName == null) {
+		final PartyContext previous = contextsByMemberId.get(memberId);
+		final String characterNameUpdate = event.getCharacterName();
+		if (characterNameUpdate != null && canonicalPartyName(characterNameUpdate) == null) {
+			// A blank character-name update means the member logged out.
 			remove(memberId);
 			return;
 		}
 
-		final PartyContext previous = contextsByMemberId.get(memberId);
-		if (previous == null) {
-			return;
-		}
+		final String playerName = characterNameUpdate != null
+				? canonicalPartyName(characterNameUpdate)
+				: previous != null && previous.getPlayerName() != null
+						? previous.getPlayerName()
+						: canonicalPartyName(member.getDisplayName());
 
-		putContext(new PartyContext(
-				memberId,
-				playerName,
-				previous.getRegionId(),
-				previous.getLocationName(),
-				previous.getUpdatedAtMillis()));
+		final Integer packedCoord = event.getCoord();
+		if (packedCoord != null) {
+			final WorldPoint worldPoint = WorldPoint.fromCoord(packedCoord);
+			final int regionId = worldPoint.getRegionID();
+			final String locationName = locationIndex != null
+					? locationIndex.findName(regionId)
+					: null;
+			putContext(new PartyContext(memberId, playerName, regionId, locationName, System.currentTimeMillis()));
+		} else if (characterNameUpdate != null && previous != null) {
+			// Do not extend location freshness for a name-only update.
+			putContext(new PartyContext(
+					memberId, playerName, previous.getRegionId(), previous.getLocationName(), previous.getUpdatedAtMillis()));
+		}
 	}
 
 	public PartyContext find(String playerName) {

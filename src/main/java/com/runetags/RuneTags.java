@@ -107,14 +107,15 @@ import net.runelite.client.hiscore.HiscoreClient;
 import net.runelite.client.input.KeyManager;
 import net.runelite.client.input.MouseManager;
 import net.runelite.client.menus.MenuManager;
+import net.runelite.client.party.PartyDataService;
+import net.runelite.client.party.PartyDataType;
 import net.runelite.client.party.PartyMember;
 import net.runelite.client.party.PartyService;
 import net.runelite.client.party.events.UserJoin;
 import net.runelite.client.party.events.UserPart;
+import net.runelite.client.party.messages.PartyData;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.plugins.party.messages.LocationUpdate;
-import net.runelite.client.plugins.party.messages.StatusUpdate;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
@@ -178,6 +179,8 @@ public class RuneTags extends Plugin {
 	private OverlayManager overlayManager;
 	@Inject
 	private PartyService partyService;
+	@Inject
+	private PartyDataService partyDataService;
 	@Inject
 	private Provider<MenuManager> menuManager;
 	@Inject
@@ -307,6 +310,8 @@ public class RuneTags extends Plugin {
 		profileMetricResolver = new ProfileMetricResolver();
 		playerContextService = new PlayerContextService(client, playerLocationService, profileMetricResolver);
 		partyContextService = new PartyContextService(partyService, locationIndex, nameNormalizer);
+		// Request Party names/coordinates even when the native Party UI is disabled.
+		partyDataService.subscribe(this, PartyDataType.CHARACTER_NAME, PartyDataType.COORD);
 
 		// 3. Targeting / lookup / Quick Profile
 		targetController = new TargetController(client, config);
@@ -460,6 +465,7 @@ public class RuneTags extends Plugin {
 	@Override
 	protected void shutDown() {
 		final boolean uninstalling = updateMessages.prepareShutdown();
+		partyDataService.unsubscribe(this, PartyDataType.CHARACTER_NAME, PartyDataType.COORD);
 		// 1. Stop external interaction first
 		if (raidInterfaces != null) {
 			mouseManager.unregisterMouseListener(raidInterfaces);
@@ -999,6 +1005,9 @@ public class RuneTags extends Plugin {
 
 	@Subscribe
 	public void onPartyChanged(PartyChanged event) {
+		if (partyContextService != null) {
+			partyContextService.clear();
+		}
 		queueFullDirectoryRefresh();
 	}
 
@@ -1006,7 +1015,7 @@ public class RuneTags extends Plugin {
 	public void onUserJoin(UserJoin event) {
 		/*
 		 * UserJoin can arrive before the character name. Clear stale member-ID context
-		 * and wait for StatusUpdate to provide a usable name.
+		 * and wait for PartyData to provide a usable name.
 		 */
 		if (event != null && partyContextService != null) {
 			partyContextService.removeMember(event.getMemberId());
@@ -1023,41 +1032,40 @@ public class RuneTags extends Plugin {
 	}
 
 	@Subscribe
-	public void onStatusUpdate(StatusUpdate event) {
+	public void onPartyData(PartyData event) {
 		if (event == null) {
 			return;
 		}
 
-		String previousPlayerName = null;
+		final PartyContextService.PartyContext previousContext = partyContextService != null
+				? partyContextService.findByMemberId(event.getMemberId())
+				: null;
+		final String previousPlayerName = previousContext != null
+				? previousContext.getPlayerName()
+				: null;
+
 		if (partyContextService != null) {
-			final PartyContextService.PartyContext previousContext =
-					partyContextService.findByMemberId(event.getMemberId());
-
-			previousPlayerName = previousContext != null
-					? previousContext.getPlayerName()
-					: null;
-
-			partyContextService.onStatusUpdate(event);
+			partyContextService.onPartyData(event);
 		}
 
-		/*
-		 * StatusUpdate supplies PartyMember display-name and login state. Queue both the
-		 * previous and current names for end-of-tick directory synchronization.
-		 */
-		queueDirectoryPlayerRefresh(previousPlayerName);
+		// PartyData packets may contain only coordinates or only a character name.
+		if (event.getCharacterName() != null) {
+			queueDirectoryPlayerRefresh(previousPlayerName);
 
-		String playerName = event.getCharacterName();
-		if (playerName == null || playerName.trim().isEmpty()) {
-			final PartyMember member = partyService != null
-					? partyService.getMemberById(event.getMemberId())
-					: null;
-
-			playerName = member != null
-					? member.getDisplayName()
-					: null;
+			String playerName = event.getCharacterName();
+			if (playerName.trim().isEmpty()) {
+				final PartyMember member = partyService != null
+						? partyService.getMemberById(event.getMemberId())
+						: null;
+				playerName = member != null ? member.getDisplayName() : null;
+			}
+			queueDirectoryPlayerRefresh(playerName);
 		}
 
-		queueDirectoryPlayerRefresh(playerName);
+		if (event.getCoord() != null && partyContextService != null
+				&& partyContextService.findByMemberId(event.getMemberId()) != null) {
+			refreshOpenQuickProfile();
+		}
 	}
 
 	private void queueDirectoryPlayerRefresh(String playerName) {
@@ -1525,25 +1533,6 @@ public class RuneTags extends Plugin {
 	@Provides
 	Configurations provideConfig(ConfigManager configManager) {
 		return configManager.getConfig(Configurations.class);
-	}
-
-	/**
-	 * ================================================================
-	 * PARTY CONTEXT
-	 * ================================================================
-	 */
-	@Subscribe
-	public void onLocationUpdate(LocationUpdate event) {
-		if (partyContextService == null) {
-			return;
-		}
-
-		partyContextService.onLocationUpdate(event);
-
-		final PartyContextService.PartyContext context = partyContextService.findByMemberId(event.getMemberId());
-		if (context != null) {
-			refreshOpenQuickProfile();
-		}
 	}
 
 	/**
