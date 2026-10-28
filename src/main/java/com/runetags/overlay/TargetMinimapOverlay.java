@@ -15,7 +15,6 @@ import net.runelite.api.Point;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.OverlayPriority;
 
 public class TargetMinimapOverlay extends Overlay {
 	private final Client client;
@@ -29,7 +28,7 @@ public class TargetMinimapOverlay extends Overlay {
 
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_WIDGETS);
-		setPriority(OverlayPriority.HIGH);
+		setPriority(PRIORITY_HIGH);
 	}
 
 	private static void drawMinimapIndicator(Graphics2D graphics, Point point, Color color, int diameter) {

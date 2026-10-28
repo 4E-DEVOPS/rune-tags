@@ -20,7 +20,6 @@ import net.runelite.client.party.PartyService;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
-import net.runelite.client.ui.overlay.OverlayPriority;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
 import net.runelite.client.util.Text;
@@ -50,7 +49,7 @@ public class FavoriteOverlay extends Overlay {
 
 		setPosition(OverlayPosition.DYNAMIC);
 		setLayer(OverlayLayer.ABOVE_SCENE);
-		setPriority(OverlayPriority.HIGH);
+		setPriority(PRIORITY_HIGH);
 	}
 
 	public boolean canHighlightFavorite(Player player) {

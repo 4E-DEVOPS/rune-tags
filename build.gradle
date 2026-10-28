@@ -98,6 +98,7 @@ tasks.register('testAll') {
 			'testLocation',
 			'testMention',
 			'testNotification',
+            'testOverlay',
 			'testPlayer',
 			'testQuickProfile',
 			'testRecords',
@@ -317,6 +318,7 @@ tasks.register('testOverlay', Test) {
 	filter {
 		includeTestsMatching 'com.runetags.overlay.ChatReferenceOverlayTest'
 		includeTestsMatching 'com.runetags.overlay.FavoriteOverlayTest'
+        includeTestsMatching 'com.runetags.overlay.NameOverlayTest'
 		includeTestsMatching 'com.runetags.overlay.QuickProfileOverlayTest'
 		includeTestsMatching 'com.runetags.overlay.TargetMinimapOverlayTest'
 		includeTestsMatching 'com.runetags.overlay.TargetOverlayTest'
