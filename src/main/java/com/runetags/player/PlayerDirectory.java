@@ -45,11 +45,7 @@ public class PlayerDirectory {
 	private final Map<String, PlayerIdentity> identities = new LinkedHashMap<>();
 	private final Map<Integer, EnumSet<WorldType>> worldTypesById = new LinkedHashMap<>();
 
-	public PlayerDirectory(
-			Client client,
-			PartyService partyService,
-			WorldService worldService,
-			NameNormalizer normalizer) {
+	public PlayerDirectory(Client client, PartyService partyService, WorldService worldService, NameNormalizer normalizer) {
 		this.client = client;
 		this.partyService = partyService;
 		this.worldService = worldService;
@@ -103,16 +99,7 @@ public class PlayerDirectory {
 			return;
 		}
 
-		mergeIdentity(
-				player.getName(),
-				PlayerSource.NEARBY,
-				player.getCombatLevel(),
-				client.getWorld(),
-				OnlineState.ONLINE,
-				null,
-				null,
-				player,
-				player.getWorldLocation());
+		mergeIdentity(player.getName(), PlayerSource.NEARBY, player.getCombatLevel(), client.getWorld(), OnlineState.ONLINE, null, null, player, player.getWorldLocation());
 	}
 
 	/*
@@ -166,8 +153,7 @@ public class PlayerDirectory {
 			return;
 		}
 
-		final boolean leaguesWorld = client.getWorldType() != null && client.getWorldType()
-				.contains(WorldType.SEASONAL);
+		final boolean leaguesWorld = client.getWorldType() != null && client.getWorldType().contains(WorldType.SEASONAL);
 
 		final AccountType observedType = AccountType.fromChatName(rawPlayerName, leaguesWorld);
 
@@ -291,8 +277,8 @@ public class PlayerDirectory {
 			mergeIdentity(friend.getName(), PlayerSource.FRIEND, null, world > 0
 					? world
 					: null, world > 0
-					? OnlineState.ONLINE
-					: OnlineState.OFFLINE, null, null, null, null);
+						? OnlineState.ONLINE
+						: OnlineState.OFFLINE, null, null, null, null);
 		}
 	}
 
@@ -313,8 +299,7 @@ public class PlayerDirectory {
 							: member.getRank().toString();
 				}
 
-				mergeIdentity(member.getName(), PlayerSource.CLAN, null, null,
-						OnlineState.UNKNOWN, settings.getName(), rankName, null, null);
+				mergeIdentity(member.getName(), PlayerSource.CLAN, null, null, OnlineState.UNKNOWN, settings.getName(), rankName, null, null);
 			}
 		}
 
@@ -337,13 +322,17 @@ public class PlayerDirectory {
 				}
 
 				final int world = member.getWorld();
-				mergeIdentity(member.getName(), PlayerSource.CLAN, null, world > 0
-						? world
-						: null, world > 0
-						? OnlineState.ONLINE
-						: OnlineState.UNKNOWN, !isBlank(channel.getName())
-						? channel.getName()
-						: null, rankName, null, null);
+				mergeIdentity(member.getName(), PlayerSource.CLAN, null,
+						world > 0
+								? world
+								: null,
+						world > 0
+								? OnlineState.ONLINE
+								: OnlineState.UNKNOWN,
+						!isBlank(channel.getName())
+							? channel.getName()
+							: null,
+						rankName, null, null);
 			}
 		}
 	}
@@ -368,9 +357,7 @@ public class PlayerDirectory {
 							: member.getRank().toString();
 				}
 
-				mergeIdentity(
-						member.getName(), PlayerSource.GUEST_CLAN, null, null,
-						OnlineState.UNKNOWN, settings.getName(), rankName, null, null);
+				mergeIdentity(member.getName(), PlayerSource.GUEST_CLAN, null, null, OnlineState.UNKNOWN, settings.getName(), rankName, null, null);
 			}
 		}
 
@@ -394,15 +381,19 @@ public class PlayerDirectory {
 				}
 
 				final int world = member.getWorld();
-				mergeIdentity(member.getName(), PlayerSource.GUEST_CLAN, null, world > 0
-						? world
-						: null, world > 0
-						? OnlineState.ONLINE
-						: OnlineState.UNKNOWN, !isBlank(channel.getName())
-						? channel.getName()
-						: settings != null
-						? settings.getName()
-						: null, rankName, null, null);
+				mergeIdentity(member.getName(), PlayerSource.GUEST_CLAN, null,
+						world > 0
+							? world
+							: null,
+						world > 0
+							? OnlineState.ONLINE
+							: OnlineState.UNKNOWN,
+						!isBlank(channel.getName())
+							? channel.getName()
+							: settings != null
+								? settings.getName()
+								: null,
+						rankName, null, null);
 			}
 		}
 	}
@@ -427,11 +418,14 @@ public class PlayerDirectory {
 					? member.getRank().toString()
 					: null;
 
-			mergeIdentity(member.getName(), PlayerSource.FRIENDS_CHAT, null, world > 0
-					? world
-					: null, world > 0
-					? OnlineState.ONLINE
-					: OnlineState.UNKNOWN, channelName, rankName, null, null);
+			mergeIdentity(member.getName(), PlayerSource.FRIENDS_CHAT, null,
+					world > 0
+						? world
+						: null,
+					world > 0
+						? OnlineState.ONLINE
+						: OnlineState.UNKNOWN,
+					channelName, rankName, null, null);
 		}
 	}
 
@@ -452,15 +446,14 @@ public class PlayerDirectory {
 		}
 
 		for (PartyMember member : partyService.getMembers()) {
-			if (member == null || !isUsablePartyName(member.getDisplayName()) || !shouldInclude(
-					member.getDisplayName(),
-					targetKey)) {
+			if (member == null || !isUsablePartyName(member.getDisplayName()) || !shouldInclude(member.getDisplayName(), targetKey)) {
 				continue;
 			}
 
 			mergeIdentity(member.getDisplayName(), PlayerSource.PARTY, null, null, member.isLoggedIn()
 					? OnlineState.ONLINE
-					: OnlineState.UNKNOWN, partyChannelName(), null, null, null);
+					: OnlineState.UNKNOWN,
+					partyChannelName(), null, null, null);
 		}
 	}
 
@@ -475,8 +468,7 @@ public class PlayerDirectory {
 				continue;
 			}
 
-			mergeIdentity(player.getName(), PlayerSource.NEARBY, player.getCombatLevel(), client.getWorld(),
-					OnlineState.ONLINE, null, null, player, player.getWorldLocation());
+			mergeIdentity(player.getName(), PlayerSource.NEARBY, player.getCombatLevel(), client.getWorld(), OnlineState.ONLINE, null, null, player, player.getWorldLocation());
 		}
 	}
 
@@ -503,16 +495,7 @@ public class PlayerDirectory {
 		}
 	}
 
-	private void mergeIdentity(
-			String rawName,
-			PlayerSource source,
-			Integer combatLevel,
-			Integer world,
-			OnlineState onlineState,
-			String channelName,
-			String channelRank,
-			Player nearbyPlayer,
-			WorldPoint worldPoint) {
+	private void mergeIdentity(String rawName, PlayerSource source, Integer combatLevel, Integer world, OnlineState onlineState, String channelName, String channelRank, Player nearbyPlayer, WorldPoint worldPoint) {
 		final String canonicalName = normalizer.canonicalize(rawName);
 		final String key = normalizer.comparisonKey(canonicalName);
 		if (key.isEmpty()) {
@@ -605,35 +588,19 @@ public class PlayerDirectory {
 		}
 
 		identities.put(key, PlayerIdentity.builder()
-			.canonicalName(existing != null
-					? existing.getCanonicalName()
-					: canonicalName)
-			.normalizedName(key).accountType(mergedAccountType).sources(Collections.unmodifiableSet(sources))
-				.combatLevel(combatLevel != null
-					? combatLevel
-					: existing == null
-					? null
-					: existing.getCombatLevel())
-			.world(world != null
-					? world
-					: existing == null
-					? null
-					: existing.getWorld())
-			.onlineState(mergedState)
-			.channelName(mergedChannelName)
-			.channelRank(mergedChannelRank)
-			.channelSource(mergedChannelSource)
-			.nearbyPlayer(nearbyPlayer != null
-					? nearbyPlayer
-					: existing == null
-					? null
-					: existing.getNearbyPlayer())
-			.lastKnownWorldPoint(worldPoint != null
-					? worldPoint
-					: existing == null
-					? null
-					: existing.getLastKnownWorldPoint())
-			.build());
+				.canonicalName(existing != null ? existing.getCanonicalName() : canonicalName)
+				.normalizedName(key)
+				.accountType(mergedAccountType)
+				.sources(Collections.unmodifiableSet(sources))
+				.combatLevel(combatLevel != null ? combatLevel : existing == null ? null : existing.getCombatLevel())
+				.world(world != null ? world : existing == null ? null : existing.getWorld())
+				.onlineState(mergedState)
+				.channelName(mergedChannelName)
+				.channelRank(mergedChannelRank)
+				.channelSource(mergedChannelSource)
+				.nearbyPlayer(nearbyPlayer != null ? nearbyPlayer : existing == null ? null : existing.getNearbyPlayer())
+				.lastKnownWorldPoint(worldPoint != null ? worldPoint : existing == null ? null : existing.getLastKnownWorldPoint())
+				.build());
 	}
 
 	private static boolean isUsablePartyName(String playerName) {
