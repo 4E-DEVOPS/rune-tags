@@ -672,6 +672,17 @@ public class QuickProfileController {
 		return identity != null && identity.isNearby();
 	}
 
+	/**
+	 * Use the same live identity as when labeling
+	 * a chat reference's Target / Untarget action.
+	 */
+	public boolean isReferenceTargeted(PlayerReference reference) {
+		final PlayerIdentity identity = resolveLiveIdentity(reference);
+		return identity != null && identity.isNearby()
+				&& identity.getCanonicalName() != null
+				&& targetController.isTargetingName(identity.getCanonicalName());
+	}
+
 	/*
 	 * Target a chat reference only when it still resolves to a nearby player.
 	 */

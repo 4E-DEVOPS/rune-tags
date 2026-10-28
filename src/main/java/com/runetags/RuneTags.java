@@ -1418,6 +1418,7 @@ public class RuneTags extends Plugin {
 			case PLAYER_SEVENTH_OPTION:
 			case PLAYER_EIGHTH_OPTION:
 			case RUNELITE_PLAYER:
+			case WALK:
 				return true;
 			default:
 				return false;

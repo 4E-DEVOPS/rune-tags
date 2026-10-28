@@ -33,6 +33,7 @@ import net.runelite.client.util.Text;
 public class InputListener extends MouseAdapter implements KeyListener {
 	private static final String MENU_OPEN_PROFILE = "Open Profile";
 	private static final String MENU_TARGET = "Target";
+	private static final String MENU_UNTARGET = "Untarget";
 	private static final String MENU_LOOKUP = "Lookup";
 
 	/*
@@ -250,7 +251,9 @@ public class InputListener extends MouseAdapter implements KeyListener {
 				.setType(MenuAction.RUNELITE)
 				.onClick(entry -> quickProfileController.open(reference, anchorPoint));
 		if (config.targetPlayerOption() && quickProfileController.canTarget(reference)) {
-			client.createMenuEntry(-2).setOption(MENU_TARGET).setTarget(target).setType(MenuAction.RUNELITE)
+			final String action = quickProfileController.isReferenceTargeted(reference)
+					? MENU_UNTARGET : MENU_TARGET;
+			client.createMenuEntry(-2).setOption(action).setTarget(target).setType(MenuAction.RUNELITE)
 					.onClick(entry -> quickProfileController.target(reference));
 		}
 
@@ -463,7 +466,9 @@ public class InputListener extends MouseAdapter implements KeyListener {
 
 			// Target stays at the top of the sender menu and resolves when selected.
 			if (config.targetPlayerOption() && quickProfileController.canTarget(senderReference)) {
-				client.createMenuEntry(-1).setOption(ColorUtil.prependColorTag(MENU_TARGET, config.targetColor()))
+				final String action = quickProfileController.isReferenceTargeted(senderReference)
+						? MENU_UNTARGET : MENU_TARGET;
+				client.createMenuEntry(-1).setOption(ColorUtil.prependColorTag(action, config.targetColor()))
 						.setTarget(nativeTarget).setType(MenuAction.RUNELITE)
 						.onClick(menuEntry -> quickProfileController.target(senderReference));
 			}
