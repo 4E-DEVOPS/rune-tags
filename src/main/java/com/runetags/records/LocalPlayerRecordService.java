@@ -323,7 +323,6 @@ public class LocalPlayerRecordService {
 						: null);
 		final List<String> tags = mergeTags(currentRecord, previousRecord);
 		final List<String> previousRsns = mergePreviousRsns(currentRsn, previousRsn, currentRecord, previousRecord);
-
 		return sanitize(LocalPlayerRecord.builder().currentRsn(currentRsn).previousRsns(previousRsns).favorite(favorite).note(note).tags(tags).build());
 	}
 
@@ -335,14 +334,12 @@ public class LocalPlayerRecordService {
 		if (previousRecord != null) {
 			addPreviousRsn(merged, previousRecord.getCurrentRsn(), currentRsn);
 		}
-
 		addPreviousRsns(merged, previousRecord != null
 					? previousRecord.getPreviousRsns()
 					: null, currentRsn);
 		if (currentRecord != null) {
 			addPreviousRsn(merged, currentRecord.getCurrentRsn(), currentRsn);
 		}
-
 		addPreviousRsns(merged, currentRecord != null
 					? currentRecord.getPreviousRsns()
 					: null, currentRsn);
@@ -611,7 +608,6 @@ public class LocalPlayerRecordService {
 			if (clean.length() > 0) {
 				clean.append('\n');
 			}
-
 			clean.append(trimmed);
 		}
 
