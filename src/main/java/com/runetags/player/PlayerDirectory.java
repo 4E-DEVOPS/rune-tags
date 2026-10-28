@@ -214,7 +214,7 @@ public class PlayerDirectory {
 	private void refreshWorldTypes() {
 		worldTypesById.clear();
 
-		// The current world remains authoritative when the external world list is unavailable.
+		// The client's current-world flags take precedence over the external world list.
 		if (client.getWorld() > 0 && client.getWorldType() != null) {
 			worldTypesById.put(client.getWorld(), EnumSet.copyOf(client.getWorldType()));
 		}
@@ -233,7 +233,8 @@ public class PlayerDirectory {
 				continue;
 			}
 
-			worldTypesById.put(world.getId(), WorldUtil.toWorldTypes(world.getTypes()));
+			// Do not overwrite the current world's authoritative client flags.
+			worldTypesById.putIfAbsent(world.getId(), WorldUtil.toWorldTypes(world.getTypes()));
 		}
 	}
 
@@ -277,8 +278,8 @@ public class PlayerDirectory {
 			mergeIdentity(friend.getName(), PlayerSource.FRIEND, null, world > 0
 					? world
 					: null, world > 0
-						? OnlineState.ONLINE
-						: OnlineState.OFFLINE, null, null, null, null);
+					? OnlineState.ONLINE
+					: OnlineState.OFFLINE, null, null, null, null);
 		}
 	}
 
@@ -330,8 +331,8 @@ public class PlayerDirectory {
 								? OnlineState.ONLINE
 								: OnlineState.UNKNOWN,
 						!isBlank(channel.getName())
-							? channel.getName()
-							: null,
+								? channel.getName()
+								: null,
 						rankName, null, null);
 			}
 		}
@@ -383,16 +384,16 @@ public class PlayerDirectory {
 				final int world = member.getWorld();
 				mergeIdentity(member.getName(), PlayerSource.GUEST_CLAN, null,
 						world > 0
-							? world
-							: null,
-						world > 0
-							? OnlineState.ONLINE
-							: OnlineState.UNKNOWN,
-						!isBlank(channel.getName())
-							? channel.getName()
-							: settings != null
-								? settings.getName()
+								? world
 								: null,
+						world > 0
+								? OnlineState.ONLINE
+								: OnlineState.UNKNOWN,
+						!isBlank(channel.getName())
+								? channel.getName()
+								: settings != null
+										? settings.getName()
+										: null,
 						rankName, null, null);
 			}
 		}
@@ -420,11 +421,11 @@ public class PlayerDirectory {
 
 			mergeIdentity(member.getName(), PlayerSource.FRIENDS_CHAT, null,
 					world > 0
-						? world
-						: null,
+							? world
+							: null,
 					world > 0
-						? OnlineState.ONLINE
-						: OnlineState.UNKNOWN,
+							? OnlineState.ONLINE
+							: OnlineState.UNKNOWN,
 					channelName, rankName, null, null);
 		}
 	}
@@ -441,7 +442,7 @@ public class PlayerDirectory {
 	}
 
 	private void addParty(String targetKey) {
-		if (partyService == null || !partyService.isInParty()) {
+		if (partyService == null || !partyService.isInParty() || partyService.getMembers() == null) {
 			return;
 		}
 
@@ -451,8 +452,8 @@ public class PlayerDirectory {
 			}
 
 			mergeIdentity(member.getDisplayName(), PlayerSource.PARTY, null, null, member.isLoggedIn()
-					? OnlineState.ONLINE
-					: OnlineState.UNKNOWN,
+							? OnlineState.ONLINE
+							: OnlineState.UNKNOWN,
 					partyChannelName(), null, null, null);
 		}
 	}
