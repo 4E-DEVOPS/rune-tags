@@ -28,11 +28,9 @@ public class PlayerLookupService {
 			case WISE_OLD_MAN:
 				openWiseOldMan(playerName);
 				break;
-
 			case RUNE_PROFILE:
 				openRuneProfile(playerName);
 				break;
-
 			case HISCORES:
 			default:
 				openHiscores(playerName);
@@ -51,8 +49,7 @@ public class PlayerLookupService {
 	}
 
 	private static void openHiscores(String playerName) {
-		LinkBrowser.browse(
-				"https://secure.runescape.com/m=hiscore_oldschool/hiscorepersonal?user1=" + encodeQuery(playerName));
+		LinkBrowser.browse("https://secure.runescape.com/m=hiscore_oldschool/hiscorepersonal?user1=" + encodeQuery(playerName));
 	}
 
 	private static String encodePath(String value) {

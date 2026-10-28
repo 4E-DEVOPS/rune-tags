@@ -15,11 +15,7 @@ public class HiscoreProfileData {
 	AccountType accountType;
 	Map<String, Integer> contextValues;
 
-	public HiscoreProfileData(
-			Integer combatLevel,
-			Integer totalLevel,
-			AccountType accountType,
-			Map<String, Integer> contextValues) {
+	public HiscoreProfileData(Integer combatLevel, Integer totalLevel, AccountType accountType, Map<String, Integer> contextValues) {
 		this.combatLevel = combatLevel;
 		this.totalLevel = totalLevel;
 		this.accountType = accountType != null

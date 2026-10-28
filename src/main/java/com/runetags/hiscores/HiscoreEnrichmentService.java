@@ -21,23 +21,20 @@ import net.runelite.client.hiscore.Skill;
 public class HiscoreEnrichmentService {
 	private final HiscoreClient hiscoreClient;
 	private final HiscoreEnrichmentCache cache;
-	private final Map<String, CompletableFuture<HiscoreEnrichmentCache.CachedProfileEnrichment>> inFlight =
-			new ConcurrentHashMap<>();
+	private final Map<String, CompletableFuture<HiscoreEnrichmentCache.CachedProfileEnrichment>> inFlight = new ConcurrentHashMap<>();
 
 	private CompletableFuture<AccountType> detectAccountType(String playerName) {
 		/*
-		 * Solo Ironman endpoints can positively identify Ironman variants. Missing entries cannot distinguish a
-		 * normal account from Group Ironman, so that case remains UNKNOWN.
+		 * Regular ironman endpoints can positively identify variants;
+		 * Missing entries cannot distinguish a normal account from GIM, so that case remains UNKNOWN.
 		 */
 		return safeLookup(playerName, HiscoreEndpoint.IRONMAN).thenCompose(ironmanResult -> {
 			if (ironmanResult == null) {
 				return CompletableFuture.completedFuture(AccountType.UNKNOWN);
 			}
 
-			final CompletableFuture<HiscoreResult> hardcoreFuture =
-					safeLookup(playerName, HiscoreEndpoint.HARDCORE_IRONMAN);
-			final CompletableFuture<HiscoreResult> ultimateFuture =
-					safeLookup(playerName, HiscoreEndpoint.ULTIMATE_IRONMAN);
+			final CompletableFuture<HiscoreResult> hardcoreFuture = safeLookup(playerName, HiscoreEndpoint.HARDCORE_IRONMAN);
+			final CompletableFuture<HiscoreResult> ultimateFuture = safeLookup(playerName, HiscoreEndpoint.ULTIMATE_IRONMAN);
 
 			return hardcoreFuture.thenCombine(ultimateFuture, (hardcoreResult, ultimateResult) -> {
 				if (hardcoreResult != null) {
@@ -82,19 +79,15 @@ public class HiscoreEnrichmentService {
 		final Skill magic = result.getSkill(HiscoreSkill.MAGIC);
 		final Skill ranged = result.getSkill(HiscoreSkill.RANGED);
 		final Skill prayer = result.getSkill(HiscoreSkill.PRAYER);
-		if (attack == null || strength == null || defence == null || hitpoints == null
-				|| magic == null || ranged == null || prayer == null) {
+		if (attack == null || strength == null || defence == null || hitpoints == null || magic == null || ranged == null || prayer == null) {
 			return null;
 		}
 
-		if (attack.getLevel() < 1 || strength.getLevel() < 1 || defence.getLevel() < 1 || hitpoints.getLevel() < 1
-				|| magic.getLevel() < 1 || ranged.getLevel() < 1 || prayer.getLevel() < 1) {
+		if (attack.getLevel() < 1 || strength.getLevel() < 1 || defence.getLevel() < 1 || hitpoints.getLevel() < 1 || magic.getLevel() < 1 || ranged.getLevel() < 1 || prayer.getLevel() < 1) {
 			return null;
 		}
 
-		return Experience.getCombatLevel(
-				attack.getLevel(), strength.getLevel(), defence.getLevel(), hitpoints.getLevel(),
-				magic.getLevel(), ranged.getLevel(), prayer.getLevel());
+		return Experience.getCombatLevel(attack.getLevel(), strength.getLevel(), defence.getLevel(), hitpoints.getLevel(), magic.getLevel(), ranged.getLevel(), prayer.getLevel());
 	}
 
 	public HiscoreEnrichmentService(HiscoreClient hiscoreClient, HiscoreEnrichmentCache cache) {
@@ -119,8 +112,7 @@ public class HiscoreEnrichmentService {
 		 */
 		synchronized (inFlight) {
 			// Re-check after acquiring the lock in case another request populated the cache.
-			final HiscoreEnrichmentCache.CachedProfileEnrichment cachedAfterLock =
-					cache.get(playerName).orElse(null);
+			final HiscoreEnrichmentCache.CachedProfileEnrichment cachedAfterLock = cache.get(playerName).orElse(null);
 			if (cachedAfterLock != null) {
 				return EnrichmentRequest.cached(cachedAfterLock);
 			}
@@ -143,27 +135,22 @@ public class HiscoreEnrichmentService {
 			}
 
 			final CompletableFuture<AccountType> accountTypeFuture = detectAccountType(playerName);
-			final CompletableFuture<HiscoreEnrichmentCache.CachedProfileEnrichment> mapped =
-					normalFuture.handle((result, throwable) -> {
+			final CompletableFuture<HiscoreEnrichmentCache.CachedProfileEnrichment> mapped = normalFuture.handle((result, throwable) -> {
 						if (throwable != null) {
-							log.debug(
-									"[RuneTags][HiScore] Lookup Failed for Player='{}' | ERROR: {}",
-									playerName, throwable.getMessage());
+							log.debug("[RuneTags][HiScore] Lookup Failed for Player='{}' | ERROR: {}", playerName, throwable.getMessage());
 							return new BaseLookupResult(null, throwable);
 						}
 
 						return new BaseLookupResult(result, null);
 					}).thenCombine(accountTypeFuture, (baseLookup, accountType) -> {
 						if (baseLookup.getThrowable() != null) {
-							return new HiscoreEnrichmentCache.CachedProfileEnrichment(
-									HiscoreEnrichmentState.ERROR, null);
+							return new HiscoreEnrichmentCache.CachedProfileEnrichment(HiscoreEnrichmentState.ERROR, null);
 						}
 
 						final HiscoreResult result = baseLookup.getResult();
 						if (result == null) {
 							cache.putNotFound(playerName);
-							return new HiscoreEnrichmentCache.CachedProfileEnrichment(
-									HiscoreEnrichmentState.NOT_FOUND, null);
+							return new HiscoreEnrichmentCache.CachedProfileEnrichment(HiscoreEnrichmentState.NOT_FOUND, null);
 						}
 
 						final Skill overall = result.getSkill(HiscoreSkill.OVERALL);
@@ -174,9 +161,7 @@ public class HiscoreEnrichmentService {
 						final Map<String, Integer> contextValues = new LinkedHashMap<>();
 
 						for (HiscoreSkill hiscoreSkill : HiscoreSkill.values()) {
-							if (hiscoreSkill.getType() != HiscoreSkillType.BOSS
-									&& hiscoreSkill.getType() != HiscoreSkillType.ACTIVITY
-									&& hiscoreSkill.getType() != HiscoreSkillType.SKILL) {
+							if (hiscoreSkill.getType() != HiscoreSkillType.BOSS && hiscoreSkill.getType() != HiscoreSkillType.ACTIVITY && hiscoreSkill.getType() != HiscoreSkillType.SKILL) {
 								continue;
 							}
 
@@ -188,13 +173,10 @@ public class HiscoreEnrichmentService {
 							contextValues.put(hiscoreSkill.name(), skill.getLevel());
 						}
 
-						final HiscoreProfileData data =
-								new HiscoreProfileData(combatLevel, totalLevel, accountType, contextValues);
+						final HiscoreProfileData data = new HiscoreProfileData(combatLevel, totalLevel, accountType, contextValues);
 						cache.putSuccess(playerName, data);
 
-						return new HiscoreEnrichmentCache.CachedProfileEnrichment(
-								HiscoreEnrichmentState.LOADED,
-								data);
+						return new HiscoreEnrichmentCache.CachedProfileEnrichment(HiscoreEnrichmentState.LOADED, data);
 					});
 
 			inFlight.put(requestKey, mapped);
@@ -213,8 +195,7 @@ public class HiscoreEnrichmentService {
 			return new EnrichmentRequest(cached.getState(), cached.getData(), null);
 		}
 
-		static EnrichmentRequest loading(
-				CompletableFuture<HiscoreEnrichmentCache.CachedProfileEnrichment> future) {
+		static EnrichmentRequest loading(CompletableFuture<HiscoreEnrichmentCache.CachedProfileEnrichment> future) {
 			return new EnrichmentRequest(HiscoreEnrichmentState.LOADING, null, future);
 		}
 

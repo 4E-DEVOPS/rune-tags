@@ -94,8 +94,7 @@ public class EfficiencyMetricService {
 		}
 
 		final HttpUrl url = baseUrl.newBuilder().addPathSegment(playerName).build();
-		final Request request = new Request.Builder()
-				.url(url).header("Accept", "application/json").header("User-Agent", "RuneTags RuneLite plugin").build();
+		final Request request = new Request.Builder().url(url).header("Accept", "application/json").header("User-Agent", "RuneTags RuneLite plugin").build();
 
 		final Call call = httpClient.newCall(request);
 		activeCalls.add(call);
@@ -135,9 +134,7 @@ public class EfficiencyMetricService {
 						}
 					}
 				} catch (RuntimeException exception) {
-					log.debug(
-							"[RuneTags][WOM] Unable to Parse Efficiency Response for Player='{}' | ERROR: {}",
-							playerName, exception.getMessage());
+					log.debug("[RuneTags][WOM] Unable to Parse Efficiency Response for Player='{}' | ERROR: {}", playerName, exception.getMessage());
 				} finally {
 					complete(key, future, data, data != null
 							? SUCCESS_TTL
@@ -149,11 +146,7 @@ public class EfficiencyMetricService {
 		return future;
 	}
 
-	private void complete(
-			String key,
-			CompletableFuture<EfficiencyProfileData> future,
-			EfficiencyProfileData data,
-			Duration ttl) {
+	private void complete(String key, CompletableFuture<EfficiencyProfileData> future, EfficiencyProfileData data, Duration ttl) {
 		if (!closed) {
 			cache.put(key, new CacheEntry(data, Instant.now().plus(ttl)));
 		}
