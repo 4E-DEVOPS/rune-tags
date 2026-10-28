@@ -176,7 +176,9 @@ public class TaggedMessageRepository {
 	}
 
 	private void indexMessage(TaggedMessage message) {
-		final String body = message != null ? message.getOriginalMessage() : null;
+		final String body = message != null
+				? message.getOriginalMessage()
+				: null;
 		if (body == null || body.isEmpty()) {
 			return;
 		}
@@ -186,7 +188,9 @@ public class TaggedMessageRepository {
 	}
 
 	private void unindexMessage(TaggedMessage message) {
-		final String body = message != null ? message.getOriginalMessage() : null;
+		final String body = message != null
+				? message.getOriginalMessage()
+				: null;
 		if (body == null || body.isEmpty()) {
 			return;
 		}

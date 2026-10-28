@@ -88,8 +88,10 @@ public class MessageFormatter {
 			}
 
 			spans.add(new StyleSpan(reference.getStartOffset(), reference.getEndOffset(), shouldColor
-					? (isSelf ? config.selfMentionColor()
-					: config.otherMentionColor()) : null, underline, shadowColor));
+					? (isSelf
+						? config.selfMentionColor()
+						: config.otherMentionColor())
+					: null, underline, shadowColor));
 		}
 
 		/*
