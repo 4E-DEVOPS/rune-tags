@@ -23,9 +23,7 @@ public class MentionNotificationService {
 	}
 
 	public void notifyMention(TaggedMessage taggedMessage) {
-		if (taggedMessage == null
-				|| taggedMessage.getLocalMentionMatch() == null
-				|| !taggedMessage.getLocalMentionMatch().isMatchesLocalPlayer()) {
+		if (taggedMessage == null || taggedMessage.getLocalMentionMatch() == null || !taggedMessage.getLocalMentionMatch().isMatchesLocalPlayer()) {
 			return;
 		}
 
@@ -34,7 +32,7 @@ public class MentionNotificationService {
 		 * while tray, RuneLite sound, and game-message output remain disabled.
 		 */
 		final Notification notification = new Notification(
-				true,								// enabled
+				true,						// enabled
 				true,								// initialized
 				true,								// override
 				false,								// tray
