@@ -32,6 +32,8 @@ public class RaidInterfaces extends MouseAdapter {
 	private static final RaidLayout TOA_APPLICANTS = new RaidLayout(InterfaceID.ToaPartydetails.APPLICANTS_LIST, 20, 1, 2, 18);
 	private static final RaidLayout TOB_ACCEPTED = new RaidLayout(InterfaceID.TobPartydetails.CURRENT, 11, 1, 2, 10);
 	private static final RaidLayout TOB_APPLICANTS = new RaidLayout(InterfaceID.TobPartydetails.APPLICANTS, 20, 1, 2, 18);
+	private static final RaidLayout TFA_MEMBERS = new RaidLayout(InterfaceID.TfaPartydetails.MEMBERS_LIST, 14, 1, 2, 11);
+	private static final RaidLayout TFA_APPLICANTS = new RaidLayout(InterfaceID.TfaPartydetails.APPLICANTS_LIST, 22, 1, 2, 20, 2);
 
 	private final Client client;
 	private final Configurations config;
@@ -175,7 +177,13 @@ public class RaidInterfaces extends MouseAdapter {
 			return hit;
 		}
 
-		return playerHit(TOA_APPLICANTS, point);
+		hit = playerHit(TOA_APPLICANTS, point);
+		if (hit != null) {
+			return hit;
+		}
+
+		hit = playerHit(TFA_MEMBERS, point);
+		return hit != null ? hit : playerHit(TFA_APPLICANTS, point);
 	}
 
 	private RaidHit playerHit(RaidLayout layout, Point point) {
@@ -226,7 +234,7 @@ public class RaidInterfaces extends MouseAdapter {
 		}
 
 		final int end = Math.min(base + layout.statsEnd, children.length - 1);
-		for (int i = base + layout.statsStart; i <= end; i++) {
+		for (int i = base + layout.statsStart; i <= end; i += layout.statsStep) {
 			if (contains(children[i], point)) {
 				return i - base;
 			}
@@ -245,11 +253,8 @@ public class RaidInterfaces extends MouseAdapter {
 	}
 
 	private boolean isProfileClick(RaidHit hit) {
-		if (isApplicantComponent(hit.componentId)) {
-			final RaidLayout layout = hit.componentId == TOB_APPLICANTS.componentId
-					? TOB_APPLICANTS
-					: TOA_APPLICANTS;
-
+		final RaidLayout layout = applicantLayout(hit.componentId);
+		if (layout != null) {
 			if (hit.offset == layout.nameOffset) {
 				return true;
 			}
@@ -377,11 +382,11 @@ public class RaidInterfaces extends MouseAdapter {
 	}
 
 	private static String menuAnchor(int componentId) {
-		if (componentId == TOB_APPLICANTS.componentId || componentId == TOA_APPLICANTS.componentId) {
+		if (isApplicantComponent(componentId)) {
 			return MENU_REJECT;
 		}
 
-		if (componentId == TOA_ACCEPTED.componentId) {
+		if (componentId == TOA_ACCEPTED.componentId || componentId == TFA_MEMBERS.componentId) {
 			return MENU_KICK;
 		}
 
@@ -389,7 +394,17 @@ public class RaidInterfaces extends MouseAdapter {
 	}
 
 	private static boolean isApplicantComponent(int componentId) {
-		return componentId == TOB_APPLICANTS.componentId || componentId == TOA_APPLICANTS.componentId;
+		return applicantLayout(componentId) != null;
+	}
+
+	private static RaidLayout applicantLayout(int componentId) {
+		if (componentId == TOB_APPLICANTS.componentId) {
+			return TOB_APPLICANTS;
+		}
+		if (componentId == TOA_APPLICANTS.componentId) {
+			return TOA_APPLICANTS;
+		}
+		return componentId == TFA_APPLICANTS.componentId ? TFA_APPLICANTS : null;
 	}
 
 	private void openProfile(String playerName, Point anchorPoint) {
@@ -431,13 +446,19 @@ public class RaidInterfaces extends MouseAdapter {
 		private final int nameOffset;
 		private final int statsStart;
 		private final int statsEnd;
+		private final int statsStep;
 
 		private RaidLayout(int componentId, int stride, int nameOffset, int statsStart, int statsEnd) {
+			this(componentId, stride, nameOffset, statsStart, statsEnd, 1);
+		}
+
+		private RaidLayout(int componentId, int stride, int nameOffset, int statsStart, int statsEnd, int statsStep) {
 			this.componentId = componentId;
 			this.stride = stride;
 			this.nameOffset = nameOffset;
 			this.statsStart = statsStart;
 			this.statsEnd = statsEnd;
+			this.statsStep = statsStep;
 		}
 	}
 

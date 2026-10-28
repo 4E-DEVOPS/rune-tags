@@ -233,6 +233,7 @@ tasks.register('testInput', Test) {
 
 	filter {
 		includeTestsMatching 'com.runetags.input.InputListenerTest'
+		includeTestsMatching 'com.runetags.input.RaidInterfacesTest'
 		includeTestsMatching 'com.runetags.input.NoteChatboxInputTest'
 		includeTestsMatching 'com.runetags.input.NoteTextLayoutTest'
 		includeTestsMatching 'com.runetags.input.TagChatboxInputTest'
