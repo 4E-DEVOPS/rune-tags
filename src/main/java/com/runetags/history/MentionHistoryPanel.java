@@ -178,7 +178,6 @@ public class MentionHistoryPanel extends PluginPanel {
 				entriesPanel.add(Box.createVerticalStrut(5));
 			}
 		}
-
 		entriesPanel.revalidate();
 		entriesPanel.repaint();
 	}
@@ -231,7 +230,6 @@ public class MentionHistoryPanel extends PluginPanel {
 			channelLabel = smallLabel(channel);
 			panel.add(channelLabel);
 		}
-
 		panel.add(Box.createVerticalStrut(5));
 
 		// Keep the message body visually distinct from sender and context metadata.
@@ -341,7 +339,6 @@ public class MentionHistoryPanel extends PluginPanel {
 			if (text.length() > 0) {
 				text.append(" \u2022 ");
 			}
-
 			text.append(entry.getLocationName());
 		}
 
@@ -426,7 +423,6 @@ public class MentionHistoryPanel extends PluginPanel {
 		for (FavoriteLabelBinding binding : favoriteLabels) {
 			applyFavoriteAppearance(binding);
 		}
-
 		entriesPanel.repaint();
 	}
 
