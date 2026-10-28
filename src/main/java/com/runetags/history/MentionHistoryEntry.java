@@ -23,8 +23,7 @@ public class MentionHistoryEntry {
 
 	/*
 	 * Context captured when the mention occurred. These values remain historical snapshots.
-	 */
-	Integer world;
+	 */ Integer world;
 	String locationName;
 	String channelName;
 
