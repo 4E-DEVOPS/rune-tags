@@ -17,10 +17,7 @@ public class PlayerContextService {
 
 	private volatile PlayerContext current = PlayerContext.unknown();
 
-	public PlayerContextService(
-			Client client,
-			PlayerLocationService playerLocationService,
-			ProfileMetricResolver profileMetricResolver) {
+	public PlayerContextService(Client client, PlayerLocationService playerLocationService, ProfileMetricResolver profileMetricResolver) {
 		this.client = client;
 		this.playerLocationService = playerLocationService;
 		this.profileMetricResolver = profileMetricResolver;

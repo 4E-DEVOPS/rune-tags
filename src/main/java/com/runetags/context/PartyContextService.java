@@ -78,8 +78,7 @@ public class PartyContextService {
 			putContext(new PartyContext(memberId, playerName, regionId, locationName, System.currentTimeMillis()));
 		} else if (characterNameUpdate != null && previous != null) {
 			// Do not extend location freshness for a name-only update.
-			putContext(new PartyContext(
-					memberId, playerName, previous.getRegionId(), previous.getLocationName(), previous.getUpdatedAtMillis()));
+			putContext(new PartyContext(memberId, playerName, previous.getRegionId(), previous.getLocationName(), previous.getUpdatedAtMillis()));
 		}
 	}
 
@@ -159,8 +158,7 @@ public class PartyContextService {
 	}
 
 	private static boolean isExpired(PartyContext context) {
-		return context == null
-				|| System.currentTimeMillis() - context.getUpdatedAtMillis() > CONTEXT_TTL_MILLIS;
+		return context == null || System.currentTimeMillis() - context.getUpdatedAtMillis() > CONTEXT_TTL_MILLIS;
 	}
 
 	private void remove(long memberId) {
