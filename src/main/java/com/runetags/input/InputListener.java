@@ -247,7 +247,6 @@ public class InputListener extends MouseAdapter implements KeyListener {
 					: MENU_TARGET;
 			client.createMenuEntry(-2).setOption(action).setTarget(target).setType(MenuAction.RUNELITE).onClick(entry -> quickProfileController.target(reference));
 		}
-
 		client.createMenuEntry(-3).setOption(MENU_LOOKUP).setTarget(target).setType(MenuAction.RUNELITE).onClick(entry -> quickProfileController.lookup(reference));
 		return true;
 	}
@@ -384,7 +383,6 @@ public class InputListener extends MouseAdapter implements KeyListener {
 		if (event.getButton() == MouseEvent.BUTTON1 && suppressCurrentLeftClick) {
 			event.consume();
 		}
-
 		return super.mouseReleased(event);
 	}
 

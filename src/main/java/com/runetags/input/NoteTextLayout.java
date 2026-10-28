@@ -141,12 +141,10 @@ public final class NoteTextLayout {
 				if (breakAt <= 0) {
 					breakAt = fittingEnd;
 				}
-
 				final String row = remaining.substring(0, breakAt).trim();
 				if (!row.isEmpty()) {
 					rows.add(row);
 				}
-
 				remaining = remaining.substring(breakAt).trim();
 			}
 		}
@@ -184,7 +182,6 @@ public final class NoteTextLayout {
 		if (clean.charAt(0) == BULLET.charAt(0)) {
 			clean = clean.substring(1).trim();
 		}
-
 		if (clean.isEmpty()) {
 			return BULLET;
 		}

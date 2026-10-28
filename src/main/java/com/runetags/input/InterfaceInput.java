@@ -148,7 +148,6 @@ public class InterfaceInput extends MouseAdapter {
 				event.consume();
 			}
 		}
-
 		return event;
 	}
 
@@ -157,7 +156,6 @@ public class InterfaceInput extends MouseAdapter {
 		if (event != null && event.getButton() == MouseEvent.BUTTON1 && suppressLeftClick) {
 			event.consume();
 		}
-
 		return event;
 	}
 
@@ -167,7 +165,6 @@ public class InterfaceInput extends MouseAdapter {
 			suppressLeftClick = false;
 			event.consume();
 		}
-
 		return event;
 	}
 
@@ -218,7 +215,6 @@ public class InterfaceInput extends MouseAdapter {
 				updated[index++] = entry;
 			}
 		}
-
 		client.getMenu().setMenuEntries(updated);
 	}
 
@@ -365,7 +361,6 @@ public class InterfaceInput extends MouseAdapter {
 
 	private Point currentMousePoint() {
 		final net.runelite.api.Point canvasPoint = client.getMouseCanvasPosition();
-
 		return canvasPoint != null
 				? new Point(canvasPoint.getX(), canvasPoint.getY())
 				: null;

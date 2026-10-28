@@ -98,7 +98,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		if (value.length() == 0) {
 			value.append(NoteTextLayout.BULLET_PREFIX);
 		}
-
 		cursor = value.length();
 		requestUpdate();
 		return this;
@@ -281,7 +280,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		if (rows.isEmpty()) {
 			rows.add(new InputRow(0, 0, "", false));
 		}
-
 		return rows;
 	}
 
@@ -320,7 +318,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 				 */
 				fittingEnd = lastSpace + 1;
 			}
-
 			final int rowEnd = fittingEnd;
 
 			/*
@@ -453,7 +450,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 						cursor = logicalLineEnd(logicalStart - 1);
 					}
 				}
-
 				requestUpdate();
 				return;
 			case KeyEvent.VK_RIGHT:
@@ -465,7 +461,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 					// Skip the complete newline + bullet prefix as one structural boundary.
 					cursor = editableLineStart(currentLineEnd + 1);
 				}
-
 				requestUpdate();
 				return;
 			case KeyEvent.VK_HOME:
@@ -639,7 +634,6 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 			if (clean.length() > available) {
 				clean.setLength(available);
 			}
-
 			if (clean.length() == 0) {
 				return;
 			}

@@ -124,7 +124,6 @@ public class MinigameInput extends MouseAdapter {
 		if (event != null && event.getButton() == MouseEvent.BUTTON1 && suppressLeftClick) {
 			event.consume();
 		}
-
 		return event;
 	}
 
@@ -134,7 +133,6 @@ public class MinigameInput extends MouseAdapter {
 			suppressLeftClick = false;
 			event.consume();
 		}
-
 		return event;
 	}
 
@@ -245,7 +243,6 @@ public class MinigameInput extends MouseAdapter {
 				updated[index++] = entry;
 			}
 		}
-
 		client.getMenu().setMenuEntries(updated);
 	}
 
@@ -269,7 +266,6 @@ public class MinigameInput extends MouseAdapter {
 
 	private Point currentMousePoint() {
 		final net.runelite.api.Point canvasPoint = client.getMouseCanvasPosition();
-
 		return canvasPoint != null
 				? new Point(canvasPoint.getX(), canvasPoint.getY())
 				: null;
