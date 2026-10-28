@@ -302,7 +302,6 @@ public class PlayerDirectory {
 							? title.getName()
 							: member.getRank().toString();
 				}
-
 				mergeIdentity(member.getName(), PlayerSource.CLAN, null, null, OnlineState.UNKNOWN, settings.getName(), rankName, null, null);
 			}
 		}
@@ -324,7 +323,6 @@ public class PlayerDirectory {
 						rankName = member.getRank().toString();
 					}
 				}
-
 				final int world = member.getWorld();
 				mergeIdentity(member.getName(), PlayerSource.CLAN, null,
 						world > 0
@@ -360,7 +358,6 @@ public class PlayerDirectory {
 							? title.getName()
 							: member.getRank().toString();
 				}
-
 				mergeIdentity(member.getName(), PlayerSource.GUEST_CLAN, null, null, OnlineState.UNKNOWN, settings.getName(), rankName, null, null);
 			}
 		}
@@ -383,7 +380,6 @@ public class PlayerDirectory {
 						rankName = member.getRank().toString();
 					}
 				}
-
 				final int world = member.getWorld();
 				mergeIdentity(member.getName(), PlayerSource.GUEST_CLAN, null,
 						world > 0
@@ -554,7 +550,6 @@ public class PlayerDirectory {
 				mergedState = existing.getOnlineState();
 			}
 		}
-
 		if (mergedState == null) {
 			mergedState = OnlineState.UNKNOWN;
 		}
