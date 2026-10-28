@@ -14,7 +14,6 @@ public class NameNormalizer {
 		final String lowercase = canonical.toLowerCase(Locale.ROOT);
 		final String comparison = SEPARATORS.matcher(lowercase).replaceAll("");
 		final String tagged = SEPARATORS.matcher(lowercase).replaceAll("_");
-
 		return new NormalizedPlayerName(canonical, comparison, tagged);
 	}
 

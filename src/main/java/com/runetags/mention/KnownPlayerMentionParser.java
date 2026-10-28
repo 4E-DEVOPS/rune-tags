@@ -86,7 +86,6 @@ public class KnownPlayerMentionParser {
 		if (targetKey == null || targetKey.isEmpty()) {
 			targetKey = normalizer.comparisonKey(identity.getCanonicalName());
 		}
-
 		if (targetKey.isEmpty()) {
 			return;
 		}
