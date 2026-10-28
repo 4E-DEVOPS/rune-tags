@@ -38,11 +38,22 @@ public interface Configurations extends Config {
 	}
 
 	@ConfigItem(
+			keyName = "quickCardOpenPosition",
+			name = " └─ Open Position",
+			description = "Choose whether Quick-Card opens relative to your click or at its previously dragged position.",
+			section = quickProfileSection,
+			position = 1
+	)
+	default QuickCardOpenPosition quickCardOpenPosition() {
+		return QuickCardOpenPosition.RELATIVE_TO_CLICK;
+	}
+
+	@ConfigItem(
 			keyName = "showPreviousRsns",
 			name = "Show Previous RSNs",
 			description = "Show known previous RuneScape names when hovering over a player's name on their Quick-Card.",
 			section = quickProfileSection,
-			position = 1
+			position = 2
 	)
 	default boolean showPreviousRsns() {
 		return true;
@@ -53,7 +64,7 @@ public interface Configurations extends Config {
 			name = "Background Opacity",
 			description = "Controls the opacity of the Quick-Card Profile background.",
 			section = quickProfileSection,
-			position = 2
+			position = 3
 	)
 	@Range(
 			min = 0,
@@ -68,7 +79,7 @@ public interface Configurations extends Config {
 			name = "Lookup Provider",
 			description = "Choose which provider is utilized when the Quick-Card 'Lookup' button is clicked.",
 			section = quickProfileSection,
-			position = 3
+			position = 4
 	)
 	default LookupProvider lookupProvider() {
 		return LookupProvider.HISCORES;

@@ -1,6 +1,8 @@
 package com.runetags.quickprofile;
 
 import com.runetags.Configurations;
+import com.runetags.Constants;
+import com.runetags.config.QuickCardOpenPosition;
 import com.runetags.context.PartyContextService;
 import com.runetags.context.PlayerContext;
 import com.runetags.context.PlayerContextService;
@@ -39,18 +41,21 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.chatbox.ChatboxPanelManager;
 import net.runelite.client.util.LinkBrowser;
 
 @Slf4j
 public class QuickProfileController {
 	public static final int CARD_ANCHOR_OFFSET = 8;
+	private static final String SAVED_CARD_POSITION_KEY = "quickCardLastPosition";
 	private final Client client;
 	private final ClientThread clientThread;
 	private final PlayerDirectory playerDirectory;
 	private final HiscoreEnrichmentService hiscoreEnrichmentService;
 	private final EfficiencyMetricService efficiencyMetricService;
 	private final Configurations config;
+	private final ConfigManager configManager;
 	private final PlayerContextService playerContextService;
 	private final PartyContextService partyContextService;
 	private final ProfileMetricResolver profileMetricResolver;
@@ -65,6 +70,7 @@ public class QuickProfileController {
 	private volatile Point anchorPoint;
 	private Point dragStartPoint;
 	private Point dragStartAnchor;
+	private boolean dragMoved;
 
 	/*
 	 * Profile context is shared only through authoritative live relationships.
@@ -93,13 +99,14 @@ public class QuickProfileController {
 	private volatile FontMetrics noteDisplayFontMetrics;
 	private volatile int noteDisplayMaxWidth;
 
-	public QuickProfileController(Client client, ClientThread clientThread, PlayerDirectory playerDirectory, HiscoreEnrichmentService hiscoreEnrichmentService, EfficiencyMetricService efficiencyMetricService, Configurations config, PlayerContextService playerContextService, PartyContextService partyContextService, ProfileMetricResolver profileMetricResolver, TargetController targetController, PlayerLookupService playerLookupService, ClanLookupService clanLookupService, ReportCaseService reportCaseService, LocalPlayerRecordService localPlayerRecordService, ChatboxPanelManager chatboxPanelManager) {
+	public QuickProfileController(Client client, ClientThread clientThread, PlayerDirectory playerDirectory, HiscoreEnrichmentService hiscoreEnrichmentService, EfficiencyMetricService efficiencyMetricService, Configurations config, PlayerContextService playerContextService, PartyContextService partyContextService, ProfileMetricResolver profileMetricResolver, TargetController targetController, PlayerLookupService playerLookupService, ClanLookupService clanLookupService, ReportCaseService reportCaseService, LocalPlayerRecordService localPlayerRecordService, ChatboxPanelManager chatboxPanelManager, ConfigManager configManager) {
 		this.client = client;
 		this.clientThread = clientThread;
 		this.playerDirectory = playerDirectory;
 		this.hiscoreEnrichmentService = hiscoreEnrichmentService;
 		this.efficiencyMetricService = efficiencyMetricService;
 		this.config = config;
+		this.configManager = configManager;
 		this.playerContextService = playerContextService;
 		this.partyContextService = partyContextService;
 		this.profileMetricResolver = profileMetricResolver;
@@ -178,9 +185,14 @@ public class QuickProfileController {
 					: null).build();
 		}
 
-		anchorPoint = clickPoint != null
-				? new Point(clickPoint)
-				: new Point(20, 20);
+		final Point savedPosition = config != null && config.quickCardOpenPosition() == QuickCardOpenPosition.LAST_POSITION
+				? getSavedCardPosition()
+				: null;
+		anchorPoint = savedPosition != null
+				? new Point(savedPosition.x - CARD_ANCHOR_OFFSET, savedPosition.y - CARD_ANCHOR_OFFSET)
+				: clickPoint != null
+						? new Point(clickPoint)
+						: new Point(20, 20);
 
 		clearLayoutBounds();
 
@@ -260,6 +272,7 @@ public class QuickProfileController {
 
 		dragStartPoint = new Point(point);
 		dragStartAnchor = new Point(currentBounds.x - CARD_ANCHOR_OFFSET, currentBounds.y - CARD_ANCHOR_OFFSET);
+		dragMoved = false;
 		return true;
 	}
 
@@ -269,6 +282,7 @@ public class QuickProfileController {
 		}
 
 		anchorPoint = new Point(dragStartAnchor.x + point.x - dragStartPoint.x, dragStartAnchor.y + point.y - dragStartPoint.y);
+		dragMoved |= !point.equals(dragStartPoint);
 		return true;
 	}
 
@@ -277,8 +291,33 @@ public class QuickProfileController {
 	}
 
 	public void stopCardDrag() {
+		if (dragStartPoint != null && dragMoved && anchorPoint != null && cardBounds != null && configManager != null) {
+			final int x = Math.max(4, Math.min(anchorPoint.x + CARD_ANCHOR_OFFSET, client.getCanvasWidth() - cardBounds.width - 4));
+			final int y = Math.max(4, Math.min(anchorPoint.y + CARD_ANCHOR_OFFSET, client.getCanvasHeight() - cardBounds.height - 4));
+			configManager.setConfiguration(Constants.CONFIG_GROUP, SAVED_CARD_POSITION_KEY, x + "," + y);
+		}
+
 		dragStartPoint = null;
 		dragStartAnchor = null;
+		dragMoved = false;
+	}
+
+	private Point getSavedCardPosition() {
+		if (configManager == null) {
+			return null;
+		}
+
+		final String stored = configManager.getConfiguration(Constants.CONFIG_GROUP, SAVED_CARD_POSITION_KEY);
+		if (stored == null || !stored.matches("[0-9]+,[0-9]+")) {
+			return null;
+		}
+
+		final String[] parts = stored.split(",", 2);
+		try {
+			return new Point(Integer.parseInt(parts[0]), Integer.parseInt(parts[1]));
+		} catch (NumberFormatException exception) {
+			return null;
+		}
 	}
 
 	public ProfileContextSnapshot resolveHistoryContext(String playerName) {

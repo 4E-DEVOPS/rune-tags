@@ -327,7 +327,7 @@ public class RuneTags extends Plugin {
 		playerLookupService = new PlayerLookupService(config);
 		clanLookupService = new ClanLookupService();
 		reportCaseService = new ReportCaseService(okHttpClient, gson, clientThread, config);
-		quickProfileController = new QuickProfileController(client, clientThread, playerDirectory, hiscoreEnrichmentService, efficiencyMetricService, config, playerContextService, partyContextService, profileMetricResolver, targetController, playerLookupService, clanLookupService, reportCaseService, localPlayerRecordService, chatboxPanelManager);
+		quickProfileController = new QuickProfileController(client, clientThread, playerDirectory, hiscoreEnrichmentService, efficiencyMetricService, config, playerContextService, partyContextService, profileMetricResolver, targetController, playerLookupService, clanLookupService, reportCaseService, localPlayerRecordService, chatboxPanelManager, configManager);
 		quickProfileOverlay = new QuickProfileOverlay(client, config, runeLiteConfig, quickProfileController, tooltipManager);
 		favoriteOverlay = new FavoriteOverlay(client, config, localPlayerRecordService, targetController, modelOutlineRenderer, partyService);
 		targetOverlay = new TargetOverlay(client, config, targetController, modelOutlineRenderer, localPlayerRecordService, favoriteOverlay);
