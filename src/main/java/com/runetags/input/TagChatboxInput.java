@@ -339,6 +339,7 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 		private final Rectangle bounds;
 		private final String tag;
 		private final Widget background;
+
 		private TagHitbox(Rectangle bounds, String tag, Widget background) {
 			this.bounds = bounds;
 			this.tag = tag;

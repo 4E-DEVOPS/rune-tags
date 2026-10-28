@@ -200,6 +200,7 @@ public final class NoteTextLayout {
 		private static final Result EMPTY = new Result(Collections.emptyList(), false);
 		private final List<String> rows;
 		private final boolean overflow;
+
 		private Result(List<String> rows, boolean overflow) {
 			this.rows = rows;
 			this.overflow = overflow;

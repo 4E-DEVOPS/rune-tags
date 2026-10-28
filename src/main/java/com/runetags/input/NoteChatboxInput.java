@@ -749,6 +749,7 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		private final int end;
 		private final String text;
 		private final boolean bullet;
+
 		private InputRow(int start, int end, String text, boolean bullet) {
 			this.start = start;
 			this.end = end;
@@ -765,6 +766,7 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		private final int y;
 		private final int width;
 		private final int height;
+
 		private VisibleRow(InputRow row, int x, int y, int width, int height) {
 			this.row = row;
 			this.x = x;

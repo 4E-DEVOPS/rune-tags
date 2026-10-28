@@ -311,7 +311,7 @@ public class InputListener extends MouseAdapter implements KeyListener {
 
 	@Override
 	public void keyPressed(KeyEvent event) {
-	// Hotkey or Escape pressing functions
+		// Hotkey or Escape pressing functions
 		if (event == null) {
 			return;
 		}
@@ -445,7 +445,7 @@ public class InputListener extends MouseAdapter implements KeyListener {
 			 * Inserting immediately after Report therefore places Open Profile directly
 			 * above Report without moving the other native actions.
 			 */
-			client.createMenuEntry(i + 1).setOption(MENU_OPEN_PROFILE).setTarget(nativeTarget) .setType(MenuAction.RUNELITE).onClick(menuEntry -> quickProfileController.open(senderReference, profileAnchor));
+			client.createMenuEntry(i + 1).setOption(MENU_OPEN_PROFILE).setTarget(nativeTarget).setType(MenuAction.RUNELITE).onClick(menuEntry -> quickProfileController.open(senderReference, profileAnchor));
 
 			// Target stays at the top of the sender menu and resolves when selected.
 			if (config.targetPlayerOption() && quickProfileController.canTarget(senderReference)) {
