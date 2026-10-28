@@ -54,12 +54,7 @@ public class MentionHistoryPanel extends PluginPanel {
 	private final List<FavoriteLabelBinding> favoriteLabels = new ArrayList<>();
 	private final Timer ageRefreshTimer;
 
-	public MentionHistoryPanel(
-			Client client,
-			Configurations config,
-			MentionHistoryService historyService,
-			QuickProfileController quickProfileController,
-			LocalPlayerRecordService localPlayerRecordService) {
+	public MentionHistoryPanel(Client client, Configurations config, MentionHistoryService historyService, QuickProfileController quickProfileController, LocalPlayerRecordService localPlayerRecordService) {
 		super(false);
 
 		this.client = client;
@@ -142,8 +137,7 @@ public class MentionHistoryPanel extends PluginPanel {
 
 			final java.awt.Graphics2D graphics2D = (java.awt.Graphics2D) graphics.create();
 			try {
-				graphics2D.setRenderingHint(
-						java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+				graphics2D.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
 				graphics2D.setColor(getBackground());
 
 				final int inset = 1;
@@ -212,8 +206,7 @@ public class MentionHistoryPanel extends PluginPanel {
 		final JLabel senderLabel = new JLabel(sender);
 		senderLabel.setFont(senderLabel.getFont().deriveFont(Font.BOLD));
 
-		final FavoriteLabelBinding favoriteBinding = new FavoriteLabelBinding(
-				senderLabel, sender, senderLabel.getForeground());
+		final FavoriteLabelBinding favoriteBinding = new FavoriteLabelBinding(senderLabel, sender, senderLabel.getForeground());
 		favoriteLabels.add(favoriteBinding);
 		applyFavoriteAppearance(favoriteBinding);
 
@@ -442,10 +435,7 @@ public class MentionHistoryPanel extends PluginPanel {
 			return;
 		}
 
-		final boolean favorite = config != null
-				&& config.showFavorites()
-				&& localPlayerRecordService != null
-				&& localPlayerRecordService.isFavorite(binding.playerName);
+		final boolean favorite = config != null && config.showFavorites() && localPlayerRecordService != null && localPlayerRecordService.isFavorite(binding.playerName);
 		final Color favoriteColor = config != null && config.favoriteColor() != null
 				? config.favoriteColor()
 				: new Color(255, 205, 70);

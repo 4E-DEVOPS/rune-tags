@@ -36,8 +36,7 @@ public class MentionHistoryService {
 	private static final int STORE_VERSION = 1;
 	private static final String LEGACY_CONFIG_KEY = "mentionHistoryV1";
 
-	private static final Path DEFAULT_HISTORY_DIRECTORY =
-			RuneLite.RUNELITE_DIR.toPath().resolve("RuneTags").resolve("history");
+	private static final Path DEFAULT_HISTORY_DIRECTORY = RuneLite.RUNELITE_DIR.toPath().resolve("RuneTags").resolve("history");
 	private static final Path DEFAULT_HISTORY_FILE = DEFAULT_HISTORY_DIRECTORY.resolve("history.json");
 
 	private final Configurations config;
@@ -70,23 +69,11 @@ public class MentionHistoryService {
 	}
 
 	public synchronized void add(TaggedMessage taggedMessage, Integer world, String locationName, String channelName) {
-		if (!config.mentionHistory()
-				|| taggedMessage == null
-				|| taggedMessage.getLocalMentionMatch() == null
-				|| !taggedMessage.getLocalMentionMatch().isMatchesLocalPlayer()) {
+		if (!config.mentionHistory() || taggedMessage == null || taggedMessage.getLocalMentionMatch() == null || !taggedMessage.getLocalMentionMatch().isMatchesLocalPlayer()) {
 			return;
 		}
 
-		final MentionHistoryEntry entry = new MentionHistoryEntry(
-				taggedMessage.getId(),
-				taggedMessage.getCanonicalSender(),
-				taggedMessage.getOriginalMessage(),
-				taggedMessage.getType(),
-				taggedMessage.getLocalMentionMatch().getReason(),
-				world,
-				locationName,
-				channelName,
-				taggedMessage.getTimestamp());
+		final MentionHistoryEntry entry = new MentionHistoryEntry(taggedMessage.getId(), taggedMessage.getCanonicalSender(), taggedMessage.getOriginalMessage(), taggedMessage.getType(), taggedMessage.getLocalMentionMatch().getReason(), world, locationName, channelName, taggedMessage.getTimestamp());
 		entries.addFirst(entry);
 		trim();
 		save();
@@ -179,9 +166,7 @@ public class MentionHistoryService {
 			removeLegacyConfig();
 			log.info("[RuneTags][Mention-History] Migrated Legacy ConfigManager History to '{}'", historyFile);
 		} catch (RuntimeException exception) {
-			log.warn(
-					"[RuneTags][Mention-History] Unable to Migrate Legacy ConfigManager History | ERROR: {}",
-					exception.getMessage());
+			log.warn("[RuneTags][Mention-History] Unable to Migrate Legacy ConfigManager History | ERROR: {}", exception.getMessage());
 		}
 	}
 
@@ -302,16 +287,7 @@ public class MentionHistoryService {
 			return null;
 		}
 
-		return new MentionHistoryEntry(
-				persisted.messageId,
-				persisted.sender,
-				persisted.message,
-				chatType,
-				matchReason,
-				persisted.world,
-				persisted.locationName,
-				persisted.channelName,
-				Instant.ofEpochMilli(persisted.timestampMillis));
+		return new MentionHistoryEntry(persisted.messageId, persisted.sender, persisted.message, chatType, matchReason, persisted.world, persisted.locationName, persisted.channelName, Instant.ofEpochMilli(persisted.timestampMillis));
 	}
 
 	/*
