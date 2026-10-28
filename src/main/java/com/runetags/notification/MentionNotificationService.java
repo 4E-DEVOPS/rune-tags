@@ -32,7 +32,7 @@ public class MentionNotificationService {
 		 * while tray, RuneLite sound, and game-message output remain disabled.
 		 */
 		final Notification notification = new Notification(
-				true,						// enabled
+				true,								// enabled
 				true,								// initialized
 				true,								// override
 				false,								// tray
