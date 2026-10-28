@@ -55,9 +55,7 @@ public class TargetMinimapOverlay extends Overlay {
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		final MinimapIndicatorMode indicatorMode = config.minimapIndicator();
-		if (!config.targetPlayerOption()
-				|| indicatorMode == MinimapIndicatorMode.OFF
-				|| client.getGameState() != GameState.LOGGED_IN) {
+		if (!config.targetPlayerOption() || indicatorMode == MinimapIndicatorMode.OFF || client.getGameState() != GameState.LOGGED_IN) {
 			return null;
 		}
 

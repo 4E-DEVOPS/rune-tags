@@ -57,9 +57,8 @@ public class FavoriteOverlay extends Overlay {
 		if (player == null) {
 			return false;
 		}
-		// TODO: After testing, replace 'return true' with
-		// 'return hasSupportedRelationship(player);'
 		return true;
+		// TODO: return hasSupportedRelationship(player);
 	}
 
 	@SuppressWarnings("unused")
@@ -67,13 +66,16 @@ public class FavoriteOverlay extends Overlay {
 		if (player == null) {
 			return false;
 		}
+
 		if (player == client.getLocalPlayer() || player.isFriend() || player.isFriendsChatMember() || player.isClanMember()) {
 			return true;
 		}
+
 		final Player self = client.getLocalPlayer();
 		if (self != null && player.getTeam() > 0 && player.getTeam() == self.getTeam()) {
 			return true;
 		}
+
 		final ClanChannel guest = client.getGuestClanChannel();
 		if (guest != null && player.getName() != null && guest.findMember(player.getName()) != null) {
 			return true;
@@ -86,31 +88,38 @@ public class FavoriteOverlay extends Overlay {
 		if (!config.showFavorites() || records == null || client.getGameState() != GameState.LOGGED_IN) {
 			return null;
 		}
+
 		final WorldView worldView = client.getTopLevelWorldView();
 		if (worldView == null) {
 			return null;
 		}
+
 		final FavoriteHighlightMode mode = config.favoriteHighlightMode() != null
 				? config.favoriteHighlightMode()
 				: FavoriteHighlightMode.BOTH;
 		if (mode == FavoriteHighlightMode.OFF) {
 			return null;
 		}
+
 		final Color configured = config.favoriteColor() != null
 				? config.favoriteColor()
 				: new Color(255, 205, 70);
+
 		final Color sceneColor = new Color(configured.getRed(), configured.getGreen(), configured.getBlue(), Math.min(200, configured.getAlpha()));
 		for (Player player : worldView.players()) {
 			if (player == null || player.getName() == null || player.getName().trim().isEmpty() || !records.isFavorite(player.getName()) || !canHighlightFavorite(player)) {
 				continue;
 			}
+
 			// TargetOverlay draws the targeted Favorite once, with this same mode and color.
 			if (targetController != null && targetController.isTargetingName(player.getName())) {
 				continue;
 			}
+
 			if (mode.showsOutline()) {
 				outlines.drawOutline(player, OUTLINE_WIDTH, sceneColor, OUTLINE_FEATHER);
 			}
+
 			if (mode.showsTile()) {
 				final Polygon tile = player.getCanvasTilePoly();
 				if (tile != null) {

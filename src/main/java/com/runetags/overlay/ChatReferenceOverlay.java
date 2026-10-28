@@ -51,12 +51,7 @@ public class ChatReferenceOverlay extends Overlay {
 	private final Configurations config;
 	private final LocalMentionMatcher localMentionMatcher;
 
-	public ChatReferenceOverlay(
-			ReferenceLayoutService layoutService,
-			ChatHitboxRegistry registry,
-			Client client,
-			Configurations config,
-			LocalMentionMatcher localMentionMatcher) {
+	public ChatReferenceOverlay(ReferenceLayoutService layoutService, ChatHitboxRegistry registry, Client client, Configurations config, LocalMentionMatcher localMentionMatcher) {
 		this.layoutService = layoutService;
 		this.registry = registry;
 		this.client = client;
@@ -71,17 +66,15 @@ public class ChatReferenceOverlay extends Overlay {
 	@Override
 	public Dimension render(Graphics2D graphics) {
 		/*
-		 * ABOVE_WIDGETS is not clipped by native chat, so constrain rendering and input
-		 * to the visible chat area.
+		 * ABOVE_WIDGETS is not clipped by native chat,
+		 * so constrain rendering and input to the visible chat area.
 		 */
 		final Widget chatScrollArea = client.getWidget(InterfaceID.Chatbox.SCROLLAREA);
 		final Widget chatboxArea = client.getWidget(InterfaceID.Chatbox.CHATAREA);
 		final Rectangle chatScrollBounds = chatScrollArea != null && !chatScrollArea.isHidden()
 				? chatScrollArea.getBounds()
 				: null;
-		final boolean hasVisibleChatbox = chatScrollBounds != null
-				&& chatScrollBounds.width > 0
-				&& chatScrollBounds.height > 0;
+		final boolean hasVisibleChatbox = chatScrollBounds != null && chatScrollBounds.width > 0 && chatScrollBounds.height > 0;
 		// Calculate semantic/reference hitboxes from the rendered chat.
 		final LayoutResult layoutResult = layoutService.layout();
 		final List<ReferenceHitbox> hitboxes = layoutResult.getHitboxes();
@@ -96,9 +89,7 @@ public class ChatReferenceOverlay extends Overlay {
 		 * Respect native no-click-through interfaces that obscure the chat surface.
 		 */
 		final Rectangle interactionBounds = unionInteractionBounds(hitboxes, localHighlights);
-		final List<Rectangle> blockingBounds = collectBlockingWidgetBounds(
-				chatboxArea, splitPrivateRoot,
-				interactionBounds);
+		final List<Rectangle> blockingBounds = collectBlockingWidgetBounds(chatboxArea, splitPrivateRoot, interactionBounds);
 		final List<ReferenceHitbox> visibleHitboxes = new ArrayList<>();
 		for (ReferenceHitbox hitbox : hitboxes) {
 			if (hitbox == null || hitbox.getBounds() == null) {
@@ -113,10 +104,8 @@ public class ChatReferenceOverlay extends Overlay {
 
 					visibleBounds = chatScrollBounds.intersection(visibleBounds);
 					break;
-
 				case SPLIT_PRIVATE:
 					break;
-
 				default:
 					continue;
 			}
@@ -131,9 +120,7 @@ public class ChatReferenceOverlay extends Overlay {
 					continue;
 				}
 
-				visibleHitboxes.add(new ReferenceHitbox(
-						hitbox.getMessageId(), fragment, hitbox.getReference(),
-						hitbox.getSurface()));
+				visibleHitboxes.add(new ReferenceHitbox(hitbox.getMessageId(), fragment, hitbox.getReference(), hitbox.getSurface()));
 			}
 		}
 
@@ -196,9 +183,7 @@ public class ChatReferenceOverlay extends Overlay {
 	/*
 	 * Build the smallest canvas region needed for chat rendering and interaction.
 	 */
-	private static Rectangle unionInteractionBounds(
-			List<ReferenceHitbox> hitboxes,
-			List<LocalHighlight> localHighlights) {
+	private static Rectangle unionInteractionBounds(List<ReferenceHitbox> hitboxes, List<LocalHighlight> localHighlights) {
 		Rectangle result = null;
 
 		if (hitboxes != null) {
@@ -235,10 +220,7 @@ public class ChatReferenceOverlay extends Overlay {
 	/*
 	 * Find visible native blockers outside the chat surfaces RuneTags decorates.
 	 */
-	private List<Rectangle> collectBlockingWidgetBounds(
-			Widget chatboxArea,
-			Widget splitPrivateRoot,
-			Rectangle interactionBounds) {
+	private List<Rectangle> collectBlockingWidgetBounds(Widget chatboxArea, Widget splitPrivateRoot, Rectangle interactionBounds) {
 		if (interactionBounds == null || interactionBounds.isEmpty()) {
 			return Collections.emptyList();
 		}
@@ -250,22 +232,13 @@ public class ChatReferenceOverlay extends Overlay {
 		final List<Rectangle> blockingBounds = new ArrayList<>();
 		final Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
 		for (Widget root : roots) {
-			collectBlockingWidgetBounds(
-					root, chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited,
-					0);
+			collectBlockingWidgetBounds(root, chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited, 0);
 		}
 
 		return blockingBounds;
 	}
 
-	private void collectBlockingWidgetBounds(
-			Widget widget,
-			Widget chatboxArea,
-			Widget splitPrivateRoot,
-			Rectangle interactionBounds,
-			List<Rectangle> blockingBounds,
-			Set<Widget> visited,
-			int depth) {
+	private void collectBlockingWidgetBounds(Widget widget, Widget chatboxArea, Widget splitPrivateRoot, Rectangle interactionBounds, List<Rectangle> blockingBounds, Set<Widget> visited, int depth) {
 		if (widget == null || depth > MAX_OCCLUSION_WIDGET_DEPTH || !visited.add(widget) || widget.isHidden()) {
 			return;
 		}
@@ -278,43 +251,23 @@ public class ChatReferenceOverlay extends Overlay {
 		}
 
 		// A no-click-through blocker also hides its descendants from chat interaction.
-		if (bounds != null && !bounds.isEmpty() && widget.getNoClickThrough() && !belongsToChatPresentation(
-				widget,
-				chatboxArea, splitPrivateRoot)) {
+		if (bounds != null && !bounds.isEmpty() && widget.getNoClickThrough() && !belongsToChatPresentation(widget, chatboxArea, splitPrivateRoot)) {
 			blockingBounds.add(interactionBounds.intersection(bounds));
-
 			return;
 		}
 
-		collectBlockingWidgetChildren(
-				widget.getChildren(), chatboxArea, splitPrivateRoot, interactionBounds,
-				blockingBounds, visited, depth + 1);
-
-		collectBlockingWidgetChildren(
-				widget.getStaticChildren(), chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited,
-				depth + 1);
-
-		collectBlockingWidgetChildren(
-				widget.getNestedChildren(), chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited,
-				depth + 1);
+		collectBlockingWidgetChildren(widget.getChildren(), chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited, depth + 1);
+		collectBlockingWidgetChildren(widget.getStaticChildren(), chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited, depth + 1);
+		collectBlockingWidgetChildren(widget.getNestedChildren(), chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited, depth + 1);
 	}
 
-	private void collectBlockingWidgetChildren(
-			Widget[] children,
-			Widget chatboxArea,
-			Widget splitPrivateRoot,
-			Rectangle interactionBounds,
-			List<Rectangle> blockingBounds,
-			Set<Widget> visited,
-			int depth) {
+	private void collectBlockingWidgetChildren(Widget[] children, Widget chatboxArea, Widget splitPrivateRoot, Rectangle interactionBounds, List<Rectangle> blockingBounds, Set<Widget> visited, int depth) {
 		if (children == null) {
 			return;
 		}
 
 		for (Widget child : children) {
-			collectBlockingWidgetBounds(
-					child, chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds,
-					visited, depth);
+			collectBlockingWidgetBounds(child, chatboxArea, splitPrivateRoot, interactionBounds, blockingBounds, visited, depth);
 		}
 	}
 
@@ -428,26 +381,17 @@ public class ChatReferenceOverlay extends Overlay {
 
 		// Area right of the blocker within its vertical band.
 		if (intersectionRight < sourceRight) {
-			output.add(new Rectangle(
-					intersectionRight, intersection.y, sourceRight - intersectionRight,
-					intersection.height));
+			output.add(new Rectangle(intersectionRight, intersection.y, sourceRight - intersectionRight, intersection.height));
 		}
 	}
 
-	private void drawLocalHighlights(
-			Graphics2D graphics,
-			List<LocalHighlight> highlights,
-			Rectangle chatScrollBounds,
-			boolean hasVisibleChatbox,
-			Shape unobscuredClip) {
+	private void drawLocalHighlights(Graphics2D graphics, List<LocalHighlight> highlights, Rectangle chatScrollBounds, boolean hasVisibleChatbox, Shape unobscuredClip) {
 		if (highlights == null || highlights.isEmpty()) {
 			return;
 		}
 
 		final Color backgroundColor = config.selfBackgroundColor();
-		final boolean drawBackground = config.highlightBackground()
-				&& backgroundColor != null
-				&& backgroundColor.getAlpha() > 0;
+		final boolean drawBackground = config.highlightBackground() && backgroundColor != null && backgroundColor.getAlpha() > 0;
 		final boolean drawUnderline = config.underlineMentions();
 		if (!drawBackground && !drawUnderline) {
 			return;
@@ -467,29 +411,21 @@ public class ChatReferenceOverlay extends Overlay {
 					}
 
 					graphics.clip(chatScrollBounds);
-
 					visibleBounds = chatScrollBounds.intersection(visibleBounds);
 
 					if (visibleBounds.isEmpty()) {
 						continue;
 					}
-
 					break;
-
 				case SPLIT_PRIVATE:
 					break;
-
 				default:
 					continue;
 			}
 
 			if (drawBackground) {
 				graphics.setColor(backgroundColor);
-
-				graphics.fillRect(
-						visibleBounds.x - BACKGROUND_HORIZONTAL_PADDING, visibleBounds.y - BACKGROUND_VERTICAL_PADDING,
-						visibleBounds.width + (BACKGROUND_HORIZONTAL_PADDING * 2),
-						visibleBounds.height + (BACKGROUND_VERTICAL_PADDING * 2));
+				graphics.fillRect(visibleBounds.x - BACKGROUND_HORIZONTAL_PADDING, visibleBounds.y - BACKGROUND_VERTICAL_PADDING, visibleBounds.width + (BACKGROUND_HORIZONTAL_PADDING * 2), visibleBounds.height + (BACKGROUND_VERTICAL_PADDING * 2));
 			}
 
 			if (drawUnderline) {
@@ -526,11 +462,7 @@ public class ChatReferenceOverlay extends Overlay {
 
 		try {
 			graphics.setColor(backgroundColor);
-
-			graphics.fillRect(
-					bounds.x - BACKGROUND_HORIZONTAL_PADDING, bounds.y - BACKGROUND_VERTICAL_PADDING,
-					bounds.width + (BACKGROUND_HORIZONTAL_PADDING * 2),
-					bounds.height + (BACKGROUND_VERTICAL_PADDING * 2));
+			graphics.fillRect(bounds.x - BACKGROUND_HORIZONTAL_PADDING, bounds.y - BACKGROUND_VERTICAL_PADDING, bounds.width + (BACKGROUND_HORIZONTAL_PADDING * 2), bounds.height + (BACKGROUND_VERTICAL_PADDING * 2));
 		} finally {
 			graphics.setColor(previousColor);
 		}
@@ -549,7 +481,6 @@ public class ChatReferenceOverlay extends Overlay {
 			}
 
 			final int y = bounds.y + bounds.height - 2;
-
 			graphics.drawLine(bounds.x, y, bounds.x + bounds.width - 1, y);
 		} finally {
 			graphics.setColor(previousColor);

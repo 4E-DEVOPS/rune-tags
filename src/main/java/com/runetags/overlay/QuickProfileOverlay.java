@@ -112,12 +112,7 @@ public class QuickProfileOverlay extends Overlay {
 	private final QuickProfileController controller;
 	private final TooltipManager tooltipManager;
 
-	public QuickProfileOverlay(
-			Client client,
-			Configurations config,
-			RuneLiteConfig runeLiteConfig,
-			QuickProfileController controller,
-			TooltipManager tooltipManager) {
+	public QuickProfileOverlay(Client client, Configurations config, RuneLiteConfig runeLiteConfig, QuickProfileController controller, TooltipManager tooltipManager) {
 		this.client = client;
 		this.config = config;
 		this.runeLiteConfig = runeLiteConfig;
@@ -133,7 +128,6 @@ public class QuickProfileOverlay extends Overlay {
 	public Dimension render(Graphics2D graphics) {
 		if (!config.showProfile() || !controller.isOpen()) {
 			controller.updateLayoutBounds(null, null, null, null, null, null, null, null, null, null);
-
 			return null;
 		}
 
@@ -144,36 +138,25 @@ public class QuickProfileOverlay extends Overlay {
 		}
 		final Font normalFont = graphics.getFont();
 		final Font bracketFont = normalFont.deriveFont(Font.BOLD, normalFont.getSize2D() + PLAYER_NAME_FONT_INCREASE);
-		final int playerNameDescent = Math.max(
-				graphics.getFontMetrics(normalFont).getDescent(), graphics.getFontMetrics(bracketFont).getDescent());
+		final int playerNameDescent = Math.max(graphics.getFontMetrics(normalFont).getDescent(), graphics.getFontMetrics(bracketFont).getDescent());
 		final boolean showTarget = config.targetPlayerOption() && model.isNearby();
 		final boolean showStatus = config.shareStatus();
 		final boolean showWorld = showStatus && config.shareWorld();
-		final boolean showLocation = config.shareLocation() && model.getLocationName() != null && !model
-				.getLocationName().isEmpty();
+		final boolean showLocation = config.shareLocation() && model.getLocationName() != null && !model.getLocationName().isEmpty();
 		final boolean showStatusLine = showStatus || showLocation;
-		final boolean showChannel = config.shareChannel() && model.getChannelName() != null && !model.getChannelName()
-				.isEmpty();
-		final boolean showRank = showChannel && config.shareRank() && model.getChannelRank() != null && !model
-				.getChannelRank().isEmpty();
-		final boolean clickableClan = showChannel && (model.getChannelSource() == PlayerSource.CLAN
-				|| model.getChannelSource() == PlayerSource.GUEST_CLAN);
+		final boolean showChannel = config.shareChannel() && model.getChannelName() != null && !model.getChannelName().isEmpty();
+		final boolean showRank = showChannel && config.shareRank() && model.getChannelRank() != null && !model.getChannelRank().isEmpty();
+		final boolean clickableClan = showChannel && (model.getChannelSource() == PlayerSource.CLAN || model.getChannelSource() == PlayerSource.GUEST_CLAN);
 		final boolean showTags = config.showTags() && model.getTags() != null && !model.getTags().isEmpty();
 		final boolean showNote = config.showNotes() && model.getNote() != null && !model.getNote().trim().isEmpty();
-		final boolean showReports = config.showReports() && model.getReportSummaries() != null && !model
-				.getReportSummaries().isEmpty();
-		final boolean hasLoadedStats = model.getEnrichmentState() == HiscoreEnrichmentState.LOADED
-				&& (model.getCombatLevel() != null || model.getTotalLevel() != null);
+		final boolean showReports = config.showReports() && model.getReportSummaries() != null && !model.getReportSummaries().isEmpty();
+		final boolean hasLoadedStats = model.getEnrichmentState() == HiscoreEnrichmentState.LOADED && (model.getCombatLevel() != null || model.getTotalLevel() != null);
 		final boolean showStats = config.showStats() && (model.isResolved() || hasLoadedStats);
 		final boolean showEhp = config.wiseOldManMetrics() && config.showEhp();
 		final boolean showEhb = config.wiseOldManMetrics() && config.showEhb();
 		final boolean showEfficiencyMetrics = showEhp || showEhb;
-		final boolean showContextMetrics = model.isResolved()
-				&& config.showKillcount()
-				&& model.getContextMetrics() != null
-				&& !model.getContextMetrics().isEmpty();
-		final boolean showUnresolvedState = !model.isResolved()
-				&& model.getEnrichmentState() != HiscoreEnrichmentState.LOADED;
+		final boolean showContextMetrics = model.isResolved() && config.showKillcount() && model.getContextMetrics() != null && !model.getContextMetrics().isEmpty();
+		final boolean showUnresolvedState = !model.isResolved() && model.getEnrichmentState() != HiscoreEnrichmentState.LOADED;
 
 		// Status and Channel share one IDENTITY section.
 		final boolean showRecordsSection = showTags || showNote || showReports;
@@ -196,15 +179,11 @@ public class QuickProfileOverlay extends Overlay {
 				? 1 : 0) + (showMetricsSection
 				? 1 : 0);
 		final boolean hasContentAfterName = showUnresolvedState || visibleSectionCount > 0;
-		final int CARD_WIDTH = preferredCardWidth(
-				graphics, model, showStatus, showWorld, showLocation, showChannel, showRank, showTags, showNote,
-				showReports, showStatsSection, showEhp, showEhb, showContextMetrics, showUnresolvedState);
+		final int CARD_WIDTH = preferredCardWidth(graphics, model, showStatus, showWorld, showLocation, showChannel, showRank, showTags, showNote, showReports, showStatsSection, showEhp, showEhb, showContextMetrics, showUnresolvedState);
 		final int sectionWidth = CARD_WIDTH - (PADDING * 2);
 		final int sectionTextMaxWidth = sectionWidth - (SECTION_PADDING * 2);
 
-		controller.updateNoteLayoutMetrics(
-				graphics.getFontMetrics(normalFont),
-				Math.max(0, sectionTextMaxWidth - (NOTE_PADDING * 2)));
+		controller.updateNoteLayoutMetrics(graphics.getFontMetrics(normalFont), Math.max(0, sectionTextMaxWidth - (NOTE_PADDING * 2)));
 
 		/*
 		 * The player-name header sits outside the inset sections. Resolved content is
@@ -217,9 +196,7 @@ public class QuickProfileOverlay extends Overlay {
 			contentHeight += HEADER_GAP;
 		}
 		if (showRecordsSection) {
-			contentHeight += recordsSectionHeight(
-					graphics, model.getTags(), showTags, model.getNote(), showNote, model.getReportSummaries(),
-					showReports, sectionTextMaxWidth);
+			contentHeight += recordsSectionHeight(graphics, model.getTags(), showTags, model.getNote(), showNote, model.getReportSummaries(), showReports, sectionTextMaxWidth);
 		}
 		if (showUnresolvedState) {
 			if (showRecordsSection) {
@@ -253,8 +230,7 @@ public class QuickProfileOverlay extends Overlay {
 			}
 		}
 
-		final int cardHeight = Math.max(
-				CARD_MIN_HEIGHT, (PADDING * 2) + contentHeight + BUTTON_TOP_GAP + BUTTON_HEIGHT);
+		final int cardHeight = Math.max(CARD_MIN_HEIGHT, (PADDING * 2) + contentHeight + BUTTON_TOP_GAP + BUTTON_HEIGHT);
 
 		// Clamp the card to the RuneLite canvas.
 		final int x = Math.max(4, Math.min(anchor.x + ANCHOR_OFFSET, client.getCanvasWidth() - CARD_WIDTH - 4));
@@ -265,7 +241,6 @@ public class QuickProfileOverlay extends Overlay {
 		final Rectangle favoriteBounds;
 		if (config.showFavorites()) {
 			favoriteBounds = new Rectangle(nextHeaderControlX, y + 5, 16, 16);
-
 			nextHeaderControlX -= 18;
 		} else {
 			favoriteBounds = null;
@@ -293,13 +268,9 @@ public class QuickProfileOverlay extends Overlay {
 			final int halfWidth = availableWidth / 2;
 
 			targetBounds = new Rectangle(x + PADDING, buttonY, halfWidth, BUTTON_HEIGHT);
-
-			lookupBounds = new Rectangle(
-					targetBounds.x + targetBounds.width + BUTTON_GAP, buttonY, availableWidth - halfWidth,
-					BUTTON_HEIGHT);
+			lookupBounds = new Rectangle(targetBounds.x + targetBounds.width + BUTTON_GAP, buttonY, availableWidth - halfWidth, BUTTON_HEIGHT);
 		} else {
 			targetBounds = null;
-
 			lookupBounds = new Rectangle(x + PADDING, buttonY, CARD_WIDTH - (PADDING * 2), BUTTON_HEIGHT);
 		}
 
@@ -355,22 +326,16 @@ public class QuickProfileOverlay extends Overlay {
 		if (accountIcon != null) {
 			final FontMetrics nameMetrics = graphics.getFontMetrics(normalFont);
 			final int iconX = nameX + Math.max(0, (ACCOUNT_ICON_SLOT_WIDTH - accountIcon.getWidth()) / 2);
-			final int iconY = textY - nameMetrics.getAscent() + Math.max(
-					0, (nameMetrics.getHeight() - accountIcon.getHeight()) / 2);
+			final int iconY = textY - nameMetrics.getAscent() + Math.max(0, (nameMetrics.getHeight() - accountIcon.getHeight()) / 2);
 
 			graphics.drawImage(accountIcon, iconX, iconY, null);
 		}
 
 		nameX += ACCOUNT_ICON_SLOT_WIDTH + ACCOUNT_ICON_GAP;
-
 		graphics.setFont(bracketFont);
-
 		graphics.drawString("[ ", nameX, textY);
-
 		nameX += graphics.getFontMetrics().stringWidth("[ ");
-
 		graphics.setFont(normalFont);
-
 		graphics.setColor(config.showFavorites() && model.isFavorite()
 				? favoriteColor()
 				: TEXT_PRIMARY);
@@ -381,11 +346,8 @@ public class QuickProfileOverlay extends Overlay {
 
 		graphics.drawString(playerName, nameX, textY);
 
-		if (config.showPreviousRsns() && tooltipManager != null && model.getPreviousRsns() != null && !model
-				.getPreviousRsns().isEmpty()) {
-			final Rectangle playerNameBounds = new Rectangle(
-					playerNameDrawX, textY - playerNameMetrics.getAscent(), playerNameWidth,
-					playerNameMetrics.getHeight());
+		if (config.showPreviousRsns() && tooltipManager != null && model.getPreviousRsns() != null && !model.getPreviousRsns().isEmpty()) {
+			final Rectangle playerNameBounds = new Rectangle(playerNameDrawX, textY - playerNameMetrics.getAscent(), playerNameWidth, playerNameMetrics.getHeight());
 
 			if (playerNameBounds.contains(mouse)) {
 				final StringBuilder tooltip = new StringBuilder("Previously:");
@@ -400,15 +362,10 @@ public class QuickProfileOverlay extends Overlay {
 		}
 
 		nameX += playerNameWidth;
-
 		graphics.setColor(TEXT_PRIMARY);
-
 		graphics.setFont(bracketFont);
-
 		graphics.drawString(" ]", nameX, textY);
-
 		graphics.setFont(normalFont);
-
 		textY += playerNameDescent;
 
 		if (hasContentAfterName) {
@@ -422,39 +379,27 @@ public class QuickProfileOverlay extends Overlay {
 		 * RuneWatch/WDR reports before HiScore enrichment finishes.
 		 */
 		if (showRecordsSection) {
-			final int recordsHeight = recordsSectionHeight(
-					graphics, model.getTags(), showTags, model.getNote(), showNote, model.getReportSummaries(),
-					showReports, sectionTextMaxWidth);
-
+			final int recordsHeight = recordsSectionHeight(graphics, model.getTags(), showTags, model.getNote(), showNote, model.getReportSummaries(), showReports, sectionTextMaxWidth);
 			final Rectangle recordsBounds = new Rectangle(x + PADDING, textY, sectionWidth, recordsHeight);
 
 			drawSectionBackground(graphics, recordsBounds);
-
-			drawSectionTitle(
-					graphics, normalFont, "RECORDS", recordsBounds.x + SECTION_PADDING,
-					sectionTitleBaseline(recordsBounds));
+			drawSectionTitle(graphics, normalFont, "RECORDS", recordsBounds.x + SECTION_PADDING, sectionTitleBaseline(recordsBounds));
 
 			int recordsContentY = recordsBounds.y + SECTION_PADDING + SECTION_TITLE_HEIGHT + SECTION_TITLE_GAP;
 			if (showTags) {
-				recordsContentY += drawTags(
-						graphics, normalFont, model.getTags(), recordsBounds.x + SECTION_PADDING, recordsContentY,
-						sectionTextMaxWidth, mouse, tagRemoveBounds);
+				recordsContentY += drawTags(graphics, normalFont, model.getTags(), recordsBounds.x + SECTION_PADDING, recordsContentY, sectionTextMaxWidth, mouse, tagRemoveBounds);
 				if (showNote || showReports) {
 					recordsContentY += NOTE_BLOCK_GAP;
 				}
 			}
 			if (showNote) {
-				recordsContentY += drawLocalNote(
-						graphics, normalFont, model.getNote(), recordsBounds.x + SECTION_PADDING, recordsContentY,
-						sectionTextMaxWidth);
+				recordsContentY += drawLocalNote(graphics, normalFont, model.getNote(), recordsBounds.x + SECTION_PADDING, recordsContentY, sectionTextMaxWidth);
 				if (showReports) {
 					recordsContentY += NOTE_BLOCK_GAP;
 				}
 			}
 			if (showReports) {
-				reportCaseLinkBounds = drawReportSummaries(
-						graphics, normalFont, model.getReportSummaries(), recordsBounds, recordsContentY,
-						sectionTextMaxWidth, mouse);
+				reportCaseLinkBounds = drawReportSummaries(graphics, normalFont, model.getReportSummaries(), recordsBounds, recordsContentY, sectionTextMaxWidth, mouse);
 			}
 
 			textY += recordsHeight;
@@ -470,9 +415,7 @@ public class QuickProfileOverlay extends Overlay {
 			final Rectangle unresolvedBounds = new Rectangle(x + PADDING, textY, sectionWidth, unresolvedHeight);
 
 			drawSectionBackground(graphics, unresolvedBounds);
-
-			drawUnresolvedState(
-					graphics, model, unresolvedBounds.x + SECTION_PADDING, unresolvedBounds.y + SECTION_PADDING + 12);
+			drawUnresolvedState(graphics, model, unresolvedBounds.x + SECTION_PADDING, unresolvedBounds.y + SECTION_PADDING + 12);
 
 			textY += unresolvedHeight;
 		} else {
@@ -491,17 +434,11 @@ public class QuickProfileOverlay extends Overlay {
 				final Rectangle identityBounds = new Rectangle(x + PADDING, textY, sectionWidth, identityHeight);
 
 				drawSectionBackground(graphics, identityBounds);
-
-				drawSectionTitle(
-						graphics, normalFont, "IDENTITY", identityBounds.x + SECTION_PADDING,
-						sectionTitleBaseline(identityBounds));
+				drawSectionTitle(graphics, normalFont, "IDENTITY", identityBounds.x + SECTION_PADDING, sectionTitleBaseline(identityBounds));
 
 				int sectionTextY = sectionContentBaseline(identityBounds);
 				if (showStatusLine) {
-					drawStatusLine(
-							graphics, model, identityBounds.x + SECTION_PADDING, sectionTextY, showStatus, showWorld,
-							showLocation, sectionTextMaxWidth);
-
+					drawStatusLine(graphics, model, identityBounds.x + SECTION_PADDING, sectionTextY, showStatus, showWorld, showLocation, sectionTextMaxWidth);
 					sectionTextY += LINE_HEIGHT;
 				}
 
@@ -519,8 +456,7 @@ public class QuickProfileOverlay extends Overlay {
 							: "";
 					final boolean renderRank = !rankText.isEmpty();
 					if (clickableClan) {
-						clanBounds = new Rectangle(
-								channelX, sectionTextY - metrics.getAscent(), channelWidth, metrics.getHeight());
+						clanBounds = new Rectangle(channelX, sectionTextY - metrics.getAscent(), channelWidth, metrics.getHeight());
 						final boolean hovered = clanBounds.contains(mouse);
 
 						graphics.setColor(hovered
@@ -534,13 +470,11 @@ public class QuickProfileOverlay extends Overlay {
 						}
 					} else {
 						graphics.setColor(TEXT_SECONDARY);
-
 						graphics.drawString(channelName, channelX, sectionTextY);
 					}
 
 					if (renderRank) {
 						graphics.setColor(TEXT_SECONDARY);
-
 						graphics.drawString(rankText, channelX + channelWidth, sectionTextY);
 					}
 				}
@@ -560,17 +494,10 @@ public class QuickProfileOverlay extends Overlay {
 				final Rectangle statsBounds = new Rectangle(x + PADDING, textY, sectionWidth, statsHeight);
 
 				drawSectionBackground(graphics, statsBounds);
-
-				drawSectionTitle(
-						graphics, normalFont, "STATS", statsBounds.x + SECTION_PADDING,
-						sectionTitleBaseline(statsBounds));
+				drawSectionTitle(graphics, normalFont, "STATS", statsBounds.x + SECTION_PADDING, sectionTitleBaseline(statsBounds));
 
 				graphics.setColor(TEXT_SECONDARY);
-
-				graphics.drawString(
-						ellipsize(graphics, statsText(model), sectionTextMaxWidth), statsBounds.x + SECTION_PADDING,
-						sectionContentBaseline(statsBounds));
-
+				graphics.drawString(ellipsize(graphics, statsText(model), sectionTextMaxWidth), statsBounds.x + SECTION_PADDING, sectionContentBaseline(statsBounds));
 				textY += statsHeight;
 			}
 
@@ -588,19 +515,12 @@ public class QuickProfileOverlay extends Overlay {
 				final Rectangle metricsBounds = new Rectangle(x + PADDING, textY, sectionWidth, metricsHeight);
 
 				drawSectionBackground(graphics, metricsBounds);
-
-				drawSectionTitle(
-						graphics, normalFont, "METRICS", metricsBounds.x + SECTION_PADDING,
-						sectionTitleBaseline(metricsBounds));
-
+				drawSectionTitle(graphics, normalFont, "METRICS", metricsBounds.x + SECTION_PADDING, sectionTitleBaseline(metricsBounds));
 				graphics.setColor(TEXT_SECONDARY);
 
 				int sectionTextY = sectionContentBaseline(metricsBounds);
 				if (showEfficiencyMetrics) {
-					graphics.drawString(
-							ellipsize(graphics, efficiencyMetricsText(model, showEhp, showEhb), sectionTextMaxWidth),
-							metricsBounds.x + SECTION_PADDING, sectionTextY);
-
+					graphics.drawString(ellipsize(graphics, efficiencyMetricsText(model, showEhp, showEhb), sectionTextMaxWidth), metricsBounds.x + SECTION_PADDING, sectionTextY);
 					sectionTextY += LINE_HEIGHT;
 				}
 
@@ -617,10 +537,7 @@ public class QuickProfileOverlay extends Overlay {
 							rowText.append(metric.getLabel()).append(": ").append(metric.getValue());
 						}
 
-						graphics.drawString(
-								ellipsize(graphics, rowText.toString(), sectionTextMaxWidth),
-								metricsBounds.x + SECTION_PADDING, sectionTextY);
-
+						graphics.drawString(ellipsize(graphics, rowText.toString(), sectionTextMaxWidth), metricsBounds.x + SECTION_PADDING, sectionTextY);
 						sectionTextY += LINE_HEIGHT;
 					}
 				}
@@ -633,40 +550,23 @@ public class QuickProfileOverlay extends Overlay {
 		 * Action buttons
 		 */
 		if (targetBounds != null) {
-			drawButton(
-					graphics, targetBounds, controller.isCurrentProfileTargeted()
-							? "Untarget"
-							: "Target", targetHovered);
+			drawButton(graphics, targetBounds, controller.isCurrentProfileTargeted()
+					? "Untarget"
+					: "Target", targetHovered);
 		}
 
 		drawButton(graphics, lookupBounds, "Lookup", lookupHovered);
 
 		// Publish interactive bounds back to the controller.
-		controller.updateLayoutBounds(
-				cardBounds, closeBounds, tagBounds, noteBounds, favoriteBounds, targetBounds, lookupBounds, clanBounds,
-				reportCaseLinkBounds, tagRemoveBounds);
-
+		controller.updateLayoutBounds(cardBounds, closeBounds, tagBounds, noteBounds, favoriteBounds, targetBounds, lookupBounds, clanBounds, reportCaseLinkBounds, tagRemoveBounds);
 		return null;
 	}
 
-	private static int sectionHeight(
-			int contentRows) {
-		return SECTION_PADDING
-				+ SECTION_TITLE_HEIGHT
-				+ SECTION_TITLE_GAP
-				+ (Math.max(0, contentRows) * LINE_HEIGHT)
-				+ SECTION_PADDING;
+	private static int sectionHeight(int contentRows) {
+		return SECTION_PADDING + SECTION_TITLE_HEIGHT + SECTION_TITLE_GAP + (Math.max(0, contentRows) * LINE_HEIGHT) + SECTION_PADDING;
 	}
 
-	private static int recordsSectionHeight(
-			Graphics2D graphics,
-			List<String> tags,
-			boolean showTags,
-			String note,
-			boolean showNote,
-			List<ReportSummary> summaries,
-			boolean showReports,
-			int sectionTextMaxWidth) {
+	private static int recordsSectionHeight(Graphics2D graphics, List<String> tags, boolean showTags, String note, boolean showNote, List<ReportSummary> summaries, boolean showReports, int sectionTextMaxWidth) {
 		int contentHeight = 0;
 
 		if (showTags) {
@@ -678,11 +578,9 @@ public class QuickProfileOverlay extends Overlay {
 				contentHeight += NOTE_BLOCK_GAP;
 			}
 			final int noteTextWidth = Math.max(0, sectionTextMaxWidth - (NOTE_PADDING * 2));
-			final List<String> noteLines = NoteTextLayout
-					.layout(graphics.getFontMetrics(), note, noteTextWidth, NOTE_MAX_DISPLAY_LINES).getRows();
+			final List<String> noteLines = NoteTextLayout.layout(graphics.getFontMetrics(), note, noteTextWidth, NOTE_MAX_DISPLAY_LINES).getRows();
 
-			contentHeight += (NOTE_PADDING * 2) + NOTE_LABEL_HEIGHT + NOTE_TEXT_GAP + (Math.max(1, noteLines.size())
-					* LINE_HEIGHT);
+			contentHeight += (NOTE_PADDING * 2) + NOTE_LABEL_HEIGHT + NOTE_TEXT_GAP + (Math.max(1, noteLines.size()) * LINE_HEIGHT);
 		}
 
 		if (showReports && summaries != null && !summaries.isEmpty()) {
@@ -712,8 +610,7 @@ public class QuickProfileOverlay extends Overlay {
 		return SECTION_PADDING + SECTION_TITLE_HEIGHT + SECTION_TITLE_GAP + contentHeight + SECTION_PADDING;
 	}
 
-	private static int reportBlockHeight(
-			ReportSummary summary) {
+	private static int reportBlockHeight(ReportSummary summary) {
 		final boolean hasDate = summary != null && !summary.getFormattedDate().isEmpty();
 		final int rows = hasDate
 				? 3
@@ -722,18 +619,15 @@ public class QuickProfileOverlay extends Overlay {
 		return REPORT_PADDING + (rows * LINE_HEIGHT) + REPORT_PADDING;
 	}
 
-	private static int titlelessSectionHeight(
-			int contentRows) {
+	private static int titlelessSectionHeight(int contentRows) {
 		return SECTION_PADDING + (Math.max(0, contentRows) * LINE_HEIGHT) + SECTION_PADDING;
 	}
 
-	private static int sectionTitleBaseline(
-			Rectangle bounds) {
+	private static int sectionTitleBaseline(Rectangle bounds) {
 		return bounds.y + SECTION_PADDING + 11;
 	}
 
-	private static int sectionContentBaseline(
-			Rectangle bounds) {
+	private static int sectionContentBaseline(Rectangle bounds) {
 		return bounds.y + SECTION_PADDING + SECTION_TITLE_HEIGHT + SECTION_TITLE_GAP + 12;
 	}
 
@@ -759,15 +653,7 @@ public class QuickProfileOverlay extends Overlay {
 		return (TAG_BLOCK_PADDING_Y * 2) + (rows * TAG_PILL_HEIGHT) + ((rows - 1) * TAG_PILL_GAP_Y);
 	}
 
-	private int drawTags(
-			Graphics2D graphics,
-			Font normalFont,
-			List<String> tags,
-			int x,
-			int y,
-			int maxWidth,
-			Point mouse,
-			Map<String, Rectangle> tagRemoveBounds) {
+	private int drawTags(Graphics2D graphics, Font normalFont, List<String> tags, int x, int y, int maxWidth, Point mouse, Map<String, Rectangle> tagRemoveBounds) {
 		if (tags == null || tags.isEmpty()) {
 			return 0;
 		}
@@ -806,8 +692,7 @@ public class QuickProfileOverlay extends Overlay {
 				graphics.drawString(tag, pillX + TAG_PILL_PAD_X, pillY + TAG_TEXT_BASELINE_OFFSET);
 
 				final int removeX = pillX + TAG_PILL_PAD_X + tagTextWidth + TAG_REMOVE_GAP;
-				final Rectangle removeBounds = new Rectangle(removeX - 2, pillY, TAG_REMOVE_WIDTH + 4,
-						TAG_PILL_HEIGHT);
+				final Rectangle removeBounds = new Rectangle(removeX - 2, pillY, TAG_REMOVE_WIDTH + 4, TAG_PILL_HEIGHT);
 				if (tagRemoveBounds != null) {
 					tagRemoveBounds.put(tag, removeBounds);
 				}
@@ -830,8 +715,7 @@ public class QuickProfileOverlay extends Overlay {
 
 	private int drawLocalNote(Graphics2D graphics, Font normalFont, String note, int x, int y, int maxWidth) {
 		final int noteTextWidth = Math.max(0, maxWidth - (NOTE_PADDING * 2));
-		final List<String> lines = NoteTextLayout
-				.layout(graphics.getFontMetrics(normalFont), note, noteTextWidth, NOTE_MAX_DISPLAY_LINES).getRows();
+		final List<String> lines = NoteTextLayout.layout(graphics.getFontMetrics(normalFont), note, noteTextWidth, NOTE_MAX_DISPLAY_LINES).getRows();
 		if (lines.isEmpty()) {
 			return 0;
 		}
@@ -845,13 +729,9 @@ public class QuickProfileOverlay extends Overlay {
 
 		try {
 			graphics.setFont(normalFont.deriveFont(Font.BOLD));
-
 			graphics.setColor(TEXT_SECONDARY);
-
 			graphics.drawString("NOTES", x + NOTE_PADDING, y + NOTE_PADDING + 11);
-
 			graphics.setFont(normalFont);
-
 			graphics.setColor(TEXT_PRIMARY);
 
 			int lineY = y + NOTE_PADDING + NOTE_LABEL_HEIGHT + NOTE_TEXT_GAP + 12;
@@ -866,21 +746,13 @@ public class QuickProfileOverlay extends Overlay {
 			}
 		} finally {
 			graphics.setFont(oldFont);
-
 			graphics.setColor(oldColor);
 		}
 
 		return noteHeight;
 	}
 
-	private Rectangle drawReportSummaries(
-			Graphics2D graphics,
-			Font normalFont,
-			List<ReportSummary> summaries,
-			Rectangle recordsBounds,
-			int startY,
-			int sectionTextMaxWidth,
-			Point mouse) {
+	private Rectangle drawReportSummaries(Graphics2D graphics, Font normalFont, List<ReportSummary> summaries, Rectangle recordsBounds, int startY, int sectionTextMaxWidth, Point mouse) {
 		if (summaries == null || summaries.isEmpty()) {
 			return null;
 		}
@@ -918,33 +790,23 @@ public class QuickProfileOverlay extends Overlay {
 			final Font reportTitleFont = normalFont.deriveFont(Font.BOLD);
 
 			graphics.setFont(reportTitleFont);
-
 			graphics.setColor(REPORT_TITLE);
-
-			graphics.drawString(
-					ellipsize(
-							graphics, sourceTitle, Math.max(
-									0, reportBounds.width - (REPORT_PADDING * 2) - (countText.isEmpty()
-											? 0
-											: graphics.getFontMetrics(normalFont).stringWidth(countText) + 10))),
-					reportBounds.x + REPORT_PADDING, lineY);
+			graphics.drawString(ellipsize(graphics, sourceTitle, Math.max(0, reportBounds.width - (REPORT_PADDING * 2) - (countText.isEmpty()
+					? 0
+					: graphics.getFontMetrics(normalFont).stringWidth(countText) + 10))), reportBounds.x + REPORT_PADDING, lineY);
 
 			// Keep the case count at normal weight.
 			graphics.setFont(normalFont);
 
 			if (!countText.isEmpty()) {
 				final int countWidth = graphics.getFontMetrics().stringWidth(countText);
-
-				graphics.drawString(
-						countText, reportBounds.x + reportBounds.width - REPORT_PADDING - countWidth, lineY);
+				graphics.drawString(countText, reportBounds.x + reportBounds.width - REPORT_PADDING - countWidth, lineY);
 			}
 
 			// Right-align aggregate case count above the evidence rating.
 			if (!countText.isEmpty()) {
 				final int countWidth = graphics.getFontMetrics().stringWidth(countText);
-
-				graphics.drawString(
-						countText, reportBounds.x + reportBounds.width - REPORT_PADDING - countWidth, lineY);
+				graphics.drawString(countText, reportBounds.x + reportBounds.width - REPORT_PADDING - countWidth, lineY);
 			}
 
 			lineY += LINE_HEIGHT;
@@ -953,10 +815,9 @@ public class QuickProfileOverlay extends Overlay {
 			final int ratingWidth = ratingText.isEmpty()
 					? 0
 					: graphics.getFontMetrics().stringWidth(ratingText);
-			final int reasonWidth = Math.max(
-					0, reportBounds.width - (REPORT_PADDING * 2) - (ratingWidth > 0
-							? ratingWidth + 10
-							: 0));
+			final int reasonWidth = Math.max(0, reportBounds.width - (REPORT_PADDING * 2) - (ratingWidth > 0
+					? ratingWidth + 10
+					: 0));
 			final String reason = summary.getReason() == null || summary.getReason().trim().isEmpty()
 					? "Case details unavailable"
 					: summary.getReason().trim();
@@ -964,12 +825,9 @@ public class QuickProfileOverlay extends Overlay {
 			final FontMetrics reasonMetrics = graphics.getFontMetrics();
 			final boolean clickable = summary.hasCaseLink() && !displayedReason.isEmpty();
 			final Rectangle currentCaseBounds = clickable
-					? new Rectangle(
-					reportBounds.x + REPORT_PADDING, lineY - reasonMetrics.getAscent(),
-					reasonMetrics.stringWidth(displayedReason), reasonMetrics.getHeight())
+					? new Rectangle(reportBounds.x + REPORT_PADDING, lineY - reasonMetrics.getAscent(), reasonMetrics.stringWidth(displayedReason), reasonMetrics.getHeight())
 					: null;
-			final boolean caseHovered =
-					currentCaseBounds != null && mouse != null && currentCaseBounds.contains(mouse);
+			final boolean caseHovered = currentCaseBounds != null && mouse != null && currentCaseBounds.contains(mouse);
 
 			graphics.setColor(caseHovered
 					? HOVER_TEXT
@@ -979,9 +837,7 @@ public class QuickProfileOverlay extends Overlay {
 
 			// Underline the case link while hovered.
 			if (caseHovered) {
-				graphics.drawLine(
-						reportBounds.x + REPORT_PADDING, lineY + 1,
-						reportBounds.x + REPORT_PADDING + reasonMetrics.stringWidth(displayedReason), lineY + 1);
+				graphics.drawLine(reportBounds.x + REPORT_PADDING, lineY + 1, reportBounds.x + REPORT_PADDING + reasonMetrics.stringWidth(displayedReason), lineY + 1);
 			}
 
 			if (reportCaseLinkBounds == null && currentCaseBounds != null) {
@@ -990,23 +846,16 @@ public class QuickProfileOverlay extends Overlay {
 
 			if (ratingWidth > 0) {
 				graphics.setColor(SECTION_TITLE);
-
-				graphics.drawString(
-						ratingText, reportBounds.x + reportBounds.width - REPORT_PADDING - ratingWidth, lineY);
+				graphics.drawString(ratingText, reportBounds.x + reportBounds.width - REPORT_PADDING - ratingWidth, lineY);
 			}
 
 			// Undated WDR records end after the case/evidence row.
 			final String formattedDate = summary.getFormattedDate();
 			if (!formattedDate.isEmpty()) {
 				lineY += LINE_HEIGHT;
-
 				graphics.setColor(TEXT_SECONDARY);
-
-				graphics.drawString(
-						ellipsize(graphics, "Reported: " + formattedDate, reportBounds.width - (REPORT_PADDING * 2)),
-						reportBounds.x + REPORT_PADDING, lineY);
+				graphics.drawString(ellipsize(graphics, "Reported: " + formattedDate, reportBounds.width - (REPORT_PADDING * 2)), reportBounds.x + REPORT_PADDING, lineY);
 			}
-
 			blockY += currentBlockHeight + REPORT_BLOCK_GAP;
 		}
 
@@ -1018,9 +867,7 @@ public class QuickProfileOverlay extends Overlay {
 
 		try {
 			graphics.setColor(noteBackgroundColor());
-
-			graphics.fillRoundRect(
-					bounds.x, bounds.y, bounds.width, bounds.height, NOTE_CORNER_RADIUS, NOTE_CORNER_RADIUS);
+			graphics.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, NOTE_CORNER_RADIUS, NOTE_CORNER_RADIUS);
 		} finally {
 			graphics.setColor(old);
 		}
@@ -1036,9 +883,7 @@ public class QuickProfileOverlay extends Overlay {
 
 		try {
 			graphics.setColor(reportBackgroundColor());
-
-			graphics.fillRoundRect(
-					bounds.x, bounds.y, bounds.width, bounds.height, REPORT_CORNER_RADIUS, REPORT_CORNER_RADIUS);
+			graphics.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, REPORT_CORNER_RADIUS, REPORT_CORNER_RADIUS);
 		} finally {
 			graphics.setColor(old);
 		}
@@ -1048,11 +893,7 @@ public class QuickProfileOverlay extends Overlay {
 		final Color base = sectionBackgroundColor();
 		final float inverse = 1f - REPORT_TINT_STRENGTH;
 
-		return new Color(
-				clampColor(Math.round((base.getRed() * inverse) + (REPORT_TINT.getRed() * REPORT_TINT_STRENGTH))),
-				clampColor(Math.round((base.getGreen() * inverse) + (REPORT_TINT.getGreen() * REPORT_TINT_STRENGTH))),
-				clampColor(Math.round((base.getBlue() * inverse) + (REPORT_TINT.getBlue() * REPORT_TINT_STRENGTH))),
-				base.getAlpha());
+		return new Color(clampColor(Math.round((base.getRed() * inverse) + (REPORT_TINT.getRed() * REPORT_TINT_STRENGTH))), clampColor(Math.round((base.getGreen() * inverse) + (REPORT_TINT.getGreen() * REPORT_TINT_STRENGTH))), clampColor(Math.round((base.getBlue() * inverse) + (REPORT_TINT.getBlue() * REPORT_TINT_STRENGTH))), base.getAlpha());
 	}
 
 	private static String warningSourceTitle(Graphics2D graphics, ReportSummary summary) {
@@ -1061,7 +902,6 @@ public class QuickProfileOverlay extends Overlay {
 				: "";
 
 		final Font font = graphics.getFont();
-
 		return font != null && font.canDisplay('⚠')
 				? "⚠ " + source
 				: source;
@@ -1107,9 +947,7 @@ public class QuickProfileOverlay extends Overlay {
 
 		try {
 			graphics.setColor(sectionBackgroundColor());
-
-			graphics.fillRoundRect(
-					bounds.x, bounds.y, bounds.width, bounds.height, SECTION_CORNER_RADIUS, SECTION_CORNER_RADIUS);
+			graphics.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, SECTION_CORNER_RADIUS, SECTION_CORNER_RADIUS);
 		} finally {
 			graphics.setColor(old);
 		}
@@ -1121,9 +959,7 @@ public class QuickProfileOverlay extends Overlay {
 
 		try {
 			graphics.setFont(normalFont.deriveFont(Font.BOLD));
-
 			graphics.setColor(SECTION_TITLE);
-
 			graphics.drawString(title, x, y);
 		} finally {
 			graphics.setFont(oldFont);
@@ -1140,20 +976,16 @@ public class QuickProfileOverlay extends Overlay {
 		switch (state) {
 			case LOADING:
 				graphics.setColor(TEXT_SECONDARY);
-
 				graphics.drawString(loadingText(), x, y);
 				break;
-
 			case NOT_FOUND:
 				graphics.setColor(TEXT_SECONDARY);
 				graphics.drawString("Player not found.", x, y);
 				break;
-
 			case ERROR:
 				graphics.setColor(OFFLINE);
 				graphics.drawString("HiScores temporarily unavailable.", x, y);
 				break;
-
 			case LOCAL:
 			default:
 				graphics.drawString("Unable to resolve player name.", x, y);
@@ -1161,8 +993,7 @@ public class QuickProfileOverlay extends Overlay {
 		}
 	}
 
-	private static String unresolvedStateText(
-			QuickProfileModel model) {
+	private static String unresolvedStateText(QuickProfileModel model) {
 		final HiscoreEnrichmentState state = model.getEnrichmentState();
 		if (state == null) {
 			return "";
@@ -1171,13 +1002,10 @@ public class QuickProfileOverlay extends Overlay {
 		switch (state) {
 			case LOADING:
 				return loadingText();
-
 			case NOT_FOUND:
 				return "Player not found.";
-
 			case ERROR:
 				return "HiScores temporarily unavailable.";
-
 			case LOCAL:
 			default:
 				return "Unable to resolve player name.";
@@ -1186,7 +1014,6 @@ public class QuickProfileOverlay extends Overlay {
 
 	private Color favoriteColor() {
 		final Color configured = config.favoriteColor();
-
 		return configured != null
 				? configured
 				: SECTION_TITLE;
@@ -1204,30 +1031,24 @@ public class QuickProfileOverlay extends Overlay {
 		final Color base = overlayBackgroundColor();
 		final float factor = Math.max(0f, Math.min(1f, (100f - SECTION_DARKEN_PERCENT) / 100f));
 
-		return new Color(
-				clampColor(Math.round(base.getRed() * factor)), clampColor(Math.round(base.getGreen() * factor)),
-				clampColor(Math.round(base.getBlue() * factor)), base.getAlpha());
+		return new Color(clampColor(Math.round(base.getRed() * factor)), clampColor(Math.round(base.getGreen() * factor)), clampColor(Math.round(base.getBlue() * factor)), base.getAlpha());
 	}
 
 	private static Color themedButtonBackground(Color base, boolean hovered) {
 		if (base == null) {
 			base = new Color(30, 30, 30, 238);
 		}
-
 		// Distinguish buttons while preserving the configured overlay hue and alpha.
 		final int adjustment = hovered
 				? 32
 				: 18;
-
 		final int brightness = (base.getRed() + base.getGreen() + base.getBlue()) / 3;
 		final boolean lightBackground = brightness > 150;
 		final int direction = lightBackground
 				? -adjustment
 				: adjustment;
 
-		return new Color(
-				clampColor(base.getRed() + direction), clampColor(base.getGreen() + direction),
-				clampColor(base.getBlue() + direction), base.getAlpha());
+		return new Color(clampColor(base.getRed() + direction), clampColor(base.getGreen() + direction), clampColor(base.getBlue() + direction), base.getAlpha());
 	}
 
 	private static int clampColor(int value) {
@@ -1239,11 +1060,8 @@ public class QuickProfileOverlay extends Overlay {
 
 		try {
 			graphics.setColor(overlayBackgroundColor());
-
 			graphics.fillRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 8, 8);
-
 			graphics.setColor(CARD_BORDER);
-
 			graphics.drawRoundRect(bounds.x, bounds.y, bounds.width, bounds.height, 8, 8);
 		} finally {
 			graphics.setColor(old);
@@ -1258,13 +1076,10 @@ public class QuickProfileOverlay extends Overlay {
 		switch (phase) {
 			case 0:
 				return "● • ∙ •";
-
 			case 1:
 				return "• ● • ∙";
-
 			case 2:
 				return "∙ • ● •";
-
 			default:
 				return "• ∙ • ●";
 		}
@@ -1277,23 +1092,13 @@ public class QuickProfileOverlay extends Overlay {
 				continue;
 			}
 
-			icons.put(
-					accountType, ImageUtil.loadImageResource(
-							QuickProfileOverlay.class, "/com/runetags/icons/" + accountType.getIconFileName()));
+			icons.put(accountType, ImageUtil.loadImageResource(QuickProfileOverlay.class, "/com/runetags/icons/" + accountType.getIconFileName()));
 		}
 
 		return icons;
 	}
 
-	private static void drawStatusLine(
-			Graphics2D graphics,
-			QuickProfileModel model,
-			int x,
-			int y,
-			boolean showStatus,
-			boolean showWorld,
-			boolean showLocation,
-			int maxWidth) {
+	private static void drawStatusLine(Graphics2D graphics, QuickProfileModel model, int x, int y, boolean showStatus, boolean showWorld, boolean showLocation, int maxWidth) {
 		String statusText = null;
 		Color statusColor = TEXT_SECONDARY;
 
@@ -1311,7 +1116,6 @@ public class QuickProfileOverlay extends Overlay {
 				statusColor = OFFLINE;
 			} else if (showWorld && model.getWorld() != null && model.getWorld() > 0) {
 				statusText = "World " + model.getWorld();
-
 				statusColor = ONLINE;
 			} else if (state == OnlineState.ONLINE) {
 				statusText = "Online";
@@ -1322,7 +1126,6 @@ public class QuickProfileOverlay extends Overlay {
 			}
 
 			graphics.setColor(statusColor);
-
 			graphics.drawString(statusText, x, y);
 		}
 
@@ -1335,7 +1138,6 @@ public class QuickProfileOverlay extends Overlay {
 				if (statusText != null) {
 					final int statusWidth = graphics.getFontMetrics().stringWidth(statusText);
 					final int remainingWidth = Math.max(0, maxWidth - statusWidth);
-
 					graphics.drawString(ellipsize(graphics, " • " + locationName, remainingWidth), x + statusWidth, y);
 				} else {
 					graphics.drawString(ellipsize(graphics, locationName, maxWidth), x, y);
@@ -1344,11 +1146,7 @@ public class QuickProfileOverlay extends Overlay {
 		}
 	}
 
-	private static String statusLineText(
-			QuickProfileModel model,
-			boolean showStatus,
-			boolean showWorld,
-			boolean showLocation) {
+	private static String statusLineText(QuickProfileModel model, boolean showStatus, boolean showWorld, boolean showLocation) {
 		String statusText = null;
 
 		if (showStatus) {
@@ -1381,23 +1179,20 @@ public class QuickProfileOverlay extends Overlay {
 				: "";
 	}
 
-	private static String channelNameText(
-			QuickProfileModel model) {
+	private static String channelNameText(QuickProfileModel model) {
 		final String channelName = model.getChannelName();
 		if (channelName == null || channelName.isEmpty()) {
 			return "";
 		}
 
-		if (model.getChannelSource() == PlayerSource.PARTY && !channelName.regionMatches(
-				true, 0, "Party:", 0, "Party:".length())) {
+		if (model.getChannelSource() == PlayerSource.PARTY && !channelName.regionMatches(true, 0, "Party:", 0, "Party:".length())) {
 			return "Party: " + channelName;
 		}
 
 		return channelName;
 	}
 
-	private static String locationText(
-			String locationName) {
+	private static String locationText(String locationName) {
 		if (locationName == null || locationName.isEmpty()) {
 			return "";
 		}
@@ -1407,8 +1202,7 @@ public class QuickProfileOverlay extends Overlay {
 				: locationName;
 	}
 
-	private static String combatText(
-			QuickProfileModel model) {
+	private static String combatText(QuickProfileModel model) {
 		if (model.getCombatLevel() != null) {
 			return String.valueOf(model.getCombatLevel());
 		}
@@ -1420,8 +1214,7 @@ public class QuickProfileOverlay extends Overlay {
 		return "—";
 	}
 
-	private static String totalText(
-			QuickProfileModel model) {
+	private static String totalText(QuickProfileModel model) {
 		if (model.getTotalLevel() != null) {
 			return String.valueOf(model.getTotalLevel());
 		}
@@ -1433,8 +1226,7 @@ public class QuickProfileOverlay extends Overlay {
 		return "—";
 	}
 
-	private static String statsText(
-			QuickProfileModel model) {
+	private static String statsText(QuickProfileModel model) {
 		return "Combat: " + combatText(model) + "  •  Total: " + totalText(model);
 	}
 
@@ -1483,7 +1275,6 @@ public class QuickProfileOverlay extends Overlay {
 			graphics.drawString(glyph, textX, textY);
 		} finally {
 			graphics.setFont(oldFont);
-
 			graphics.setColor(oldColor);
 		}
 	}
@@ -1532,7 +1323,6 @@ public class QuickProfileOverlay extends Overlay {
 			graphics.drawString(glyph, textX, textY);
 		} finally {
 			graphics.setFont(oldFont);
-
 			graphics.setColor(oldColor);
 		}
 	}
@@ -1544,15 +1334,10 @@ public class QuickProfileOverlay extends Overlay {
 			graphics.setColor(overlayBackgroundColor());
 
 			final Color buttonBackground = themedButtonBackground(overlayBackgroundColor(), hovered);
-
 			graphics.setColor(buttonBackground);
-
 			graphics.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
-
 			graphics.setColor(CARD_BORDER);
-
 			graphics.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
-
 			graphics.setColor(hovered
 					? HOVER_TEXT
 					: TEXT_PRIMARY);
@@ -1592,38 +1377,20 @@ public class QuickProfileOverlay extends Overlay {
 		return Long.toString((long) Math.floor(value));
 	}
 
-	private static int preferredCardWidth(
-			Graphics2D graphics,
-			QuickProfileModel model,
-			boolean showStatus,
-			boolean showWorld,
-			boolean showLocation,
-			boolean showChannel,
-			boolean showRank,
-			boolean showTags,
-			boolean showNote,
-			boolean showReports,
-			boolean showStats,
-			boolean showEhp,
-			boolean showEhb,
-			boolean showContextMetrics,
-			boolean showUnresolvedState) {
+	private static int preferredCardWidth(Graphics2D graphics, QuickProfileModel model, boolean showStatus, boolean showWorld, boolean showLocation, boolean showChannel, boolean showRank, boolean showTags, boolean showNote, boolean showReports, boolean showStats, boolean showEhp, boolean showEhb, boolean showContextMetrics, boolean showUnresolvedState) {
 		final FontMetrics metrics = graphics.getFontMetrics();
 
-		int contentWidth = ACCOUNT_ICON_SLOT_WIDTH + ACCOUNT_ICON_GAP + metrics.stringWidth(
-				safe(model.getDisplayName()));
+		int contentWidth = ACCOUNT_ICON_SLOT_WIDTH + ACCOUNT_ICON_GAP + metrics.stringWidth(safe(model.getDisplayName()));
 		int sectionContentWidth = 0;
 		final Font reportTitleFont = graphics.getFont().deriveFont(Font.BOLD);
 		final FontMetrics reportTitleMetrics = graphics.getFontMetrics(reportTitleFont);
 		if (showStatus || showLocation) {
 			final String statusLine = statusLineText(model, showStatus, showWorld, showLocation);
-
 			sectionContentWidth = Math.max(sectionContentWidth, metrics.stringWidth(statusLine));
 		}
 
 		if (showChannel) {
 			String channelText = channelNameText(model);
-
 			if (showRank) {
 				channelText += "  •  " + model.getChannelRank();
 			}
@@ -1639,10 +1406,7 @@ public class QuickProfileOverlay extends Overlay {
 					continue;
 				}
 
-				final int pillWidth = metrics.stringWidth(tag)
-						+ (TAG_PILL_PAD_X * 2)
-						+ TAG_REMOVE_GAP
-						+ TAG_REMOVE_WIDTH;
+				final int pillWidth = metrics.stringWidth(tag) + (TAG_PILL_PAD_X * 2) + TAG_REMOVE_GAP + TAG_REMOVE_WIDTH;
 				if (tagsWidth > 0) {
 					tagsWidth += TAG_PILL_GAP_X;
 				}
@@ -1650,16 +1414,11 @@ public class QuickProfileOverlay extends Overlay {
 				tagsWidth += pillWidth;
 			}
 
-			sectionContentWidth = Math.max(
-					sectionContentWidth, tagsWidth + TAG_BLOCK_PADDING_X_LEFT + TAG_BLOCK_PADDING_X_RIGHT);
+			sectionContentWidth = Math.max(sectionContentWidth, tagsWidth + TAG_BLOCK_PADDING_X_LEFT + TAG_BLOCK_PADDING_X_RIGHT);
 		}
 
 		if (showNote && model.getNote() != null && !model.getNote().trim().isEmpty()) {
-			sectionContentWidth = Math.max(
-					sectionContentWidth,
-					Math.min(
-							NOTE_PREFERRED_TEXT_WIDTH,
-							NoteTextLayout.widestLogicalLineWidth(metrics, model.getNote())));
+			sectionContentWidth = Math.max(sectionContentWidth, Math.min(NOTE_PREFERRED_TEXT_WIDTH, NoteTextLayout.widestLogicalLineWidth(metrics, model.getNote())));
 		}
 
 		if (showReports && model.getReportSummaries() != null) {
@@ -1699,8 +1458,7 @@ public class QuickProfileOverlay extends Overlay {
 		}
 
 		if (showEhp || showEhb) {
-			sectionContentWidth = Math.max(
-					sectionContentWidth, metrics.stringWidth(efficiencyMetricsText(model, showEhp, showEhb)));
+			sectionContentWidth = Math.max(sectionContentWidth, metrics.stringWidth(efficiencyMetricsText(model, showEhp, showEhb)));
 		}
 
 		if (showContextMetrics && model.getContextMetrics() != null) {

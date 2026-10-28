@@ -164,9 +164,7 @@ public class NameOverlay extends Overlay {
 			return false;
 		}
 		final PlayerNameLocation nativeLocation = piConfig.playerNamePosition();
-		if ((location == FavoriteNameLocation.ABOVE && nativeLocation != PlayerNameLocation.ABOVE_HEAD)
-				|| (location == FavoriteNameLocation.CENTER && nativeLocation != PlayerNameLocation.MODEL_CENTER)
-				|| (location == FavoriteNameLocation.RIGHT && nativeLocation != PlayerNameLocation.MODEL_RIGHT)) {
+		if ((location == FavoriteNameLocation.ABOVE && nativeLocation != PlayerNameLocation.ABOVE_HEAD) || (location == FavoriteNameLocation.CENTER && nativeLocation != PlayerNameLocation.MODEL_CENTER) || (location == FavoriteNameLocation.RIGHT && nativeLocation != PlayerNameLocation.MODEL_RIGHT)) {
 			return false;
 		}
 		return piDrawsPlayer(player);

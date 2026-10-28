@@ -35,13 +35,7 @@ public class TargetOverlay extends Overlay {
 	private final LocalPlayerRecordService records;
 	private final FavoriteOverlay favoriteOverlay;
 
-	public TargetOverlay(
-			Client client,
-			Configurations config,
-			TargetController targetController,
-			ModelOutlineRenderer modelOutlineRenderer,
-			LocalPlayerRecordService records,
-			FavoriteOverlay favoriteOverlay) {
+	public TargetOverlay(Client client, Configurations config, TargetController targetController, ModelOutlineRenderer modelOutlineRenderer, LocalPlayerRecordService records, FavoriteOverlay favoriteOverlay) {
 		this.client = client;
 		this.config = config;
 		this.targetController = targetController;
@@ -64,31 +58,32 @@ public class TargetOverlay extends Overlay {
 		if (target == null) {
 			return null;
 		}
-		final boolean favorite = config.showFavorites()
-				&& records != null && target.getName() != null
-				&& records.isFavorite(target.getName())
-				&& favoriteOverlay != null && favoriteOverlay.canHighlightFavorite(target);
+		final boolean favorite = config.showFavorites() && records != null && target.getName() != null && records.isFavorite(target.getName()) && favoriteOverlay != null && favoriteOverlay.canHighlightFavorite(target);
 		final Color configuredColor = favorite ? config.favoriteColor() : config.targetColor();
-		final Color targetColor = configuredColor != null ? configuredColor
-				: (favorite ? new Color(255, 205, 70) : new Color(80, 100, 255, 200));
+		final Color targetColor = configuredColor != null
+				? configuredColor
+				: (favorite ? new Color(255, 205, 70)
+						: new Color(80, 100, 255, 200));
 		final TargetMode targetMode = config.targetMode() != null ? config.targetMode() : TargetMode.OFF;
 		final FavoriteHighlightMode favoriteMode = config.favoriteHighlightMode() != null
 				? config.favoriteHighlightMode() : FavoriteHighlightMode.BOTH;
-		final boolean outline = favorite ? favoriteMode.showsOutline() : targetMode.showsOutline();
-		final boolean tile = favorite ? favoriteMode.showsTile() : targetMode.showsTile();
+		final boolean outline = favorite
+				? favoriteMode.showsOutline() : targetMode.showsOutline();
+		final boolean tile = favorite
+				? favoriteMode.showsTile() : targetMode.showsTile();
 		if (outline) {
 			// Preserve FavoriteOverlay's scene alpha behavior for gold highlights.
 			final Color outlineColor = favorite
-					? new Color(targetColor.getRed(), targetColor.getGreen(), targetColor.getBlue(),
-						Math.min(200, targetColor.getAlpha())) : targetColor;
+					? new Color(targetColor.getRed(), targetColor.getGreen(), targetColor.getBlue(), Math.min(200, targetColor.getAlpha()))
+					: targetColor;
 			modelOutlineRenderer.drawOutline(target, OUTLINE_WIDTH, outlineColor, OUTLINE_FEATHER);
 		}
 		if (tile) {
 			final Polygon tilePoly = target.getCanvasTilePoly();
 			if (tilePoly != null) {
 				final Color tileColor = favorite
-						? new Color(targetColor.getRed(), targetColor.getGreen(), targetColor.getBlue(),
-							Math.min(200, targetColor.getAlpha())) : targetColor;
+						? new Color(targetColor.getRed(), targetColor.getGreen(), targetColor.getBlue(), Math.min(200, targetColor.getAlpha()))
+						: targetColor;
 				OverlayUtil.renderPolygon(graphics, tilePoly, tileColor);
 			}
 		}
