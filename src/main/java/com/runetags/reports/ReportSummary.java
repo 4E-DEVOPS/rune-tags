@@ -21,8 +21,7 @@ public class ReportSummary {
 	/*
 	 * Current RuneWatch records publish hash as the public case identifier.
 	 * ReportCaseService also accepts short_code and normalizes either value into caseId.
-	 */
-	String caseId;
+	 */ String caseId;
 
 	String reason;
 	String evidenceRating;
