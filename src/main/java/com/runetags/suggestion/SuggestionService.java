@@ -40,11 +40,7 @@ public final class SuggestionService {
 	private int mentionStart = -1;
 	private int selectedIndex;
 
-	public SuggestionService(
-			Client client,
-			ClientThread clientThread,
-			Configurations config,
-			PlayerDirectory playerDirectory) {
+	public SuggestionService(Client client, ClientThread clientThread, Configurations config, PlayerDirectory playerDirectory) {
 		this.client = client;
 		this.clientThread = clientThread;
 		this.config = config;
@@ -168,9 +164,7 @@ public final class SuggestionService {
 			final String input = safe(client.getVarcStrValue(VarClientID.CHATINPUT));
 
 			// Leave changed input untouched if the captured @ position is no longer valid.
-			if (completionMentionStart < 0
-					|| completionMentionStart >= input.length()
-					|| input.charAt(completionMentionStart) != '@') {
+			if (completionMentionStart < 0 || completionMentionStart >= input.length() || input.charAt(completionMentionStart) != '@') {
 				return;
 			}
 
@@ -239,8 +233,7 @@ public final class SuggestionService {
 			candidates.add(new Candidate(name, matchIndex == 0));
 		}
 
-		candidates.sort(Comparator.comparing(Candidate::isPrefixMatch).reversed()
-				.thenComparing(Candidate::getName, String.CASE_INSENSITIVE_ORDER));
+		candidates.sort(Comparator.comparing(Candidate::isPrefixMatch).reversed().thenComparing(Candidate::getName, String.CASE_INSENSITIVE_ORDER));
 
 		final List<String> output = new ArrayList<>();
 		for (Candidate candidate : candidates) {
@@ -267,12 +260,7 @@ public final class SuggestionService {
 			return false;
 		}
 
-		return (config.autocompleteFriends() && sources.contains(PlayerSource.FRIEND))
-				|| (config.autocompleteClan()
-				&& (sources.contains(PlayerSource.CLAN) || sources.contains(PlayerSource.GUEST_CLAN)))
-				|| (config.autocompleteFriendsChat() && sources.contains(PlayerSource.FRIENDS_CHAT))
-				|| (config.autocompleteParty() && sources.contains(PlayerSource.PARTY))
-				|| (config.autocompleteNearby() && sources.contains(PlayerSource.NEARBY));
+		return (config.autocompleteFriends() && sources.contains(PlayerSource.FRIEND)) || (config.autocompleteClan() && (sources.contains(PlayerSource.CLAN) || sources.contains(PlayerSource.GUEST_CLAN))) || (config.autocompleteFriendsChat() && sources.contains(PlayerSource.FRIENDS_CHAT)) || (config.autocompleteParty() && sources.contains(PlayerSource.PARTY)) || (config.autocompleteNearby() && sources.contains(PlayerSource.NEARBY));
 	}
 
 	private static int trailingMentionStart(String input) {
