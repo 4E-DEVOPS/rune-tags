@@ -318,8 +318,7 @@ public class LocalPlayerRecordService {
 		final String note = firstNonBlank(
 				currentRecord != null
 						? currentRecord.getNote()
-						: null,
-				previousRecord != null
+						: null, previousRecord != null
 						? previousRecord.getNote()
 						: null);
 		final List<String> tags = mergeTags(currentRecord, previousRecord);
@@ -563,8 +562,7 @@ public class LocalPlayerRecordService {
 		try {
 			Files.createDirectories(recordDirectory);
 
-			try (BufferedWriter writer = Files.newBufferedWriter(recordTempFile, StandardCharsets.UTF_8);
-					JsonWriter jsonWriter = new JsonWriter(writer)) {
+			try (BufferedWriter writer = Files.newBufferedWriter(recordTempFile, StandardCharsets.UTF_8); JsonWriter jsonWriter = new JsonWriter(writer)) {
 				jsonWriter.setIndent("    ");
 				gson.toJson(snapshot, PersistedStore.class, jsonWriter);
 			}
