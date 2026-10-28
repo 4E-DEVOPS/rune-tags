@@ -97,10 +97,8 @@ public class TaggedMessageRepository {
 	 * Exact bodies apply to every chat type. Case-folded candidates are private
 	 * only, matching ReferenceLayoutService's existing compatibility fallback.
 	 */
-	public synchronized List<TaggedMessage> snapshotMatchingBodies(
-			Set<String> exactBodies, Set<String> foldedBodies, boolean privateOnly) {
-		if ((exactBodies == null || exactBodies.isEmpty())
-				&& (foldedBodies == null || foldedBodies.isEmpty())) {
+	public synchronized List<TaggedMessage> snapshotMatchingBodies(Set<String> exactBodies, Set<String> foldedBodies, boolean privateOnly) {
+		if ((exactBodies == null || exactBodies.isEmpty()) && (foldedBodies == null || foldedBodies.isEmpty())) {
 			return Collections.emptyList();
 		}
 
@@ -119,8 +117,7 @@ public class TaggedMessageRepository {
 					continue;
 				}
 
-				addIndexedCandidates(messagesByFoldedBody.get(body.toLowerCase(Locale.ROOT)), privateOnly, true,
-						selected, orderedCandidates);
+				addIndexedCandidates(messagesByFoldedBody.get(body.toLowerCase(Locale.ROOT)), privateOnly, true, selected, orderedCandidates);
 			}
 		}
 
@@ -158,12 +155,7 @@ public class TaggedMessageRepository {
 		revision++;
 	}
 
-	private void addIndexedCandidates(
-			List<TaggedMessage> candidates,
-			boolean privateOnly,
-			boolean privateFallbackOnly,
-			Set<TaggedMessage> selected,
-			Map<Long, TaggedMessage> orderedCandidates) {
+	private void addIndexedCandidates(List<TaggedMessage> candidates, boolean privateOnly, boolean privateFallbackOnly, Set<TaggedMessage> selected, Map<Long, TaggedMessage> orderedCandidates) {
 		if (candidates == null || candidates.isEmpty()) {
 			return;
 		}
@@ -190,8 +182,7 @@ public class TaggedMessageRepository {
 		}
 
 		messagesByBody.computeIfAbsent(body, ignored -> new ArrayList<>()).add(message);
-		messagesByFoldedBody.computeIfAbsent(
-				body.toLowerCase(Locale.ROOT), ignored -> new ArrayList<>()).add(message);
+		messagesByFoldedBody.computeIfAbsent(body.toLowerCase(Locale.ROOT), ignored -> new ArrayList<>()).add(message);
 	}
 
 	private void unindexMessage(TaggedMessage message) {
@@ -204,8 +195,7 @@ public class TaggedMessageRepository {
 		removeIndexedMessage(messagesByFoldedBody, body.toLowerCase(Locale.ROOT), message);
 	}
 
-	private static void removeIndexedMessage(
-			Map<String, List<TaggedMessage>> index, String key, TaggedMessage message) {
+	private static void removeIndexedMessage(Map<String, List<TaggedMessage>> index, String key, TaggedMessage message) {
 		final List<TaggedMessage> indexed = index.get(key);
 		if (indexed == null) {
 			return;
@@ -251,9 +241,7 @@ public class TaggedMessageRepository {
 		}
 
 		final ChatMessageType type = message.getType();
-		return type == ChatMessageType.PRIVATECHAT
-				|| type == ChatMessageType.MODPRIVATECHAT
-				|| type == ChatMessageType.PRIVATECHATOUT;
+		return type == ChatMessageType.PRIVATECHAT || type == ChatMessageType.MODPRIVATECHAT || type == ChatMessageType.PRIVATECHATOUT;
 	}
 
 	private static ChatMessageType retentionType(TaggedMessage message) {

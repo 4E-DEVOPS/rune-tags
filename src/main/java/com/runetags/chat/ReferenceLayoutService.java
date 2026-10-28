@@ -410,11 +410,7 @@ public class ReferenceLayoutService {
 	private boolean lastFavoritesEnabled;
 	private int lastFavoriteColorRgb = Integer.MIN_VALUE;
 
-	public ReferenceLayoutService(
-			Client client,
-			Configurations config,
-			TaggedMessageRepository repository,
-			LocalPlayerRecordService localPlayerRecordService) {
+	public ReferenceLayoutService(Client client, Configurations config, TaggedMessageRepository repository, LocalPlayerRecordService localPlayerRecordService) {
 		this.client = client;
 		this.config = config;
 		this.repository = repository;
@@ -479,10 +475,7 @@ public class ReferenceLayoutService {
 		final Color favoriteColor = configuredFavoriteColor();
 		final int favoriteColorRgb = favoriteColor.getRGB();
 
-		if (!favoriteSenderRowsDirty
-				&& favoriteRevision == lastFavoriteRevision
-				&& favoritesEnabled == lastFavoritesEnabled
-				&& favoriteColorRgb == lastFavoriteColorRgb) {
+		if (!favoriteSenderRowsDirty && favoriteRevision == lastFavoriteRevision && favoritesEnabled == lastFavoritesEnabled && favoriteColorRgb == lastFavoriteColorRgb) {
 			return;
 		}
 
@@ -546,8 +539,7 @@ public class ReferenceLayoutService {
 		final Set<Widget> usedBodyWidgets = Collections.newSetFromMap(new IdentityHashMap<>());
 
 		for (TaggedMessage message : messages) {
-			if (message == null || message.getCanonicalSender() == null
-					|| message.getCanonicalSender().trim().isEmpty()) {
+			if (message == null || message.getCanonicalSender() == null || message.getCanonicalSender().trim().isEmpty()) {
 				continue;
 			}
 
@@ -555,8 +547,7 @@ public class ReferenceLayoutService {
 			 * Reserve body ownership for every retained message before applying Favorite styling.
 			 * This prevents duplicate bodies from being claimed by the wrong message.
 			 */
-			final RenderedTextWidget messageWidget = findRenderedWidgetForMessageIndexedForFont(
-					message, textWidgets, bodyIndex, rowIndex, usedBodyWidgets);
+			final RenderedTextWidget messageWidget = findRenderedWidgetForMessageIndexedForFont(message, textWidgets, bodyIndex, rowIndex, usedBodyWidgets);
 			if (messageWidget == null || messageWidget.widget == null) {
 				continue;
 			}
@@ -567,8 +558,7 @@ public class ReferenceLayoutService {
 				continue;
 			}
 
-			final RenderedSenderMatch senderMatch = findChatboxSender(
-					messageWidget, message.getCanonicalSender(), textWidgets, rowIndex);
+			final RenderedSenderMatch senderMatch = findChatboxSender(messageWidget, message.getCanonicalSender(), textWidgets, rowIndex);
 			if (senderMatch == null) {
 				continue;
 			}
@@ -578,8 +568,7 @@ public class ReferenceLayoutService {
 	}
 
 	private void applyFavoriteSenderColor(RenderedSenderMatch senderMatch, String sender) {
-		if (senderMatch == null || senderMatch.rendered == null || senderMatch.rendered.widget == null
-				|| sender == null || sender.isEmpty()) {
+		if (senderMatch == null || senderMatch.rendered == null || senderMatch.rendered.widget == null || sender == null || sender.isEmpty()) {
 			return;
 		}
 
@@ -605,13 +594,7 @@ public class ReferenceLayoutService {
 			return;
 		}
 
-		final String appliedText = rawText.substring(0, rawStart)
-				+ "<col="
-				+ colorHex(configuredFavoriteColor())
-				+ ">"
-				+ rawText.substring(rawStart, rawEnd)
-				+ "</col>"
-				+ rawText.substring(rawEnd);
+		final String appliedText = rawText.substring(0, rawStart) + "<col=" + colorHex(configuredFavoriteColor()) + ">" + rawText.substring(rawStart, rawEnd) + "</col>" + rawText.substring(rawEnd);
 
 		if (appliedText.equals(rawText)) {
 			return;
@@ -655,8 +638,7 @@ public class ReferenceLayoutService {
 	 * Only wrapper markup is changed; visible text and the native restore color are preserved.
 	 */
 	private void repairExpandedReferenceStyles(Widget messageWidget, TaggedMessage message) {
-		if (messageWidget == null || message == null
-				|| message.getReferences() == null || message.getReferences().isEmpty()) {
+		if (messageWidget == null || message == null || message.getReferences() == null || message.getReferences().isEmpty()) {
 			return;
 		}
 
@@ -704,8 +686,7 @@ public class ReferenceLayoutService {
 				continue;
 			}
 
-			final boolean isSelf = samePlayerName(reference.getLookupName(), localPlayerName)
-					|| samePlayerName(renderedToken, localPlayerName);
+			final boolean isSelf = samePlayerName(reference.getLookupName(), localPlayerName) || samePlayerName(renderedToken, localPlayerName);
 			final boolean shouldColor = isSelf
 					? config.mentionSelf()
 					: config.mentionOthers();
@@ -716,9 +697,7 @@ public class ReferenceLayoutService {
 			/*
 			 * Rewrite only the expanded player-name wrapper and preserve its native restore color.
 			 */
-			final Pattern expandedNamePattern = Pattern.compile(
-					"<col=([0-9a-fA-F]{6})><u>(" + Pattern.quote(renderedToken) + ")</u><col=([0-9a-fA-F]{6})>",
-					Pattern.CASE_INSENSITIVE);
+			final Pattern expandedNamePattern = Pattern.compile("<col=([0-9a-fA-F]{6})><u>(" + Pattern.quote(renderedToken) + ")</u><col=([0-9a-fA-F]{6})>", Pattern.CASE_INSENSITIVE);
 
 			final Matcher matcher = expandedNamePattern.matcher(repaired);
 			if (!matcher.find()) {
@@ -731,10 +710,8 @@ public class ReferenceLayoutService {
 			final String displayedName = matcher.group(2);
 			final String restoreColor = matcher.group(3);
 			final String replacement = "<col=" + openingColor + ">" + (config.underlineMentions()
-					? "<u>"
-					: "") + displayedName + (config.underlineMentions()
-					? "</u>"
-					: "") + "<col=" + restoreColor + ">";
+					? "<u>" : "") + displayedName + (config.underlineMentions()
+					? "</u>" : "") + "<col=" + restoreColor + ">";
 
 			repaired = matcher.replaceFirst(Matcher.quoteReplacement(replacement));
 		}
@@ -757,8 +734,7 @@ public class ReferenceLayoutService {
 	}
 
 	private static String playerNameKey(String value) {
-		return value.replace('\u00A0', ' ')
-				.replace('_', ' ').trim().toLowerCase(Locale.ROOT);
+		return value.replace('\u00A0', ' ').replace('_', ' ').trim().toLowerCase(Locale.ROOT);
 	}
 
 	/*
@@ -799,8 +775,7 @@ public class ReferenceLayoutService {
 				continue;
 			}
 
-			final RenderedTextWidget messageWidget =
-					findRenderedWidgetForMessageIndexedForFont(message, textWidgets, bodyIndex, rowIndex, usedWidgets);
+			final RenderedTextWidget messageWidget = findRenderedWidgetForMessageIndexedForFont(message, textWidgets, bodyIndex, rowIndex, usedWidgets);
 			if (messageWidget == null || messageWidget.widget == null) {
 				continue;
 			}
@@ -817,9 +792,7 @@ public class ReferenceLayoutService {
 	 * Exact body matching is primary. Sender confirmation and private case-folded fallback
 	 * disambiguate candidates. Candidate geometry is always revalidated live.
 	 */
-	private RenderedTextWidget findRenderedWidgetForMessageIndexedForFont(
-			TaggedMessage message, List<RenderedTextWidget> widgets, RenderedBodyIndex bodyIndex,
-			RenderedRowIndex rowIndex, Set<Widget> usedWidgets) {
+	private RenderedTextWidget findRenderedWidgetForMessageIndexedForFont(TaggedMessage message, List<RenderedTextWidget> widgets, RenderedBodyIndex bodyIndex, RenderedRowIndex rowIndex, Set<Widget> usedWidgets) {
 		if (message == null || widgets == null || bodyIndex == null || rowIndex == null || usedWidgets == null) {
 			return null;
 		}
@@ -829,14 +802,12 @@ public class ReferenceLayoutService {
 			return null;
 		}
 
-		final RenderedTextWidget exactMatch = selectRenderedFontBodyCandidate(
-				message, bodyIndex.candidates(needle), rowIndex, widgets, usedWidgets);
+		final RenderedTextWidget exactMatch = selectRenderedFontBodyCandidate(message, bodyIndex.candidates(needle), rowIndex, widgets, usedWidgets);
 		if (exactMatch != null || !isPrivateMessage(message)) {
 			return exactMatch;
 		}
 
-		return selectRenderedFontBodyCandidate(
-				message, bodyIndex.candidatesIgnoreCase(needle), rowIndex, widgets, usedWidgets);
+		return selectRenderedFontBodyCandidate(message, bodyIndex.candidatesIgnoreCase(needle), rowIndex, widgets, usedWidgets);
 	}
 
 	/*
@@ -844,11 +815,8 @@ public class ReferenceLayoutService {
 	 *
 	 * Body-only fallback is retained only for semantic records without a sender.
 	 */
-	private RenderedTextWidget selectRenderedFontBodyCandidate(
-			TaggedMessage message, List<RenderedTextWidget> candidates,
-			RenderedRowIndex rowIndex, List<RenderedTextWidget> allWidgets, Set<Widget> usedWidgets) {
-		if (message == null || candidates == null || candidates.isEmpty()
-				|| rowIndex == null || allWidgets == null || usedWidgets == null) {
+	private RenderedTextWidget selectRenderedFontBodyCandidate(TaggedMessage message, List<RenderedTextWidget> candidates, RenderedRowIndex rowIndex, List<RenderedTextWidget> allWidgets, Set<Widget> usedWidgets) {
+		if (message == null || candidates == null || candidates.isEmpty() || rowIndex == null || allWidgets == null || usedWidgets == null) {
 			return null;
 		}
 
@@ -857,8 +825,7 @@ public class ReferenceLayoutService {
 		RenderedTextWidget bodyFallback = null;
 
 		for (RenderedTextWidget rendered : candidates) {
-			if (rendered == null || rendered.widget == null
-					|| usedWidgets.contains(rendered.widget) || rendered.widget.isHidden()) {
+			if (rendered == null || rendered.widget == null || usedWidgets.contains(rendered.widget) || rendered.widget.isHidden()) {
 				continue;
 			}
 
@@ -916,8 +883,7 @@ public class ReferenceLayoutService {
 	 * promote the pass to complete-surface correlation when off-screen ownership
 	 * must be preserved. Widget ownership remains unique within this surface pass.
 	 */
-	private void layoutSurface(Widget surfaceWidget, Surface surface, List<ReferenceHitbox> output,
-			List<LocalHighlight> localHighlights, boolean includeLocalHighlights) {
+	private void layoutSurface(Widget surfaceWidget, Surface surface, List<ReferenceHitbox> output, List<LocalHighlight> localHighlights, boolean includeLocalHighlights) {
 		if (surfaceWidget == null || surfaceWidget.isHidden()) {
 			return;
 		}
@@ -945,8 +911,7 @@ public class ReferenceLayoutService {
 
 		RenderedBodyIndex bodyIndex = new RenderedBodyIndex(textWidgets);
 		RenderedRowIndex rowIndex = new RenderedRowIndex(textWidgets);
-		List<TaggedMessage> messages = repository.snapshotMatchingBodies(
-				bodyIndex.exactBodies(), bodyIndex.foldedBodies(), surface == Surface.SPLIT_PRIVATE);
+		List<TaggedMessage> messages = repository.snapshotMatchingBodies(bodyIndex.exactBodies(), bodyIndex.foldedBodies(), surface == Surface.SPLIT_PRIVATE);
 		if (messages.isEmpty()) {
 			return;
 		}
@@ -973,8 +938,7 @@ public class ReferenceLayoutService {
 				continue;
 			}
 
-			final RenderedTextWidget messageWidget = findRenderedWidgetForMessage(
-					message, textWidgets, bodyIndex, rowIndex, usedWidgets, surface);
+			final RenderedTextWidget messageWidget = findRenderedWidgetForMessage(message, textWidgets, bodyIndex, rowIndex, usedWidgets, surface);
 			if (messageWidget == null || !isLiveRenderedCandidate(messageWidget)) {
 				continue;
 			}
@@ -1017,13 +981,8 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	private boolean needsCompleteChatboxCorrelation(
-			List<TaggedMessage> messages,
-			RenderedBodyIndex bodyIndex,
-			RenderedRowIndex rowIndex,
-			List<RenderedTextWidget> textWidgets) {
-		if (messages == null || messages.isEmpty() || bodyIndex == null
-				|| rowIndex == null || textWidgets == null || textWidgets.isEmpty()) {
+	private boolean needsCompleteChatboxCorrelation(List<TaggedMessage> messages, RenderedBodyIndex bodyIndex, RenderedRowIndex rowIndex, List<RenderedTextWidget> textWidgets) {
+		if (messages == null || messages.isEmpty() || bodyIndex == null || rowIndex == null || textWidgets == null || textWidgets.isEmpty()) {
 			return false;
 		}
 
@@ -1088,8 +1047,7 @@ public class ReferenceLayoutService {
 		return sender + '\u0000' + bodyKey;
 	}
 
-	private static boolean isVisibleForLayout(
-			RenderedTextWidget rendered, Surface surface, Rectangle visibleBounds) {
+	private static boolean isVisibleForLayout(RenderedTextWidget rendered, Surface surface, Rectangle visibleBounds) {
 		if (rendered == null || rendered.widget == null || rendered.widget.isHidden()) {
 			return false;
 		}
@@ -1137,8 +1095,7 @@ public class ReferenceLayoutService {
 		}
 
 		final boolean hasPlayerReference = message.getReferences() != null && !message.getReferences().isEmpty();
-		final boolean hasLocalMention = message.getLocalMentionMatch() != null && message.getLocalMentionMatch()
-				.isMatchesLocalPlayer();
+		final boolean hasLocalMention = message.getLocalMentionMatch() != null && message.getLocalMentionMatch().isMatchesLocalPlayer();
 
 		if (!hasPlayerReference && !hasLocalMention) {
 			restoreOriginalFont(messageWidget);
@@ -1224,8 +1181,7 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	private RenderedTextWidget findRenderedWidgetForMessage(TaggedMessage message, List<RenderedTextWidget> widgets,
-			RenderedBodyIndex bodyIndex, RenderedRowIndex rowIndex, Set<Widget> usedWidgets, Surface surface) {
+	private RenderedTextWidget findRenderedWidgetForMessage(TaggedMessage message, List<RenderedTextWidget> widgets, RenderedBodyIndex bodyIndex, RenderedRowIndex rowIndex, Set<Widget> usedWidgets, Surface surface) {
 		if (message == null || widgets == null || bodyIndex == null || rowIndex == null || usedWidgets == null) {
 			return null;
 		}
@@ -1236,8 +1192,7 @@ public class ReferenceLayoutService {
 		}
 
 		final List<RenderedTextWidget> exactCandidates = bodyIndex.candidates(needle);
-		final RenderedTextWidget exactMatch = selectRenderedBodyCandidate(
-				message, exactCandidates, rowIndex, widgets, usedWidgets);
+		final RenderedTextWidget exactMatch = selectRenderedBodyCandidate(message, exactCandidates, rowIndex, widgets, usedWidgets);
 		if (exactMatch != null || !isPrivateMessage(message) || needle.trim().isEmpty()) {
 			return exactMatch;
 		}
@@ -1251,8 +1206,7 @@ public class ReferenceLayoutService {
 		 * reused unchanged.
 		 */
 		final List<RenderedTextWidget> foldedCandidates = bodyIndex.candidatesIgnoreCase(needle);
-		final RenderedTextWidget foldedMatch = selectRenderedBodyCandidate(
-				message, foldedCandidates, rowIndex, widgets, usedWidgets);
+		final RenderedTextWidget foldedMatch = selectRenderedBodyCandidate(message, foldedCandidates, rowIndex, widgets, usedWidgets);
 		return foldedMatch;
 	}
 
@@ -1261,11 +1215,8 @@ public class ReferenceLayoutService {
 	 *
 	 * Player-authored rows never fall back to body text alone.
 	 */
-	private RenderedTextWidget selectRenderedBodyCandidate(
-			TaggedMessage message, List<RenderedTextWidget> candidates,
-			RenderedRowIndex rowIndex, List<RenderedTextWidget> allWidgets, Set<Widget> usedWidgets) {
-		if (message == null || candidates == null || candidates.isEmpty() || rowIndex == null
-				|| allWidgets == null || usedWidgets == null) {
+	private RenderedTextWidget selectRenderedBodyCandidate(TaggedMessage message, List<RenderedTextWidget> candidates, RenderedRowIndex rowIndex, List<RenderedTextWidget> allWidgets, Set<Widget> usedWidgets) {
+		if (message == null || candidates == null || candidates.isEmpty() || rowIndex == null || allWidgets == null || usedWidgets == null) {
 			return null;
 		}
 
@@ -1274,8 +1225,7 @@ public class ReferenceLayoutService {
 		RenderedTextWidget bodyFallback = null;
 
 		for (RenderedTextWidget rendered : candidates) {
-			if (rendered == null || rendered.widget == null
-					|| usedWidgets.contains(rendered.widget) || rendered.widget.isHidden()) {
+			if (rendered == null || rendered.widget == null || usedWidgets.contains(rendered.widget) || rendered.widget.isHidden()) {
 				continue;
 			}
 
@@ -1304,10 +1254,8 @@ public class ReferenceLayoutService {
 	 * If that cannot confirm ownership, the complete semantic Widget list remains
 	 * the live reconstruction fallback.
 	 */
-	private boolean hasRenderedSenderOnRow(RenderedTextWidget messageWidget, TaggedMessage message,
-			RenderedRowIndex rowIndex, List<RenderedTextWidget> widgets) {
-		if (messageWidget == null || messageWidget.widget == null || message == null
-				|| rowIndex == null || widgets == null) {
+	private boolean hasRenderedSenderOnRow(RenderedTextWidget messageWidget, TaggedMessage message, RenderedRowIndex rowIndex, List<RenderedTextWidget> widgets) {
+		if (messageWidget == null || messageWidget.widget == null || message == null || rowIndex == null || widgets == null) {
 			return false;
 		}
 
@@ -1330,17 +1278,13 @@ public class ReferenceLayoutService {
 		return hasRenderedSenderInLiveCandidates(messageWidget, sender, widgets);
 	}
 
-	private static boolean hasRenderedSenderInIndexedCandidates(
-			RenderedTextWidget messageWidget, Rectangle messageBounds,
-			String sender, List<RenderedTextWidget> candidates) {
-		if (messageWidget == null || messageBounds == null || sender == null
-				|| sender.isEmpty() || candidates == null || candidates.isEmpty()) {
+	private static boolean hasRenderedSenderInIndexedCandidates(RenderedTextWidget messageWidget, Rectangle messageBounds, String sender, List<RenderedTextWidget> candidates) {
+		if (messageWidget == null || messageBounds == null || sender == null || sender.isEmpty() || candidates == null || candidates.isEmpty()) {
 			return false;
 		}
 
 		for (RenderedTextWidget candidate : candidates) {
-			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget
-					|| candidate.bounds == null || candidate.bounds.x > messageBounds.x) {
+			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget || candidate.bounds == null || candidate.bounds.x > messageBounds.x) {
 				continue;
 			}
 			if (indexOfName(candidate.semanticText, sender) < 0) {
@@ -1349,10 +1293,7 @@ public class ReferenceLayoutService {
 
 			final Rectangle liveMessageBounds = messageWidget.widget.getBounds();
 			final Rectangle liveCandidateBounds = candidate.widget.getBounds();
-			if (liveMessageBounds != null && liveCandidateBounds != null
-					&& liveCandidateBounds.y == liveMessageBounds.y
-					&& liveCandidateBounds.x <= liveMessageBounds.x
-					&& !candidate.widget.isHidden()) {
+			if (liveMessageBounds != null && liveCandidateBounds != null && liveCandidateBounds.y == liveMessageBounds.y && liveCandidateBounds.x <= liveMessageBounds.x && !candidate.widget.isHidden()) {
 				return true;
 			}
 		}
@@ -1360,10 +1301,8 @@ public class ReferenceLayoutService {
 		return false;
 	}
 
-	private static boolean hasRenderedSenderInLiveCandidates(
-			RenderedTextWidget messageWidget, String sender, List<RenderedTextWidget> candidates) {
-		if (messageWidget == null || messageWidget.widget == null || sender == null
-				|| sender.isEmpty() || candidates == null || candidates.isEmpty()) {
+	private static boolean hasRenderedSenderInLiveCandidates(RenderedTextWidget messageWidget, String sender, List<RenderedTextWidget> candidates) {
+		if (messageWidget == null || messageWidget.widget == null || sender == null || sender.isEmpty() || candidates == null || candidates.isEmpty()) {
 			return false;
 		}
 
@@ -1373,14 +1312,12 @@ public class ReferenceLayoutService {
 		}
 
 		for (RenderedTextWidget candidate : candidates) {
-			if (candidate == null || candidate.widget == null
-					|| candidate.widget == messageWidget.widget || candidate.widget.isHidden()) {
+			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget || candidate.widget.isHidden()) {
 				continue;
 			}
 
 			final Rectangle candidateBounds = candidate.widget.getBounds();
-			if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0
-					|| candidateBounds.y != messageBounds.y || candidateBounds.x > messageBounds.x) {
+			if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0 || candidateBounds.y != messageBounds.y || candidateBounds.x > messageBounds.x) {
 				continue;
 			}
 
@@ -1432,8 +1369,7 @@ public class ReferenceLayoutService {
 		return findWidgetForMessage(message, widgets, usedWidgets, true);
 	}
 
-	private Widget findWidgetForMessage(TaggedMessage message,
-			List<Widget> widgets, Set<Widget> usedWidgets, boolean ignoreCase) {
+	private Widget findWidgetForMessage(TaggedMessage message, List<Widget> widgets, Set<Widget> usedWidgets, boolean ignoreCase) {
 		if (message == null || widgets == null || usedWidgets == null) {
 			return null;
 		}
@@ -1555,8 +1491,7 @@ public class ReferenceLayoutService {
 	 * One PlayerReference may legitimately produce more than one physical
 	 * ReferenceHitbox if the reference itself crosses a visual line break.
 	 */
-	private void layoutMessage(RenderedTextWidget renderedWidget, TaggedMessage message, Surface surface,
-			List<ReferenceHitbox> output, int horizontalOffset, int verticalOffset) {
+	private void layoutMessage(RenderedTextWidget renderedWidget, TaggedMessage message, Surface surface, List<ReferenceHitbox> output, int horizontalOffset, int verticalOffset) {
 		final Widget widget = renderedWidget != null
 				? renderedWidget.widget
 				: null;
@@ -1569,8 +1504,7 @@ public class ReferenceLayoutService {
 		final Rectangle widgetBounds = offsetBounds(widget.getBounds(), horizontalOffset, verticalOffset);
 		final String rawWidgetText = renderedWidget.rawText;
 		final String semanticWidgetText = renderedWidget.semanticText;
-		if (font == null || widgetBounds == null || widgetBounds.width <= 0 || widgetBounds.height <= 0
-				|| rawWidgetText == null || semanticWidgetText == null) {
+		if (font == null || widgetBounds == null || widgetBounds.width <= 0 || widgetBounds.height <= 0 || rawWidgetText == null || semanticWidgetText == null) {
 			return;
 		}
 
@@ -1592,8 +1526,7 @@ public class ReferenceLayoutService {
 			return;
 		}
 
-		final List<WrappedLine> wrappedLines = wrapSemanticLines(
-				widget, rawWidgetText, semanticWidgetText, map, font, widgetBounds);
+		final List<WrappedLine> wrappedLines = wrapSemanticLines(widget, rawWidgetText, semanticWidgetText, map, font, widgetBounds);
 		if (wrappedLines.isEmpty()) {
 			return;
 		}
@@ -1609,8 +1542,7 @@ public class ReferenceLayoutService {
 				continue;
 			}
 
-			addWrappedSemanticHitboxes(widget, rawWidgetText, semanticWidgetText, map, font, widgetBounds, wrappedLines,
-					semanticStart, semanticEnd, message.getId(), reference, surface, output);
+			addWrappedSemanticHitboxes(widget, rawWidgetText, semanticWidgetText, map, font, widgetBounds, wrappedLines, semanticStart, semanticEnd, message.getId(), reference, surface, output);
 		}
 	}
 
@@ -1620,16 +1552,13 @@ public class ReferenceLayoutService {
 	 * SENDER references are not added to TaggedMessage.references and do not affect
 	 * mention processing.
 	 */
-	private void layoutSender(RenderedTextWidget messageWidget, TaggedMessage message, Surface surface,
-			List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex, List<ReferenceHitbox> output) {
+	private void layoutSender(RenderedTextWidget messageWidget, TaggedMessage message, Surface surface, List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex, List<ReferenceHitbox> output) {
 		final String sender = message.getCanonicalSender();
 		if (sender == null || sender.isEmpty()) {
 			return;
 		}
 
-		final PlayerReference senderReference = PlayerReference.builder().rawText(sender).normalizedToken(sender)
-				.lookupName(sender).startOffset(0).endOffset(sender.length()).type(ReferenceType.SENDER)
-				.locallyResolved(false).identity(null).chatType(message.getType()).build();
+		final PlayerReference senderReference = PlayerReference.builder().rawText(sender).normalizedToken(sender).lookupName(sender).startOffset(0).endOffset(sender.length()).type(ReferenceType.SENDER).locallyResolved(false).identity(null).chatType(message.getType()).build();
 		if (!ChatInteractionPolicy.isClickable(senderReference, config)) {
 			return;
 		}
@@ -1643,17 +1572,14 @@ public class ReferenceLayoutService {
 				layoutChatboxSender(messageWidget, message, senderReference, surface, textWidgets, rowIndex, output);
 				break;
 			case SPLIT_PRIVATE:
-				layoutSplitPrivateSender(
-						messageWidget, message, senderReference, surface, textWidgets, rowIndex, output);
+				layoutSplitPrivateSender(messageWidget, message, senderReference, surface, textWidgets, rowIndex, output);
 				break;
 			default:
 				break;
 		}
 	}
 
-	private void layoutChatboxSender(
-			RenderedTextWidget messageWidget, TaggedMessage message, PlayerReference senderReference, Surface surface,
-			List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex, List<ReferenceHitbox> output) {
+	private void layoutChatboxSender(RenderedTextWidget messageWidget, TaggedMessage message, PlayerReference senderReference, Surface surface, List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex, List<ReferenceHitbox> output) {
 		if (messageWidget == null || messageWidget.widget == null || rowIndex == null) {
 			return;
 		}
@@ -1665,18 +1591,15 @@ public class ReferenceLayoutService {
 		}
 
 		final int senderEnd = senderMatch.semanticStart + sender.length();
-		addSemanticHitbox(senderMatch.rendered.widget, senderMatch.rendered.rawText, senderMatch.rendered.semanticText,
-				senderMatch.semanticStart, senderEnd, message.getId(), senderReference, surface, output);
+		addSemanticHitbox(senderMatch.rendered.widget, senderMatch.rendered.rawText, senderMatch.rendered.semanticText, senderMatch.semanticStart, senderEnd, message.getId(), senderReference, surface, output);
 	}
 
 	/*
 	 * Resolves the normal-chatbox sender Widget shared by sender interaction
 	 * and Favorite sender coloring.
 	 */
-	private RenderedSenderMatch findChatboxSender(RenderedTextWidget messageWidget, String sender,
-			List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex) {
-		if (messageWidget == null || messageWidget.widget == null || sender == null || sender.isEmpty()
-				|| textWidgets == null || rowIndex == null || messageWidget.bounds == null) {
+	private RenderedSenderMatch findChatboxSender(RenderedTextWidget messageWidget, String sender, List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex) {
+		if (messageWidget == null || messageWidget.widget == null || sender == null || sender.isEmpty() || textWidgets == null || rowIndex == null || messageWidget.bounds == null) {
 			return null;
 		}
 
@@ -1686,8 +1609,7 @@ public class ReferenceLayoutService {
 
 		final List<RenderedTextWidget> indexedCandidates = rowIndex.candidates(messageWidget.bounds.y);
 		for (RenderedTextWidget candidate : indexedCandidates) {
-			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget
-					|| candidate.bounds == null || candidate.bounds.x > messageWidget.bounds.x) {
+			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget || candidate.bounds == null || candidate.bounds.x > messageWidget.bounds.x) {
 				continue;
 			}
 
@@ -1715,14 +1637,12 @@ public class ReferenceLayoutService {
 		}
 
 		for (RenderedTextWidget candidate : textWidgets) {
-			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget
-					|| candidate.widget.isHidden()) {
+			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget || candidate.widget.isHidden()) {
 				continue;
 			}
 
 			final Rectangle candidateBounds = candidate.widget.getBounds();
-			if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0
-					|| candidateBounds.y != liveMessageBounds.y || candidateBounds.x > liveMessageBounds.x) {
+			if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0 || candidateBounds.y != liveMessageBounds.y || candidateBounds.x > liveMessageBounds.x) {
 				continue;
 			}
 
@@ -1742,16 +1662,13 @@ public class ReferenceLayoutService {
 	}
 
 	private static boolean isLiveSenderCandidate(RenderedTextWidget senderWidget, RenderedTextWidget messageWidget) {
-		if (senderWidget == null || senderWidget.widget == null || messageWidget == null
-				|| messageWidget.widget == null || senderWidget.widget.isHidden()) {
+		if (senderWidget == null || senderWidget.widget == null || messageWidget == null || messageWidget.widget == null || senderWidget.widget.isHidden()) {
 			return false;
 		}
 
 		final Rectangle senderBounds = senderWidget.widget.getBounds();
 		final Rectangle messageBounds = messageWidget.widget.getBounds();
-		return senderBounds != null && messageBounds != null
-				&& senderBounds.width > 0 && senderBounds.height > 0
-				&& senderBounds.y == messageBounds.y && senderBounds.x <= messageBounds.x;
+		return senderBounds != null && messageBounds != null && senderBounds.width > 0 && senderBounds.height > 0 && senderBounds.y == messageBounds.y && senderBounds.x <= messageBounds.x;
 	}
 
 	/*
@@ -1761,10 +1678,7 @@ public class ReferenceLayoutService {
 	 * Matching does not depend on fixed child indices, account-name length,
 	 * or message X position.
 	 */
-	private void layoutSplitPrivateSender(
-			RenderedTextWidget messageWidget, TaggedMessage message, PlayerReference senderReference,
-			Surface surface, List<RenderedTextWidget> textWidgets,
-			RenderedRowIndex rowIndex, List<ReferenceHitbox> output) {
+	private void layoutSplitPrivateSender(RenderedTextWidget messageWidget, TaggedMessage message, PlayerReference senderReference, Surface surface, List<RenderedTextWidget> textWidgets, RenderedRowIndex rowIndex, List<ReferenceHitbox> output) {
 		if (messageWidget == null || messageWidget.widget == null || rowIndex == null || messageWidget.bounds == null) {
 			return;
 		}
@@ -1779,8 +1693,7 @@ public class ReferenceLayoutService {
 
 		final List<RenderedTextWidget> indexedCandidates = rowIndex.candidates(messageWidget.bounds.y);
 		for (RenderedTextWidget candidate : indexedCandidates) {
-			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget
-					|| candidate.bounds == null || candidate.bounds.x > messageWidget.bounds.x) {
+			if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget || candidate.bounds == null || candidate.bounds.x > messageWidget.bounds.x) {
 				continue;
 			}
 
@@ -1801,14 +1714,12 @@ public class ReferenceLayoutService {
 			}
 
 			for (RenderedTextWidget candidate : textWidgets) {
-				if (candidate == null || candidate.widget == null
-						|| candidate.widget == messageWidget.widget || candidate.widget.isHidden()) {
+				if (candidate == null || candidate.widget == null || candidate.widget == messageWidget.widget || candidate.widget.isHidden()) {
 					continue;
 				}
 
 				final Rectangle candidateBounds = candidate.widget.getBounds();
-				if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0
-						|| candidateBounds.y != liveMessageBounds.y || candidateBounds.x > liveMessageBounds.x) {
+				if (candidateBounds == null || candidateBounds.width <= 0 || candidateBounds.height <= 0 || candidateBounds.y != liveMessageBounds.y || candidateBounds.x > liveMessageBounds.x) {
 					continue;
 				}
 
@@ -1828,8 +1739,7 @@ public class ReferenceLayoutService {
 		}
 
 		final int senderEnd = senderStart + sender.length();
-		addSemanticHitbox(senderWidget.widget, senderWidget.rawText, senderWidget.semanticText, senderStart, senderEnd,
-				message.getId(), senderReference, surface, output);
+		addSemanticHitbox(senderWidget.widget, senderWidget.rawText, senderWidget.semanticText, senderStart, senderEnd, message.getId(), senderReference, surface, output);
 	}
 
 	private int resolveChatboxBodyXOffset(TaggedMessage message, RenderedTextWidget renderedWidget) {
@@ -1867,8 +1777,7 @@ public class ReferenceLayoutService {
 				: CHATBOX_X_PENDING;
 	}
 
-	private int resolveChatboxBodyYOffset(
-			TaggedMessage message, RenderedTextWidget renderedWidget, Widget surfaceWidget) {
+	private int resolveChatboxBodyYOffset(TaggedMessage message, RenderedTextWidget renderedWidget, Widget surfaceWidget) {
 		final ChatboxBodyState currentState = chatboxBodyState(renderedWidget, surfaceWidget);
 		if (message == null || currentState == null) {
 			return 0;
@@ -1904,8 +1813,7 @@ public class ReferenceLayoutService {
 		final Rectangle bounds = widget.getBounds();
 		final Rectangle surfaceBounds = surfaceWidget.getBounds();
 		final RowKey rowKey = RowKey.of(widget);
-		if (bounds == null || bounds.width <= 0 || bounds.height <= 0
-				|| surfaceBounds == null || surfaceBounds.height <= 0 || rowKey == null) {
+		if (bounds == null || bounds.width <= 0 || bounds.height <= 0 || surfaceBounds == null || surfaceBounds.height <= 0 || rowKey == null) {
 			return null;
 		}
 
@@ -1971,11 +1879,8 @@ public class ReferenceLayoutService {
 	 * Converts one semantic span into physical hitbox fragments across its wrapped
 	 * visual lines.
 	 */
-	private void addSemanticHitbox(
-			Widget widget, String rawWidgetText, String semanticWidgetText, int semanticStart, int semanticEnd,
-			long messageId, PlayerReference reference, Surface surface, List<ReferenceHitbox> output) {
-		if (widget == null || rawWidgetText == null || semanticWidgetText == null || semanticStart < 0
-				|| semanticEnd <= semanticStart || semanticEnd > semanticWidgetText.length()) {
+	private void addSemanticHitbox(Widget widget, String rawWidgetText, String semanticWidgetText, int semanticStart, int semanticEnd, long messageId, PlayerReference reference, Surface surface, List<ReferenceHitbox> output) {
+		if (widget == null || rawWidgetText == null || semanticWidgetText == null || semanticStart < 0 || semanticEnd <= semanticStart || semanticEnd > semanticWidgetText.length()) {
 			return;
 		}
 
@@ -1990,14 +1895,12 @@ public class ReferenceLayoutService {
 			return;
 		}
 
-		final List<WrappedLine> wrappedLines = wrapSemanticLines(
-				widget, rawWidgetText, semanticWidgetText, map, font, widgetBounds);
+		final List<WrappedLine> wrappedLines = wrapSemanticLines(widget, rawWidgetText, semanticWidgetText, map, font, widgetBounds);
 		if (wrappedLines.isEmpty()) {
 			return;
 		}
 
-		addWrappedSemanticHitboxes(widget, rawWidgetText, semanticWidgetText, map, font, widgetBounds, wrappedLines,
-				semanticStart, semanticEnd, messageId, reference, surface, output);
+		addWrappedSemanticHitboxes(widget, rawWidgetText, semanticWidgetText, map, font, widgetBounds, wrappedLines, semanticStart, semanticEnd, messageId, reference, surface, output);
 	}
 
 	/*
@@ -2026,8 +1929,7 @@ public class ReferenceLayoutService {
 		 * the supplied bounds width.
 		 */
 		final Rectangle measurementBounds = new Rectangle(0, 0, availableWidth, 1);
-		final List<WrappedLine> lines = wrapSemanticLines(
-				null, rawWidgetText, semanticWidgetText, map, font, measurementBounds);
+		final List<WrappedLine> lines = wrapSemanticLines(null, rawWidgetText, semanticWidgetText, map, font, measurementBounds);
 		return Math.max(1, lines.size());
 	}
 
@@ -2053,8 +1955,7 @@ public class ReferenceLayoutService {
 	 *
 	 * The physical message Widget has already been resolved by layoutSurface().
 	 */
-	private void layoutLocalHighlight(RenderedTextWidget renderedWidget, TaggedMessage message, Surface surface,
-			List<LocalHighlight> output, int horizontalOffset, int verticalOffset) {
+	private void layoutLocalHighlight(RenderedTextWidget renderedWidget, TaggedMessage message, Surface surface, List<LocalHighlight> output, int horizontalOffset, int verticalOffset) {
 		final Widget widget = renderedWidget != null
 				? renderedWidget.widget
 				: null;
@@ -2105,8 +2006,7 @@ public class ReferenceLayoutService {
 
 			final int end = start + loweredToken.length();
 			if (hasBoundaries(loweredMessage, start, end) && !overlapsPlayerReference(start, end, message)) {
-				final List<Rectangle> rectangles = layoutSemanticSpan(widget, rawWidgetText, semanticWidgetText,
-						messageStart + start, messageStart + end, horizontalOffset, verticalOffset);
+				final List<Rectangle> rectangles = layoutSemanticSpan(widget, rawWidgetText, semanticWidgetText, messageStart + start, messageStart + end, horizontalOffset, verticalOffset);
 				for (Rectangle bounds : rectangles) {
 					if (bounds == null || bounds.width <= 0 || bounds.height <= 0) {
 						continue;
@@ -2130,8 +2030,7 @@ public class ReferenceLayoutService {
 			return false;
 		}
 
-		return localMatch.getReason() == MatchReason.UNIQUE_HIGHLIGHT
-				|| localMatch.getReason() == MatchReason.NORMALIZED_ACCOUNT_NAME;
+		return localMatch.getReason() == MatchReason.UNIQUE_HIGHLIGHT || localMatch.getReason() == MatchReason.NORMALIZED_ACCOUNT_NAME;
 	}
 
 	private static boolean overlapsPlayerReference(int start, int end, TaggedMessage message) {
@@ -2184,12 +2083,10 @@ public class ReferenceLayoutService {
 	 * Cached-text form used by the render pass. Bounds and FontTypeFace remain
 	 * live reads so no reconstruction geometry is frozen in the semantic cache.
 	 */
-	private List<Rectangle> layoutSemanticSpan(Widget widget, String rawWidgetText, String semanticWidgetText,
-			int semanticStart, int semanticEnd, int horizontalOffset, int verticalOffset) {
+	private List<Rectangle> layoutSemanticSpan(Widget widget, String rawWidgetText, String semanticWidgetText, int semanticStart, int semanticEnd, int horizontalOffset, int verticalOffset) {
 		final List<Rectangle> output = new ArrayList<>();
 
-		if (widget == null || rawWidgetText == null || semanticWidgetText == null
-				|| semanticStart < 0 || semanticEnd <= semanticStart) {
+		if (widget == null || rawWidgetText == null || semanticWidgetText == null || semanticStart < 0 || semanticEnd <= semanticStart) {
 			return output;
 		}
 
@@ -2207,8 +2104,7 @@ public class ReferenceLayoutService {
 			return output;
 		}
 
-		final List<WrappedLine> wrappedLines = wrapSemanticLines(
-				widget, rawWidgetText, semanticWidgetText, map, font, widgetBounds);
+		final List<WrappedLine> wrappedLines = wrapSemanticLines(widget, rawWidgetText, semanticWidgetText, map, font, widgetBounds);
 		if (wrappedLines.isEmpty()) {
 			return output;
 		}
@@ -2231,14 +2127,12 @@ public class ReferenceLayoutService {
 					: map.rawBoundary(line.start);
 			final int rawSegmentStart = map.rawBoundary(segmentStart);
 			final int rawSegmentEnd = map.rawBoundary(segmentEnd);
-			if (rawLineStart < 0 || rawSegmentStart < rawLineStart
-					|| rawSegmentEnd < rawSegmentStart || rawSegmentEnd > rawWidgetText.length()) {
+			if (rawLineStart < 0 || rawSegmentStart < rawLineStart || rawSegmentEnd < rawSegmentStart || rawSegmentEnd > rawWidgetText.length()) {
 				continue;
 			}
 
 			final int prefixWidth = font.getTextWidth(rawWidgetText.substring(rawLineStart, rawSegmentStart));
-			final int segmentWidth = Math.max(1, font.getTextWidth(
-					rawWidgetText.substring(rawSegmentStart, rawSegmentEnd)));
+			final int segmentWidth = Math.max(1, font.getTextWidth(rawWidgetText.substring(rawSegmentStart, rawSegmentEnd)));
 			final int lineOriginX = alignedLineX(widget, widgetBounds, line.width);
 			final int lineY = widgetBounds.y + (lineIndex * physicalLineHeight);
 			output.add(new Rectangle(lineOriginX + prefixWidth, lineY, segmentWidth, physicalLineHeight));
@@ -2253,10 +2147,7 @@ public class ReferenceLayoutService {
 	 * the widget. If a name crosses a wrap boundary, each visible piece receives
 	 * its own ReferenceHitbox pointing to the same PlayerReference.
 	 */
-	private void addWrappedSemanticHitboxes(
-			Widget widget, String rawWidgetText, String semanticWidgetText, MessageMarkupMap map, FontTypeFace font,
-			Rectangle widgetBounds, List<WrappedLine> wrappedLines, int semanticStart, int semanticEnd,
-			long messageId, PlayerReference reference, Surface surface, List<ReferenceHitbox> output) {
+	private void addWrappedSemanticHitboxes(Widget widget, String rawWidgetText, String semanticWidgetText, MessageMarkupMap map, FontTypeFace font, Rectangle widgetBounds, List<WrappedLine> wrappedLines, int semanticStart, int semanticEnd, long messageId, PlayerReference reference, Surface surface, List<ReferenceHitbox> output) {
 		if (wrappedLines == null || wrappedLines.isEmpty()) {
 			return;
 		}
@@ -2283,16 +2174,12 @@ public class ReferenceLayoutService {
 					: map.rawBoundary(line.start);
 			final int rawSegmentStart = map.rawBoundary(segmentStart);
 			final int rawSegmentEnd = map.rawBoundary(segmentEnd);
-			if (rawLineStart < 0
-					|| rawSegmentStart < rawLineStart
-					|| rawSegmentEnd < rawSegmentStart
-					|| rawSegmentEnd > rawWidgetText.length()) {
+			if (rawLineStart < 0 || rawSegmentStart < rawLineStart || rawSegmentEnd < rawSegmentStart || rawSegmentEnd > rawWidgetText.length()) {
 				continue;
 			}
 
 			final int prefixWidth = font.getTextWidth(rawWidgetText.substring(rawLineStart, rawSegmentStart));
-			final int segmentWidth = Math.max(1, font.getTextWidth(
-					rawWidgetText.substring(rawSegmentStart, rawSegmentEnd)));
+			final int segmentWidth = Math.max(1, font.getTextWidth(rawWidgetText.substring(rawSegmentStart, rawSegmentEnd)));
 
 			/*
 			 * Resolve horizontal alignment independently for each visual line.
@@ -2316,8 +2203,7 @@ public class ReferenceLayoutService {
 	 * widget, it falls back to a hard character boundary so layout can still
 	 * progress.
 	 */
-	private List<WrappedLine> wrapSemanticLines(Widget widget, String rawWidgetText, String semanticWidgetText,
-			MessageMarkupMap map, FontTypeFace font, Rectangle widgetBounds) {
+	private List<WrappedLine> wrapSemanticLines(Widget widget, String rawWidgetText, String semanticWidgetText, MessageMarkupMap map, FontTypeFace font, Rectangle widgetBounds) {
 		final List<WrappedLine> lines = new ArrayList<>();
 		if (semanticWidgetText == null || semanticWidgetText.isEmpty() || widgetBounds.width <= 0) {
 			return lines;
@@ -2418,8 +2304,7 @@ public class ReferenceLayoutService {
 		 * line avoids introducing artificial vertical geometry.
 		 */
 		if (lines.isEmpty()) {
-			lines.add(new WrappedLine(0, textLength, semanticWidth(
-					rawWidgetText, map, font, 0, textLength)));
+			lines.add(new WrappedLine(0, textLength, semanticWidth(rawWidgetText, map, font, 0, textLength)));
 		}
 
 		return lines;
@@ -2446,8 +2331,7 @@ public class ReferenceLayoutService {
 	 * Measure one semantic range using the actual raw RuneScape markup and the
 	 * widget's own font.
 	 */
-	private static int semanticWidth(String rawWidgetText, MessageMarkupMap map, FontTypeFace font,
-			int semanticStart, int semanticEnd) {
+	private static int semanticWidth(String rawWidgetText, MessageMarkupMap map, FontTypeFace font, int semanticStart, int semanticEnd) {
 		if (semanticStart < 0 || semanticEnd < semanticStart) {
 			return 0;
 		}
@@ -2540,9 +2424,7 @@ public class ReferenceLayoutService {
 		}
 
 		final ChatMessageType type = message.getType();
-		return type == ChatMessageType.PRIVATECHAT
-				|| type == ChatMessageType.MODPRIVATECHAT
-				|| type == ChatMessageType.PRIVATECHATOUT;
+		return type == ChatMessageType.PRIVATECHAT || type == ChatMessageType.MODPRIVATECHAT || type == ChatMessageType.PRIVATECHATOUT;
 	}
 
 	/*
@@ -2552,8 +2434,7 @@ public class ReferenceLayoutService {
 	 * Native reconstruction or semantic repository revision changes
 	 * force rediscovery, while text, visibility, and geometry remain live reads.
 	 */
-	private void collectRenderedTextWidgets(Widget surfaceWidget, Surface surface, Rectangle visibleBounds,
-			List<RenderedTextWidget> output) {
+	private void collectRenderedTextWidgets(Widget surfaceWidget, Surface surface, Rectangle visibleBounds, List<RenderedTextWidget> output) {
 		if (surfaceWidget == null || surface == null || output == null) {
 			return;
 		}
@@ -2561,8 +2442,7 @@ public class ReferenceLayoutService {
 		final RenderedSurfaceCache cache = renderedSurfaceCache(surface);
 		final int topologySignature = surfaceTopologySignature(surfaceWidget);
 		final long repositoryRevision = repository.getRevision();
-		final boolean requiresRebuild = cache.root != surfaceWidget || cache.dirty
-				|| cache.topologySignature != topologySignature || cache.repositoryRevision != repositoryRevision;
+		final boolean requiresRebuild = cache.root != surfaceWidget || cache.dirty || cache.topologySignature != topologySignature || cache.repositoryRevision != repositoryRevision;
 
 		boolean staleMembership = false;
 		if (!requiresRebuild) {
@@ -2584,8 +2464,7 @@ public class ReferenceLayoutService {
 		}
 	}
 
-	private void addCachedRenderedTextWidget(CachedRenderedWidget cached, Surface surface, Rectangle visibleBounds,
-			List<RenderedTextWidget> output) {
+	private void addCachedRenderedTextWidget(CachedRenderedWidget cached, Surface surface, Rectangle visibleBounds, List<RenderedTextWidget> output) {
 		if (cached == null || cached.widget == null || cached.widget.isHidden()) {
 			return;
 		}
@@ -2620,8 +2499,7 @@ public class ReferenceLayoutService {
 		output.add(new RenderedTextWidget(cached.widget, rawText, semanticText, new Rectangle(bounds)));
 	}
 
-	private void rebuildRenderedSurfaceCache(RenderedSurfaceCache cache, Widget surfaceWidget, int topologySignature,
-			long repositoryRevision) {
+	private void rebuildRenderedSurfaceCache(RenderedSurfaceCache cache, Widget surfaceWidget, int topologySignature, long repositoryRevision) {
 		cache.root = surfaceWidget;
 		cache.widgets.clear();
 
@@ -2633,8 +2511,7 @@ public class ReferenceLayoutService {
 		cache.dirty = false;
 	}
 
-	private void discoverRenderedSurfaceWidgets(
-			Widget widget, List<CachedRenderedWidget> output, Set<Widget> visited, int depth) {
+	private void discoverRenderedSurfaceWidgets(Widget widget, List<CachedRenderedWidget> output, Set<Widget> visited, int depth) {
 		if (widget == null || depth > MAX_WIDGET_DEPTH || !visited.add(widget)) {
 			return;
 		}
@@ -2652,8 +2529,7 @@ public class ReferenceLayoutService {
 		discoverRenderedSurfaceChildren(widget.getNestedChildren(), output, visited, depth + 1);
 	}
 
-	private void discoverRenderedSurfaceChildren(
-			Widget[] children, List<CachedRenderedWidget> output, Set<Widget> visited, int depth) {
+	private void discoverRenderedSurfaceChildren(Widget[] children, List<CachedRenderedWidget> output, Set<Widget> visited, int depth) {
 		if (children == null) {
 			return;
 		}

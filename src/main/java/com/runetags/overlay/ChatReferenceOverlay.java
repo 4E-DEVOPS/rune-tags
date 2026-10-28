@@ -572,13 +572,10 @@ public class ChatReferenceOverlay extends Overlay {
 
 			// Segmented dots
 			for (int x = bounds.x; x < bounds.x + bounds.width; x += 3) {
-				//          — 1px dotted segments —
+				//			— 1px dotted segments —
 				graphics.fillRect(x, y, 1, 1);
-				//          — 2px horizontal segments —
-				//                graphics.drawLine(
-				//                        x,
-				//                        y,
-				//                        Math.min(x + 1, bounds.x + bounds.width - 1), y);
+				//			— 2px horizontal segments —
+				//				graphics.drawLine(x, y, Math.min(x + 1, bounds.x + bounds.width - 1), y);
 			}
 		} finally {
 			graphics.setColor(previousColor);

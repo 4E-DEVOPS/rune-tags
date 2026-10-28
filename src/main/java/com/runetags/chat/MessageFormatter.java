@@ -47,8 +47,7 @@ public class MessageFormatter {
 		 * Local matches include account-name variants and Unique Highlights.
 		 * Mention Whole Message applies Self Mention Color to the complete body.
 		 */
-		final boolean mentionWholeMessage = config.mentionWholeMessage()
-				&& config.mentionSelf() && message.getLocalMentionMatch().isMatchesLocalPlayer();
+		final boolean mentionWholeMessage = config.mentionWholeMessage() && config.mentionSelf() && message.getLocalMentionMatch().isMatchesLocalPlayer();
 
 		final String wholeMessageColorTag = mentionWholeMessage
 				? ColorUtil.colorTag(config.selfMentionColor())
@@ -141,15 +140,7 @@ public class MessageFormatter {
 			final String closingShadow = span.getShadowColor() != null
 					? "</shad>"
 					: "";
-			formatted = formatted.substring(0, rawStart)
-					+ openingColor
-					+ openingShadow
-					+ openingUnderline
-					+ formatted.substring(rawStart, rawEnd)
-					+ closingUnderline
-					+ closingShadow
-					+ closingColor
-					+ formatted.substring(rawEnd);
+			formatted = formatted.substring(0, rawStart) + openingColor + openingShadow + openingUnderline + formatted.substring(rawStart, rawEnd) + closingUnderline + closingShadow + closingColor + formatted.substring(rawEnd);
 		}
 
 		/*
@@ -189,8 +180,7 @@ public class MessageFormatter {
 		 * Skip ACCOUNT_NAME matches already represented by PlayerReference.
 		 * Normalized account variants and Unique Highlights remain eligible.
 		 */
-		if (localMatch.getReason() != MatchReason.NORMALIZED_ACCOUNT_NAME
-				&& localMatch.getReason() != MatchReason.UNIQUE_HIGHLIGHT) {
+		if (localMatch.getReason() != MatchReason.NORMALIZED_ACCOUNT_NAME && localMatch.getReason() != MatchReason.UNIQUE_HIGHLIGHT) {
 			return;
 		}
 

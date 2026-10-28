@@ -21,10 +21,7 @@ public class ChatProcessor {
 	private final KnownPlayerMentionParser knownPlayerMentionParser;
 	private final LocalMentionMatcher localMentionMatcher;
 
-	public ChatProcessor(
-			TagParser tagParser,
-			KnownPlayerMentionParser knownPlayerMentionParser,
-			LocalMentionMatcher localMentionMatcher) {
+	public ChatProcessor(TagParser tagParser, KnownPlayerMentionParser knownPlayerMentionParser, LocalMentionMatcher localMentionMatcher) {
 		this.tagParser = tagParser;
 		this.knownPlayerMentionParser = knownPlayerMentionParser;
 		this.localMentionMatcher = localMentionMatcher;
@@ -34,8 +31,7 @@ public class ChatProcessor {
 		final List<PlayerReference> references = new ArrayList<>();
 
 		/*
-		 * Parse explicit @tags first so their spans are reserved before
-		 * ordinary known-player matching.
+		 * Parse explicit @tags first so their spans are reserved before ordinary known-player matching.
 		 */
 		final List<PlayerReference> tags = tagParser.parse(message);
 		references.addAll(tags);
@@ -44,8 +40,7 @@ public class ChatProcessor {
 		references.addAll(knownReferences);
 
 		/*
-		 * Attach the originating chat channel to every reference before
-		 * final ordering and local-player matching.
+		 * Attach the originating chat channel to every reference before final ordering and local-player matching.
 		 */
 		for (int index = 0; index < references.size(); index++) {
 			references.set(index, references.get(index).toBuilder().chatType(type).build());
@@ -56,8 +51,7 @@ public class ChatProcessor {
 		LocalMentionMatch bestMatch = LocalMentionMatch.none();
 
 		/*
-		 * Structured references take priority because they provide the most
-		 * specific semantic match.
+		 * Structured references take priority because they provide the most specific semantic match.
 		 */
 		for (PlayerReference reference : references) {
 			final LocalMentionMatch candidate = localMentionMatcher.match(reference, localPlayerName);
@@ -78,15 +72,6 @@ public class ChatProcessor {
 			}
 		}
 
-		return TaggedMessage.builder()
-				.id(id)
-				.type(type)
-				.originalSender(sender)
-				.canonicalSender(sender)
-				.originalMessage(message)
-				.timestamp(Instant.now())
-				.references(references)
-				.localMentionMatch(bestMatch)
-				.build();
+		return TaggedMessage.builder().id(id).type(type).originalSender(sender).canonicalSender(sender).originalMessage(message).timestamp(Instant.now()).references(references).localMentionMatch(bestMatch).build();
 	}
 }

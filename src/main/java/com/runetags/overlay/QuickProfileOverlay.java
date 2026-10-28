@@ -907,9 +907,9 @@ public class QuickProfileOverlay extends Overlay {
 			/*
 			 * Report source header/title.
 			 *
-			 *     ⚠ WE DO RAIDS
-			 *     ⚠ RUNEWATCH          6 CASES
-			 *       ^ bold             ^ normal
+			 *		⚠ WE DO RAIDS
+			 *		⚠ RUNEWATCH			6 CASES
+			 *			^ bold				^ normal
 			 */
 			final String sourceTitle = warningSourceTitle(graphics, summary);
 			final String countText = summary.getCaseCount() > 1

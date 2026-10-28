@@ -58,11 +58,7 @@ public class FontLayoutService {
 	 */
 	private final Set<Long> constructedMessageIds = new HashSet<>();
 
-	public FontLayoutService(
-			Client client,
-			Configurations config,
-			TaggedMessageRepository repository,
-			ReferenceLayoutService referenceLayoutService) {
+	public FontLayoutService(Client client, Configurations config, TaggedMessageRepository repository, ReferenceLayoutService referenceLayoutService) {
 		this.client = client;
 		this.config = config;
 		this.repository = repository;
@@ -146,8 +142,7 @@ public class FontLayoutService {
 		}
 
 		/*
-		 * Apply mention-font treatment only to TaggedMessages containing a reference
-		 * or local-player match.
+		 * Apply mention-font treatment only to TaggedMessages containing a reference or local-player match.
 		 */
 		final TaggedMessage taggedMessage = findTaggedMessage(semanticBody, objectStack, objectStackSize, messages);
 		if (taggedMessage == null || !hasMentionFontTreatment(taggedMessage)) {
@@ -206,8 +201,7 @@ public class FontLayoutService {
 			return;
 		}
 
-		final PrefixMeasurement prefix = measurePrefix(event.getScriptId(), baseFont, objectStack, objectStackSize,
-				semanticBody, intStack, intStackSize);
+		final PrefixMeasurement prefix = measurePrefix(event.getScriptId(), baseFont, objectStack, objectStackSize, semanticBody, intStack, intStackSize);
 		if (prefix == null) {
 			return;
 		}
@@ -258,8 +252,7 @@ public class FontLayoutService {
 		}
 
 		final boolean hasPlayerReference = message.getReferences() != null && !message.getReferences().isEmpty();
-		final boolean hasLocalMention = message.getLocalMentionMatch() != null
-				&& message.getLocalMentionMatch().isMatchesLocalPlayer();
+		final boolean hasLocalMention = message.getLocalMentionMatch() != null && message.getLocalMentionMatch().isMatchesLocalPlayer();
 
 		return hasPlayerReference || hasLocalMention;
 	}
@@ -274,8 +267,7 @@ public class FontLayoutService {
 	 * Player-authored messages require sender/prefix confirmation. Repeated
 	 * sender/body pairs are consumed newest-first within one reconstruction batch.
 	 */
-	private TaggedMessage findTaggedMessage(
-			String semanticBody, Object[] objectStack, int objectStackSize, List<TaggedMessage> messages) {
+	private TaggedMessage findTaggedMessage(String semanticBody, Object[] objectStack, int objectStackSize, List<TaggedMessage> messages) {
 		if (messages == null || messages.isEmpty()) {
 			return null;
 		}
@@ -284,9 +276,7 @@ public class FontLayoutService {
 
 		for (int i = messages.size() - 1; i >= 0; i--) {
 			final TaggedMessage message = messages.get(i);
-			if (message == null || constructedMessageIds.contains(message.getId())
-					|| message.getOriginalMessage() == null
-					|| !message.getOriginalMessage().equals(semanticBody)) {
+			if (message == null || constructedMessageIds.contains(message.getId()) || message.getOriginalMessage() == null || !message.getOriginalMessage().equals(semanticBody)) {
 				continue;
 			}
 
@@ -398,8 +388,7 @@ public class FontLayoutService {
 	 * plus the small account/channel decoration represented by its leading
 	 * dimensions.
 	 */
-	private PrefixMeasurement measurePrefix(int scriptId, FontTypeFace baseFont, Object[] objectStack,
-			int objectStackSize, String semanticBody, int[] intStack, int intStackSize) {
+	private PrefixMeasurement measurePrefix(int scriptId, FontTypeFace baseFont, Object[] objectStack, int objectStackSize, String semanticBody, int[] intStack, int intStackSize) {
 		final List<String> components = findPrefixComponents(objectStack, objectStackSize, semanticBody);
 		if (components.isEmpty()) {
 			return null;

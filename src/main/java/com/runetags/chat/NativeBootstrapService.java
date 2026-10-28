@@ -27,11 +27,7 @@ public class NativeBootstrapService {
 	private final ChatProcessor chatProcessor;
 	private final TaggedMessageRepository repository;
 
-	public NativeBootstrapService(
-			Client client,
-			PlayerDirectory playerDirectory,
-			ChatProcessor chatProcessor,
-			TaggedMessageRepository repository) {
+	public NativeBootstrapService(Client client, PlayerDirectory playerDirectory, ChatProcessor chatProcessor, TaggedMessageRepository repository) {
 		this.client = client;
 		this.playerDirectory = playerDirectory;
 		this.chatProcessor = chatProcessor;
@@ -41,9 +37,9 @@ public class NativeBootstrapService {
 	/**
 	 * Rebuild RuneTags semantic chat state from the current native buffers.
 	 *
-	 * @param startingMessageId      current RuneTags message ID
-	 * @param localPlayerName        current local player's display name
-	 * @param supportedTypePredicate RuneTags supported-chat-type predicate
+	 * @param startingMessageId			current RuneTags message ID
+	 * @param localPlayerName			current local player's display name
+	 * @param supportedTypePredicate	RuneTags supported-chat-type predicate
 	 * @return the newest RuneTags message ID assigned by this bootstrap
 	 */
 	public long bootstrap(
@@ -104,8 +100,7 @@ public class NativeBootstrapService {
 			 * PRIVATECHATOUT identifies the recipient and does not update authoritative
 			 * sender-account observations.
 			 */
-			if (playerDirectory != null && rawName != null && !rawName.trim().isEmpty()
-					&& type != ChatMessageType.PRIVATECHATOUT) {
+			if (playerDirectory != null && rawName != null && !rawName.trim().isEmpty() && type != ChatMessageType.PRIVATECHATOUT) {
 				playerDirectory.observeAccountType(rawName);
 			}
 
@@ -125,8 +120,7 @@ public class NativeBootstrapService {
 			final String canonicalSender = rawName != null
 					? Text.removeTags(rawName)
 					: null;
-			final TaggedMessage taggedMessage = chatProcessor.process(
-				++nextMessageId, type, canonicalSender, semanticMessage, localPlayerName);
+			final TaggedMessage taggedMessage = chatProcessor.process(++nextMessageId, type, canonicalSender, semanticMessage, localPlayerName);
 
 			repository.add(taggedMessage);
 		}
