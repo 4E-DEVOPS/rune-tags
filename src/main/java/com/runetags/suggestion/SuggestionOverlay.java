@@ -81,10 +81,7 @@ public final class SuggestionOverlay extends Overlay {
 			graphics.setColor(selected
 					? SELECTED_TEXT
 					: TEXT);
-			graphics.drawString(
-					"@" + suggestions.get(i),
-					x + 7,
-					rowY + ((ROW_HEIGHT - metrics.getHeight()) / 2) + metrics.getAscent());
+			graphics.drawString("@" + suggestions.get(i), x + 7, rowY + ((ROW_HEIGHT - metrics.getHeight()) / 2) + metrics.getAscent());
 		}
 
 		return null;

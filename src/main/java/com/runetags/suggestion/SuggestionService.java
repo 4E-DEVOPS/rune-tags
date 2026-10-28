@@ -189,8 +189,7 @@ public final class SuggestionService {
 						final String prefix = widgetText.substring(0, separator + 1);
 
 						if (!colorTag.isEmpty()) {
-							chatboxInput.setText(
-									prefix + " " + colorTag + completed + "</col>" + colorTag + "*</col" + ">");
+							chatboxInput.setText(prefix + " " + colorTag + completed + "</col>" + colorTag + "*</col" + ">");
 						} else {
 							chatboxInput.setText(prefix + " " + completed + "*");
 						}
