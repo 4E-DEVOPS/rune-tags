@@ -205,7 +205,7 @@ public class TaggedMessageRepository {
 			return;
 		}
 
-		for (Iterator<TaggedMessage> iterator = indexed.iterator(); iterator.hasNext();) {
+		for (Iterator<TaggedMessage> iterator = indexed.iterator(); iterator.hasNext(); ) {
 			if (iterator.next() == message) {
 				iterator.remove();
 				break;

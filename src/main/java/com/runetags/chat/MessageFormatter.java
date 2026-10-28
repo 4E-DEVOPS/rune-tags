@@ -209,8 +209,8 @@ public class MessageFormatter {
 			final int end = start + loweredToken.length();
 			if (hasBoundaries(loweredMessage, start, end) && !overlapsExistingSpan(start, end, spans)) {
 				spans.add(new StyleSpan(start, end, shouldColor
-					? config.selfMentionColor()
-					: null, underline, shadowColor));
+						? config.selfMentionColor()
+						: null, underline, shadowColor));
 			}
 
 			from = start + 1;

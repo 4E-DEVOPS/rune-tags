@@ -318,9 +318,7 @@ public class ReferenceLayoutService {
 			this.rowKey = rowKey;
 			this.contentY = contentY;
 		}
-
 	}
-
 
 	/*
 	 * One reusable text-bearing Widget discovered beneath a chat surface.
@@ -403,7 +401,6 @@ public class ReferenceLayoutService {
 	private final RenderedSurfaceCache chatboxRenderedSurfaceCache = new RenderedSurfaceCache();
 	private final RenderedSurfaceCache splitPrivateRenderedSurfaceCache = new RenderedSurfaceCache();
 	private long lastGeometryPruneRevision = Long.MIN_VALUE;
-
 
 	private boolean favoriteSenderRowsDirty = true;
 	private long lastFavoriteRevision = Long.MIN_VALUE;
@@ -1060,7 +1057,6 @@ public class ReferenceLayoutService {
 		return bounds != null && bounds.width > 0 && bounds.height > 0 && visibleBounds.intersects(bounds);
 	}
 
-
 	private static boolean isLiveRenderedCandidate(RenderedTextWidget rendered) {
 		if (rendered == null || rendered.widget == null || rendered.widget.isHidden()) {
 			return false;
@@ -1079,8 +1075,6 @@ public class ReferenceLayoutService {
 		pruneChatboxBodyXState(repository.snapshotRetainedIds());
 		lastGeometryPruneRevision = revision;
 	}
-
-
 
 	/*
 	 * Apply the configured mention font to one owned physical message Widget.
@@ -2457,7 +2451,6 @@ public class ReferenceLayoutService {
 		if (requiresRebuild || staleMembership) {
 			rebuildRenderedSurfaceCache(cache, surfaceWidget, topologySignature, repositoryRevision);
 		}
-
 
 		for (CachedRenderedWidget cached : cache.widgets) {
 			addCachedRenderedTextWidget(cached, surface, visibleBounds, output);

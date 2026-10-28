@@ -42,8 +42,7 @@ public class NativeBootstrapService {
 	 * @param supportedTypePredicate	RuneTags supported-chat-type predicate
 	 * @return the newest RuneTags message ID assigned by this bootstrap
 	 */
-	public long bootstrap(
-			long startingMessageId, String localPlayerName, Predicate<ChatMessageType> supportedTypePredicate) {
+	public long bootstrap(long startingMessageId, String localPlayerName, Predicate<ChatMessageType> supportedTypePredicate) {
 		if (supportedTypePredicate == null) {
 			return startingMessageId;
 		}
