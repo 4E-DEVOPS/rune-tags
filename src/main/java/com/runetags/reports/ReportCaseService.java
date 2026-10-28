@@ -43,8 +43,7 @@ import okhttp3.ResponseBody;
 
 @Slf4j
 public class ReportCaseService {
-	private static final String REPORT_LIST_URL = "https://raw.githubusercontent"
-			+ ".com/while-loop/runelite-plugins/runewatch-updater/mixedlist.json";
+	private static final String REPORT_LIST_URL = "https://raw.githubusercontent" + ".com/while-loop/runelite-plugins/runewatch-updater/mixedlist.json";
 
 	/*
 	 * Persistent last-known-good report dataset under RuneLite's RuneTags directory.
@@ -56,8 +55,7 @@ public class ReportCaseService {
 	private static final Duration REFRESH_INTERVAL = Duration.ofMinutes(15);
 	private static final Duration RETRY_INTERVAL = Duration.ofMinutes(1);
 
-	private static final DateTimeFormatter FEED_DATE_FORMAT = DateTimeFormatter.ofPattern(
-			"yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
+	private static final DateTimeFormatter FEED_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH);
 
 	private final OkHttpClient httpClient;
 	private final Gson gson;
@@ -99,12 +97,7 @@ public class ReportCaseService {
 		this(httpClient, gson, clientThread, config, DEFAULT_REPORT_LIST_FILE);
 	}
 
-	ReportCaseService(
-			OkHttpClient httpClient,
-			Gson gson,
-			ClientThread clientThread,
-			Configurations config,
-			Path reportListFile) {
+	ReportCaseService(OkHttpClient httpClient, Gson gson, ClientThread clientThread, Configurations config, Path reportListFile) {
 		this.httpClient = httpClient;
 		this.gson = gson;
 		this.clientThread = clientThread;
@@ -163,8 +156,7 @@ public class ReportCaseService {
 
 			// Replace the last-known-good snapshot only after the temporary file is complete.
 			try {
-				Files.move(
-					reportListTempFile, reportListFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+				Files.move(reportListTempFile, reportListFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 			} catch (IOException atomicMoveFailure) {
 				// Fall back when the file system does not support atomic moves.
 				Files.move(reportListTempFile, reportListFile, StandardCopyOption.REPLACE_EXISTING);
@@ -313,9 +305,7 @@ public class ReportCaseService {
 			}
 
 			// Throttle failed refresh attempts to once per minute.
-			if (!force
-					&& lastDownloadAttempt != null
-					&& Duration.between(lastDownloadAttempt, now).compareTo(RETRY_INTERVAL) < 0) {
+			if (!force && lastDownloadAttempt != null && Duration.between(lastDownloadAttempt, now).compareTo(RETRY_INTERVAL) < 0) {
 				return;
 			}
 
@@ -359,9 +349,7 @@ public class ReportCaseService {
 					body = responseBody.string();
 					success = body != null && !body.trim().isEmpty();
 				} catch (IOException exception) {
-					log.debug(
-							"[RuneTags][Reports] Unable to Read Report-list Response | ERROR: {}",
-							exception.getMessage());
+					log.debug("[RuneTags][Reports] Unable to Read Report-list Response | ERROR: {}", exception.getMessage());
 				} finally {
 					finishDownload(epoch, body, success);
 				}
@@ -406,8 +394,7 @@ public class ReportCaseService {
 		}
 
 		if (success) {
-			//log.debug(
-			//		"[RuneTags][Reports] Report-list Dataset Downloaded and Persisted | Background Parse Requested");
+			//log.debug("[RuneTags][Reports] Report-list Dataset Downloaded and Persisted | Background Parse Requested");
 		}
 
 		for (Runnable callback : callbacks) {
@@ -498,8 +485,7 @@ public class ReportCaseService {
 				}
 
 				final LocalDateTime publishedDate = parsePublishedDate(reportCase.publishedDate);
-				accumulators.computeIfAbsent(playerKey, ignored -> new PlayerAccumulator())
-						.add(source, reportCase, publishedDate);
+				accumulators.computeIfAbsent(playerKey, ignored -> new PlayerAccumulator()).add(source, reportCase, publishedDate);
 			}
 		} catch (JsonParseException exception) {
 			log.debug("[RuneTags][Reports] Unable to Parse Report-list Dataset | ERROR: {}", exception.getMessage());
@@ -517,7 +503,6 @@ public class ReportCaseService {
 		}
 
 		//log.debug("[RuneTags][Reports] Parsed Report-list Dataset | Reports={}", summaries.size());
-
 		return Collections.unmodifiableMap(summaries);
 	}
 
@@ -534,8 +519,7 @@ public class ReportCaseService {
 	}
 
 	private boolean isStaleLocked(Instant now) {
-		return lastSuccessfulDownload == null
-				|| Duration.between(lastSuccessfulDownload, now).compareTo(REFRESH_INTERVAL) >= 0;
+		return lastSuccessfulDownload == null || Duration.between(lastSuccessfulDownload, now).compareTo(REFRESH_INTERVAL) >= 0;
 	}
 
 	private static String normalizePlayerName(String value) {
@@ -644,15 +628,7 @@ public class ReportCaseService {
 				return null;
 			}
 
-			return ReportSummary.builder()
-					.source(latestSource)
-					.caseCount(count)
-					.rsn(latestCase.rsn)
-					.publishedDate(latestPublishedDate)
-					.caseId(caseIdentifier(latestCase))
-					.reason(latestCase.reason)
-					.evidenceRating(latestCase.evidenceRating)
-					.build();
+			return ReportSummary.builder().source(latestSource).caseCount(count).rsn(latestCase.rsn).publishedDate(latestPublishedDate).caseId(caseIdentifier(latestCase)).reason(latestCase.reason).evidenceRating(latestCase.evidenceRating).build();
 		}
 
 		private static boolean isNewer(LocalDateTime candidate, LocalDateTime current) {

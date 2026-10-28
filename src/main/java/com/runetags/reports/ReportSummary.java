@@ -10,8 +10,7 @@ import lombok.Value;
 @Value
 @Builder
 public class ReportSummary {
-	private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter.ofPattern(
-			"MMMM dd, yyyy", Locale.ENGLISH);
+	private static final DateTimeFormatter DISPLAY_DATE_FORMAT = DateTimeFormatter.ofPattern("MMMM dd, yyyy", Locale.ENGLISH);
 
 	String source;
 	int caseCount;
