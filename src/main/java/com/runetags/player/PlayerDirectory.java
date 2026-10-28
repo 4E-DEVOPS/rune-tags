@@ -275,11 +275,14 @@ public class PlayerDirectory {
 			}
 
 			final int world = friend.getWorld();
-			mergeIdentity(friend.getName(), PlayerSource.FRIEND, null, world > 0
-					? world
-					: null, world > 0
-					? OnlineState.ONLINE
-					: OnlineState.OFFLINE, null, null, null, null);
+			mergeIdentity(friend.getName(), PlayerSource.FRIEND, null,
+					world > 0
+							? world
+							: null,
+					world > 0
+							? OnlineState.ONLINE
+							: OnlineState.OFFLINE,
+					null, null, null, null);
 		}
 	}
 
