@@ -22,13 +22,13 @@ import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
-import net.runelite.client.util.Text;
 
 /**
  * Favorite tile/model outline only;
  * Names are rendered on UNDER_WIDGETS by NameOverlay.
  */
 public class FavoriteOverlay extends Overlay {
+	private static boolean DEBUG = false;
 	private static final int OUTLINE_WIDTH = 2;
 	private static final int OUTLINE_FEATHER = 4;
 
@@ -56,30 +56,37 @@ public class FavoriteOverlay extends Overlay {
 		if (player == null) {
 			return false;
 		}
-		return true;
-		// TODO: return hasSupportedRelationship(player);
+		if (DEBUG) {
+			return true;
+		}
+		return hasSupportedRelationship(player);
 	}
 
-	@SuppressWarnings("unused")
 	private boolean hasSupportedRelationship(Player player) {
 		if (player == null) {
 			return false;
 		}
 
-		if (player == client.getLocalPlayer() || player.isFriend() || player.isFriendsChatMember() || player.isClanMember()) {
+		final Player self = client.getLocalPlayer();
+		if (player == self || player.isFriend() || player.isFriendsChatMember() || player.isClanMember()) {
 			return true;
 		}
 
-		final Player self = client.getLocalPlayer();
 		if (self != null && player.getTeam() > 0 && player.getTeam() == self.getTeam()) {
 			return true;
 		}
 
+		final String name = player.getName();
+		if (name == null) {
+			return false;
+		}
+
 		final ClanChannel guest = client.getGuestClanChannel();
-		if (guest != null && player.getName() != null && guest.findMember(player.getName()) != null) {
+		if (guest != null && guest.findMember(name) != null) {
 			return true;
 		}
-		return partyService != null && partyService.isInParty() && player.getName() != null && partyService.getMemberByDisplayName(player.getName()) != null;
+
+		return partyService != null && partyService.isInParty() && partyService.getMemberByDisplayName(name) != null;
 	}
 
 	@Override
