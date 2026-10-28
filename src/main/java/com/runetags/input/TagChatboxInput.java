@@ -163,8 +163,7 @@ public final class TagChatboxInput extends ChatboxInput implements KeyListener, 
 		if (selected.size() >= PlayerTagCatalog.MAX_TAGS_PER_PLAYER) {
 			final Widget message = container.createChild(-1, WidgetType.TEXT);
 			message.setFontId(FontID.BOLD_12);
-			message.setText(
-					"A maximum of (" + PlayerTagCatalog.MAX_TAGS_PER_PLAYER + ") Tags have already been selected.");
+			message.setText("A maximum of (" + PlayerTagCatalog.MAX_TAGS_PER_PLAYER + ") Tags have already been selected.");
 			message.setTextColor(0x282828);
 			message.setXPositionMode(WidgetPositionMode.ABSOLUTE_CENTER);
 			message.setXTextAlignment(WidgetTextAlignment.CENTER);

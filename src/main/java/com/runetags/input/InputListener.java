@@ -51,12 +51,7 @@ public class InputListener extends MouseAdapter implements KeyListener {
 	private boolean suppressCurrentEscape;
 	private boolean suppressCurrentSuggestionTyped;
 
-	public InputListener(
-			Client client,
-			Configurations config,
-			ChatHitboxRegistry registry,
-			QuickProfileController quickProfileController,
-			SuggestionService suggestionService) {
+	public InputListener(Client client, Configurations config, ChatHitboxRegistry registry, QuickProfileController quickProfileController, SuggestionService suggestionService) {
 		this.client = client;
 		this.config = config;
 		this.registry = registry;
@@ -245,20 +240,15 @@ public class InputListener extends MouseAdapter implements KeyListener {
 		suppressNativeMenu(nativeSenderName());
 		final Point anchorPoint = new Point(mousePoint);
 		final String target = menuTarget(reference);
-		client.createMenuEntry(-1)
-				.setOption(MENU_OPEN_PROFILE)
-				.setTarget(target)
-				.setType(MenuAction.RUNELITE)
-				.onClick(entry -> quickProfileController.open(reference, anchorPoint));
+		client.createMenuEntry(-1).setOption(MENU_OPEN_PROFILE).setTarget(target).setType(MenuAction.RUNELITE).onClick(entry -> quickProfileController.open(reference, anchorPoint));
 		if (config.targetPlayerOption() && quickProfileController.canTarget(reference)) {
 			final String action = quickProfileController.isReferenceTargeted(reference)
-					? MENU_UNTARGET : MENU_TARGET;
-			client.createMenuEntry(-2).setOption(action).setTarget(target).setType(MenuAction.RUNELITE)
-					.onClick(entry -> quickProfileController.target(reference));
+					? MENU_UNTARGET
+					: MENU_TARGET;
+			client.createMenuEntry(-2).setOption(action).setTarget(target).setType(MenuAction.RUNELITE).onClick(entry -> quickProfileController.target(reference));
 		}
 
-		client.createMenuEntry(-3).setOption(MENU_LOOKUP).setTarget(target).setType(MenuAction.RUNELITE)
-				.onClick(entry -> quickProfileController.lookup(reference));
+		client.createMenuEntry(-3).setOption(MENU_LOOKUP).setTarget(target).setType(MenuAction.RUNELITE).onClick(entry -> quickProfileController.lookup(reference));
 		return true;
 	}
 
@@ -316,9 +306,7 @@ public class InputListener extends MouseAdapter implements KeyListener {
 		}
 
 		final boolean hasSender = senderName != null && !senderName.isEmpty();
-		client.setMenuEntries(
-				Arrays.stream(entries).filter(entry -> !hasSender || !isNativePlayerMenu(entry, senderName))
-						.filter(entry -> !isNativeMovementMenu(entry)).toArray(MenuEntry[]::new));
+		client.setMenuEntries(Arrays.stream(entries).filter(entry -> !hasSender || !isNativePlayerMenu(entry, senderName)).filter(entry -> !isNativeMovementMenu(entry)).toArray(MenuEntry[]::new));
 	}
 
 	@Override
@@ -328,10 +316,7 @@ public class InputListener extends MouseAdapter implements KeyListener {
 			return;
 		}
 
-		if (!quickProfileController.isEditingNote()
-				&& !quickProfileController.isEditingTag()
-				&& suggestionService != null
-				&& suggestionService.handleKeyPressed(event)) {
+		if (!quickProfileController.isEditingNote() && !quickProfileController.isEditingTag() && suggestionService != null && suggestionService.handleKeyPressed(event)) {
 			if (event.getKeyCode() == KeyEvent.VK_ESCAPE) {
 				suppressCurrentEscape = true;
 			}
@@ -460,17 +445,14 @@ public class InputListener extends MouseAdapter implements KeyListener {
 			 * Inserting immediately after Report therefore places Open Profile directly
 			 * above Report without moving the other native actions.
 			 */
-			client.createMenuEntry(i + 1)
-					.setOption(MENU_OPEN_PROFILE).setTarget(nativeTarget) .setType(MenuAction.RUNELITE)
-					.onClick(menuEntry -> quickProfileController.open(senderReference, profileAnchor));
+			client.createMenuEntry(i + 1).setOption(MENU_OPEN_PROFILE).setTarget(nativeTarget) .setType(MenuAction.RUNELITE).onClick(menuEntry -> quickProfileController.open(senderReference, profileAnchor));
 
 			// Target stays at the top of the sender menu and resolves when selected.
 			if (config.targetPlayerOption() && quickProfileController.canTarget(senderReference)) {
 				final String action = quickProfileController.isReferenceTargeted(senderReference)
-						? MENU_UNTARGET : MENU_TARGET;
-				client.createMenuEntry(-1).setOption(ColorUtil.prependColorTag(action, config.targetColor()))
-						.setTarget(nativeTarget).setType(MenuAction.RUNELITE)
-						.onClick(menuEntry -> quickProfileController.target(senderReference));
+						? MENU_UNTARGET
+						: MENU_TARGET;
+				client.createMenuEntry(-1).setOption(ColorUtil.prependColorTag(action, config.targetColor())).setTarget(nativeTarget).setType(MenuAction.RUNELITE).onClick(menuEntry -> quickProfileController.target(senderReference));
 			}
 			return true;
 		}
@@ -495,9 +477,7 @@ public class InputListener extends MouseAdapter implements KeyListener {
 			}
 		}
 
-		return PlayerReference.builder().rawText(playerName).normalizedToken(playerName).lookupName(playerName)
-				.startOffset(0).endOffset(playerName.length()).type(ReferenceType.SENDER).locallyResolved(false)
-				.identity(null).chatType(null).build();
+		return PlayerReference.builder().rawText(playerName).normalizedToken(playerName).lookupName(playerName).startOffset(0).endOffset(playerName.length()).type(ReferenceType.SENDER).locallyResolved(false).identity(null).chatType(null).build();
 	}
 
 	/*
@@ -507,8 +487,7 @@ public class InputListener extends MouseAdapter implements KeyListener {
 	 * RuneTags never creates Report.
 	 */
 	private boolean isNativeChatReportMenuEntry(MenuEntry entry) {
-		return entry != null && entry.getOption() != null && NATIVE_MENU_REPORT.equals(
-				Text.removeTags(entry.getOption())) && isSupportedChatMessageEntry(entry.getParam1());
+		return entry != null && entry.getOption() != null && NATIVE_MENU_REPORT.equals(Text.removeTags(entry.getOption())) && isSupportedChatMessageEntry(entry.getParam1());
 	}
 
 	/*

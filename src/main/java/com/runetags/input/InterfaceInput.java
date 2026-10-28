@@ -45,8 +45,7 @@ public class InterfaceInput extends MouseAdapter {
 	}
 
 	public void onMenuEntryAdded(MenuEntryAdded event) {
-		if (event == null || (event.getType() != MenuAction.CC_OP.getId()
-				&& event.getType() != MenuAction.CC_OP_LOW_PRIORITY.getId())) {
+		if (event == null || (event.getType() != MenuAction.CC_OP.getId() && event.getType() != MenuAction.CC_OP_LOW_PRIORITY.getId())) {
 			return;
 		}
 
@@ -173,29 +172,15 @@ public class InterfaceInput extends MouseAdapter {
 	}
 
 	private void addProfileEntry(MenuEntryAdded event, int index) {
-		client.createMenuEntry(index)
-				.setOption(MENU_OPEN_PROFILE)
-				.setTarget(event.getTarget())
-				.setType(MenuAction.RUNELITE)
-				.setIdentifier(event.getIdentifier())
-				.onClick(entry -> openProfile(entry.getTarget()));
+		client.createMenuEntry(index).setOption(MENU_OPEN_PROFILE).setTarget(event.getTarget()).setType(MenuAction.RUNELITE).setIdentifier(event.getIdentifier()).onClick(entry -> openProfile(entry.getTarget()));
 	}
 
 	private void addProfileEntry(MenuEntryAdded event, String playerName, int index) {
-		client.createMenuEntry(index)
-				.setOption(MENU_OPEN_PROFILE)
-				.setTarget(playerName)
-				.setType(MenuAction.RUNELITE)
-				.setIdentifier(event.getIdentifier())
-				.onClick(entry -> openProfile(playerName));
+		client.createMenuEntry(index).setOption(MENU_OPEN_PROFILE).setTarget(playerName).setType(MenuAction.RUNELITE).setIdentifier(event.getIdentifier()).onClick(entry -> openProfile(playerName));
 	}
 
 	private void addProfileEntry(String playerName, String target, Point anchorPoint, int index) {
-		client.createMenuEntry(index)
-				.setOption(MENU_OPEN_PROFILE)
-				.setTarget(target)
-				.setType(MenuAction.RUNELITE)
-				.onClick(entry -> openProfile(playerName, anchorPoint));
+		client.createMenuEntry(index).setOption(MENU_OPEN_PROFILE).setTarget(target).setType(MenuAction.RUNELITE).onClick(entry -> openProfile(playerName, anchorPoint));
 	}
 
 	private void moveProfileToTop(String playerName, Point anchorPoint) {
@@ -238,8 +223,7 @@ public class InterfaceInput extends MouseAdapter {
 	}
 
 	private static boolean isProfileEntry(MenuEntry entry, String playerName) {
-		return entry != null && MENU_OPEN_PROFILE.equals(entry.getOption())
-				&& playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()));
+		return entry != null && MENU_OPEN_PROFILE.equals(entry.getOption()) && playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()));
 	}
 
 	private String profileMenuTarget(String playerName) {
@@ -283,8 +267,7 @@ public class InterfaceInput extends MouseAdapter {
 				return new ChatChannelHit(playerName);
 			}
 
-			if (rank != null && rank.getType() == WidgetType.TEXT && !rank.isSelfHidden()
-					&& rank.getBounds().contains(point) && isRankOption(cleanPlayerName(rank.getText()))) {
+			if (rank != null && rank.getType() == WidgetType.TEXT && !rank.isSelfHidden() && rank.getBounds().contains(point) && isRankOption(cleanPlayerName(rank.getText()))) {
 				return new ChatChannelHit(playerName);
 			}
 		}
@@ -309,8 +292,7 @@ public class InterfaceInput extends MouseAdapter {
 
 		for (int i = 1; i < children.length; i += 3) {
 			final Widget username = children[i];
-			if (username == null || username.getType() != WidgetType.TEXT || username.isSelfHidden()
-					|| !username.getBounds().contains(point)) {
+			if (username == null || username.getType() != WidgetType.TEXT || username.isSelfHidden() || !username.getBounds().contains(point)) {
 				continue;
 			}
 
@@ -336,8 +318,7 @@ public class InterfaceInput extends MouseAdapter {
 			return "Delete".equals(option);
 		}
 
-		if (componentId == InterfaceID.ClansSidepanel.PLAYERLIST
-				|| componentId == InterfaceID.ClansGuestSidepanel.PLAYERLIST) {
+		if (componentId == InterfaceID.ClansSidepanel.PLAYERLIST || componentId == InterfaceID.ClansGuestSidepanel.PLAYERLIST) {
 			return isFriendOption(option);
 		}
 

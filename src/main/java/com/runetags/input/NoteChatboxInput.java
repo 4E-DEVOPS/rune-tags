@@ -175,8 +175,7 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		final Widget cursorWidget = container.createChild(-1, WidgetType.RECTANGLE);
 		final long start = System.currentTimeMillis();
 		cursorWidget.setOnTimerListener((JavaScriptCallback) event -> {
-			final boolean on = (System.currentTimeMillis() - start) % CURSOR_FLASH_RATE_MILLIS
-					> CURSOR_FLASH_RATE_MILLIS / 2;
+			final boolean on = (System.currentTimeMillis() - start) % CURSOR_FLASH_RATE_MILLIS > CURSOR_FLASH_RATE_MILLIS / 2;
 			cursorWidget.setOpacity(on
 					? 255
 					: 0);
@@ -262,8 +261,7 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 					? newlineIndex
 					: value.length();
 			final int prefixLength = NoteTextLayout.BULLET_PREFIX.length();
-			final boolean hasBullet = logicalEnd - logicalStart >= prefixLength && value
-					.substring(logicalStart, logicalStart + prefixLength).equals(NoteTextLayout.BULLET_PREFIX);
+			final boolean hasBullet = logicalEnd - logicalStart >= prefixLength && value.substring(logicalStart, logicalStart + prefixLength).equals(NoteTextLayout.BULLET_PREFIX);
 
 			/*
 			 * Stored text retains "• ", while QUILL_8 renders only the editable text and
@@ -287,13 +285,7 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		return rows;
 	}
 
-	private void wrapLogicalLine(
-			List<InputRow> output,
-			FontTypeFace font,
-			int maxWidth,
-			int start,
-			int end,
-			boolean bullet) {
+	private void wrapLogicalLine(List<InputRow> output, FontTypeFace font, int maxWidth, int start, int end, boolean bullet) {
 		if (start >= end) {
 			output.add(new InputRow(start, end, "", bullet));
 			return;
@@ -580,8 +572,7 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		final int lineStart = logicalLineStart(position);
 		final int lineEnd = logicalLineEnd(lineStart);
 		final int prefixLength = NoteTextLayout.BULLET_PREFIX.length();
-		if (lineEnd - lineStart >= prefixLength && value.substring(lineStart, lineStart + prefixLength)
-				.equals(NoteTextLayout.BULLET_PREFIX)) {
+		if (lineEnd - lineStart >= prefixLength && value.substring(lineStart, lineStart + prefixLength).equals(NoteTextLayout.BULLET_PREFIX)) {
 			return lineStart + prefixLength;
 		}
 
@@ -630,14 +621,12 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 
 	private void pasteClipboard() {
 		try {
-			final Object clipboardValue = Toolkit.getDefaultToolkit().getSystemClipboard()
-					.getData(DataFlavor.stringFlavor);
+			final Object clipboardValue = Toolkit.getDefaultToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
 			if (clipboardValue == null) {
 				return;
 			}
 
-			String pasted = clipboardValue.toString().replace("\r\n", " ").replace('\r', ' ').replace('\n', ' ')
-					.replace(NoteTextLayout.BULLET, "-");
+			String pasted = clipboardValue.toString().replace("\r\n", " ").replace('\r', ' ').replace('\n', ' ').replace(NoteTextLayout.BULLET, "-");
 			final StringBuilder clean = new StringBuilder();
 			for (int index = 0; index < pasted.length(); ++index) {
 				final char character = pasted.charAt(index);
@@ -697,9 +686,7 @@ public final class NoteChatboxInput extends ChatboxInput implements KeyListener,
 		final int localX = mouseEvent.getX() - canvasLocation.getX();
 		final int localY = mouseEvent.getY() - canvasLocation.getY();
 		for (VisibleRow visibleRow : visibleRows) {
-			final Rectangle bounds = new Rectangle(
-					visibleRow.x, visibleRow.y, Math.max(1, visibleRow.width),
-					visibleRow.height);
+			final Rectangle bounds = new Rectangle(visibleRow.x, visibleRow.y, Math.max(1, visibleRow.width), visibleRow.height);
 			if (!bounds.contains(new Point(localX, localY))) {
 				continue;
 			}

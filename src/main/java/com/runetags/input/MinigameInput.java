@@ -172,10 +172,7 @@ public class MinigameInput extends MouseAdapter {
 
 	private MinigameHit barbarianNameHit(int componentId, Point point) {
 		final Widget username = client.getWidget(componentId);
-		if (username == null
-				|| username.getType() != WidgetType.TEXT
-				|| username.isHidden()
-				|| !containsVisible(username, point)) {
+		if (username == null || username.getType() != WidgetType.TEXT || username.isHidden() || !containsVisible(username, point)) {
 			return null;
 		}
 
@@ -189,10 +186,7 @@ public class MinigameInput extends MouseAdapter {
 
 	private MinigameHit barbarianRoleHit(int componentId, Point point) {
 		final Widget role = client.getWidget(componentId);
-		if (role == null
-				|| role.getType() != WidgetType.TEXT
-				|| role.isHidden()
-				|| !containsVisible(role, point)) {
+		if (role == null || role.getType() != WidgetType.TEXT || role.isHidden() || !containsVisible(role, point)) {
 			return null;
 		}
 
@@ -227,11 +221,7 @@ public class MinigameInput extends MouseAdapter {
 				? target
 				: playerName;
 
-		client.createMenuEntry(index)
-				.setOption(MENU_OPEN_PROFILE)
-				.setTarget(menuTarget)
-				.setType(MenuAction.RUNELITE)
-				.onClick(entry -> openProfile(playerName, anchorPoint));
+		client.createMenuEntry(index).setOption(MENU_OPEN_PROFILE).setTarget(menuTarget).setType(MenuAction.RUNELITE).onClick(entry -> openProfile(playerName, anchorPoint));
 	}
 
 	private void removeProfileMenu(String playerName) {
@@ -260,8 +250,7 @@ public class MinigameInput extends MouseAdapter {
 	}
 
 	private static boolean isProfileEntry(MenuEntry entry, String playerName) {
-		return entry != null && MENU_OPEN_PROFILE.equals(entry.getOption())
-				&& playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()));
+		return entry != null && MENU_OPEN_PROFILE.equals(entry.getOption()) && playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()));
 	}
 
 	private String profileMenuTarget(String playerName) {
@@ -312,10 +301,7 @@ public class MinigameInput extends MouseAdapter {
 	}
 
 	private static boolean isBarbarianRole(String value) {
-		return "Attacker".equalsIgnoreCase(value)
-				|| "Collector".equalsIgnoreCase(value)
-				|| "Defender".equalsIgnoreCase(value)
-				|| "Healer".equalsIgnoreCase(value);
+		return "Attacker".equalsIgnoreCase(value) || "Collector".equalsIgnoreCase(value) || "Defender".equalsIgnoreCase(value) || "Healer".equalsIgnoreCase(value);
 	}
 
 	private static boolean isEmptyPlayerName(String value) {

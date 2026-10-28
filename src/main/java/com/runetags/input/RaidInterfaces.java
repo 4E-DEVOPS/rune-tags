@@ -28,14 +28,10 @@ public class RaidInterfaces extends MouseAdapter {
 	private static final String MENU_KICK = "Kick";
 	private static final String MENU_REJECT = "Reject";
 
-	private static final RaidLayout TOA_ACCEPTED =
-			new RaidLayout(InterfaceID.ToaPartydetails.MEMBERS_LIST, 13, 1, 2, 10);
-	private static final RaidLayout TOA_APPLICANTS =
-			new RaidLayout(InterfaceID.ToaPartydetails.APPLICANTS_LIST, 20, 1, 2, 18);
-	private static final RaidLayout TOB_ACCEPTED =
-			new RaidLayout(InterfaceID.TobPartydetails.CURRENT, 11, 1, 2, 10);
-	private static final RaidLayout TOB_APPLICANTS =
-			new RaidLayout(InterfaceID.TobPartydetails.APPLICANTS, 20, 1, 2, 18);
+	private static final RaidLayout TOA_ACCEPTED = new RaidLayout(InterfaceID.ToaPartydetails.MEMBERS_LIST, 13, 1, 2, 10);
+	private static final RaidLayout TOA_APPLICANTS = new RaidLayout(InterfaceID.ToaPartydetails.APPLICANTS_LIST, 20, 1, 2, 18);
+	private static final RaidLayout TOB_ACCEPTED = new RaidLayout(InterfaceID.TobPartydetails.CURRENT, 11, 1, 2, 10);
+	private static final RaidLayout TOB_APPLICANTS = new RaidLayout(InterfaceID.TobPartydetails.APPLICANTS, 20, 1, 2, 18);
 
 	private final Client client;
 	private final Configurations config;
@@ -52,10 +48,7 @@ public class RaidInterfaces extends MouseAdapter {
 	}
 
 	public void onMenuEntryAdded(MenuEntryAdded event) {
-		if (event == null
-				|| !allowsRightClick()
-				|| (event.getType() != MenuAction.CC_OP.getId()
-				&& event.getType() != MenuAction.CC_OP_LOW_PRIORITY.getId())) {
+		if (event == null || !allowsRightClick() || (event.getType() != MenuAction.CC_OP.getId() && event.getType() != MenuAction.CC_OP_LOW_PRIORITY.getId())) {
 			return;
 		}
 
@@ -263,9 +256,7 @@ public class RaidInterfaces extends MouseAdapter {
 				return true;
 			}
 
-			return !hasNativeAction(hit.playerName)
-					&& hit.offset >= layout.statsStart
-					&& hit.offset <= layout.statsEnd;
+			return !hasNativeAction(hit.playerName) && hit.offset >= layout.statsStart && hit.offset <= layout.statsEnd;
 		}
 
 		return true;
@@ -289,9 +280,7 @@ public class RaidInterfaces extends MouseAdapter {
 		}
 
 		for (MenuEntry entry : client.getMenu().getMenuEntries()) {
-			if (entry != null
-					&& anchor.equals(entry.getOption())
-					&& hit.playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
+			if (entry != null && anchor.equals(entry.getOption()) && hit.playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
 				return true;
 			}
 		}
@@ -325,11 +314,7 @@ public class RaidInterfaces extends MouseAdapter {
 				? target
 				: playerName;
 
-		client.createMenuEntry(index)
-				.setOption(MENU_OPEN_PROFILE)
-				.setTarget(menuTarget)
-				.setType(MenuAction.RUNELITE)
-				.onClick(entry -> openProfile(playerName, anchorPoint));
+		client.createMenuEntry(index).setOption(MENU_OPEN_PROFILE).setTarget(menuTarget).setType(MenuAction.RUNELITE).onClick(entry -> openProfile(playerName, anchorPoint));
 	}
 
 	private void removeProfileMenu(String playerName) {
@@ -358,8 +343,7 @@ public class RaidInterfaces extends MouseAdapter {
 	}
 
 	private static boolean isProfileEntry(MenuEntry entry, String playerName) {
-		return entry != null && MENU_OPEN_PROFILE.equals(entry.getOption())
-				&& playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()));
+		return entry != null && MENU_OPEN_PROFILE.equals(entry.getOption()) && playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()));
 	}
 
 	private int profileMenuIndex(String playerName, int componentId) {
@@ -371,9 +355,7 @@ public class RaidInterfaces extends MouseAdapter {
 		final MenuEntry[] entries = client.getMenu().getMenuEntries();
 		for (int i = 0; i < entries.length; i++) {
 			final MenuEntry entry = entries[i];
-			if (entry != null
-					&& anchor.equals(entry.getOption())
-					&& playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
+			if (entry != null && anchor.equals(entry.getOption()) && playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
 				return i;
 			}
 		}
@@ -389,10 +371,7 @@ public class RaidInterfaces extends MouseAdapter {
 				return entry.getTarget();
 			}
 
-			if (anchor != null
-					&& entry != null
-					&& anchor.equals(entry.getOption())
-					&& playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
+			if (anchor != null && entry != null && anchor.equals(entry.getOption()) && playerName.equalsIgnoreCase(cleanPlayerName(entry.getTarget()))) {
 				return entry.getTarget();
 			}
 		}
