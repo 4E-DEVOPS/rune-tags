@@ -133,7 +133,6 @@ public class PartyContextService {
 				memberIdsByName.remove(previousKey, memberId);
 			}
 		}
-
 		final String key = comparisonKeyOrEmpty(context.getPlayerName());
 		if (!key.isEmpty()) {
 			memberIdsByName.put(key, memberId);

@@ -38,7 +38,6 @@ public final class ProfileMetricResolver {
 				? location.getRegionId()
 				: -1;
 		final PlayerLocation resolvedLocation = new PlayerLocation(override.getLocationName(), regionId);
-
 		return new PlayerContext(resolvedLocation, override.getMetrics());
 	}
 
