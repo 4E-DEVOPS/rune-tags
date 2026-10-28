@@ -25,14 +25,14 @@ import net.runelite.client.ui.overlay.OverlayUtil;
 import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
 import net.runelite.client.util.Text;
 
-/** 
- * Favorite tile/model outline only; 
+/**
+ * Favorite tile/model outline only;
  * Names are rendered on UNDER_WIDGETS by NameOverlay.
  */
 public class FavoriteOverlay extends Overlay {
 	private static final int OUTLINE_WIDTH = 2;
 	private static final int OUTLINE_FEATHER = 4;
-	
+
 	private final Client client;
 	private final Configurations config;
 	private final LocalPlayerRecordService records;
@@ -52,7 +52,7 @@ public class FavoriteOverlay extends Overlay {
 		setLayer(OverlayLayer.ABOVE_SCENE);
 		setPriority(OverlayPriority.HIGH);
 	}
-	
+
 	public boolean canHighlightFavorite(Player player) {
 		if (player == null) {
 			return false;

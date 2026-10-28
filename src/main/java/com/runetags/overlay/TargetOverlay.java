@@ -27,7 +27,7 @@ import net.runelite.client.ui.overlay.outline.ModelOutlineRenderer;
 public class TargetOverlay extends Overlay {
 	private static final int OUTLINE_WIDTH = 2;
 	private static final int OUTLINE_FEATHER = 4;
-	
+
 	private final Client client;
 	private final Configurations config;
 	private final TargetController targetController;
@@ -59,18 +59,26 @@ public class TargetOverlay extends Overlay {
 			return null;
 		}
 		final boolean favorite = config.showFavorites() && records != null && target.getName() != null && records.isFavorite(target.getName()) && favoriteOverlay != null && favoriteOverlay.canHighlightFavorite(target);
-		final Color configuredColor = favorite ? config.favoriteColor() : config.targetColor();
+		final Color configuredColor = favorite
+				? config.favoriteColor()
+				: config.targetColor();
 		final Color targetColor = configuredColor != null
 				? configuredColor
-				: (favorite ? new Color(255, 205, 70)
+				: (favorite
+						? new Color(255, 205, 70)
 						: new Color(80, 100, 255, 200));
-		final TargetMode targetMode = config.targetMode() != null ? config.targetMode() : TargetMode.OFF;
+		final TargetMode targetMode = config.targetMode() != null
+				? config.targetMode()
+				: TargetMode.OFF;
 		final FavoriteHighlightMode favoriteMode = config.favoriteHighlightMode() != null
-				? config.favoriteHighlightMode() : FavoriteHighlightMode.BOTH;
+				? config.favoriteHighlightMode()
+				: FavoriteHighlightMode.BOTH;
 		final boolean outline = favorite
-				? favoriteMode.showsOutline() : targetMode.showsOutline();
+				? favoriteMode.showsOutline()
+				: targetMode.showsOutline();
 		final boolean tile = favorite
-				? favoriteMode.showsTile() : targetMode.showsTile();
+				? favoriteMode.showsTile()
+				: targetMode.showsTile();
 		if (outline) {
 			// Preserve FavoriteOverlay's scene alpha behavior for gold highlights.
 			final Color outlineColor = favorite
@@ -124,5 +132,4 @@ public class TargetOverlay extends Overlay {
 			graphics.setColor(oldColor);
 		}
 	}
-
 }

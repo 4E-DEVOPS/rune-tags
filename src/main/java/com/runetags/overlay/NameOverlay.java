@@ -4,10 +4,12 @@ import com.runetags.Configurations;
 import com.runetags.config.FavoriteOptions.FavoriteNameLocation;
 import com.runetags.records.LocalPlayerRecordService;
 import com.runetags.target.TargetController;
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+
 import net.runelite.api.Client;
 import net.runelite.api.FriendsChatManager;
 import net.runelite.api.FriendsChatMember;
@@ -101,7 +103,9 @@ public class NameOverlay extends Overlay {
 					drawName(graphics, target, favoriteLocation(), favoriteColor());
 				}
 			} else if (config.targetName()) {
-				drawName(graphics, target, FavoriteNameLocation.ABOVE, config.targetColor() != null ? config.targetColor() : new Color(80, 100, 255));
+				drawName(graphics, target, FavoriteNameLocation.ABOVE, config.targetColor() != null
+						? config.targetColor()
+						: new Color(80, 100, 255));
 			}
 		}
 		return null;
@@ -114,7 +118,9 @@ public class NameOverlay extends Overlay {
 	}
 
 	private Color favoriteColor() {
-		return config.favoriteColor() != null ? config.favoriteColor() : new Color(255, 205, 70);
+		return config.favoriteColor() != null
+				? config.favoriteColor()
+				: new Color(255, 205, 70);
 	}
 
 	private void drawName(Graphics2D graphics, Player player, FavoriteNameLocation location, Color color) {
@@ -152,8 +158,8 @@ public class NameOverlay extends Overlay {
 			final BufferedImage rankIcon = getPiRankIcon(player);
 			if (rankIcon != null) {
 				pos = new Point(pos.getX() + (location == FavoriteNameLocation.RIGHT
-						? rankIcon.getWidth()
-						: rankIcon.getWidth() / 2), pos.getY());
+							? rankIcon.getWidth()
+							: rankIcon.getWidth() / 2), pos.getY());
 			}
 		}
 		OverlayUtil.renderTextLocation(graphics, pos, name, color);
@@ -170,7 +176,9 @@ public class NameOverlay extends Overlay {
 		return piDrawsPlayer(player);
 	}
 
-	/** Matches the PI highlight category gating, not its colors, for rank-offset purposes. */
+	/**
+	 * Matches the PI highlight category gating, not its colors, for rank-offset purposes.
+	 */
 	private boolean piDrawsPlayer(Player player) {
 		if (player == client.getLocalPlayer()) {
 			return piEnabled(piConfig.highlightOwnPlayer());

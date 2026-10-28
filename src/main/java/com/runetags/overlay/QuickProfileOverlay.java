@@ -551,8 +551,8 @@ public class QuickProfileOverlay extends Overlay {
 		 */
 		if (targetBounds != null) {
 			drawButton(graphics, targetBounds, controller.isCurrentProfileTargeted()
-					? "Untarget"
-					: "Target", targetHovered);
+						? "Untarget"
+						: "Target", targetHovered);
 		}
 
 		drawButton(graphics, lookupBounds, "Lookup", lookupHovered);
