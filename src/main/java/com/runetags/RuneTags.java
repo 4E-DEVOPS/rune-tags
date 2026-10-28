@@ -828,11 +828,7 @@ public class RuneTags extends Plugin {
 		}
 
 		final Nameable nameable = event.getNameable();
-		if (nameable == null
-				|| nameable.getName() == null
-				|| nameable.getName().trim().isEmpty()
-				|| nameable.getPrevName() == null
-				|| nameable.getPrevName().trim().isEmpty()) {
+		if (nameable == null || nameable.getName() == null || nameable.getName().trim().isEmpty() || nameable.getPrevName() == null || nameable.getPrevName().trim().isEmpty()) {
 			return;
 		}
 
@@ -843,7 +839,6 @@ public class RuneTags extends Plugin {
 		 * without forcing a full directory refresh.
 		 */
 		queueDirectoryPlayerRefresh(nameable.getPrevName());
-
 		queueDirectoryPlayerRefresh(nameable.getName());
 	}
 
@@ -885,15 +880,9 @@ public class RuneTags extends Plugin {
 	}
 
 	private static void addNameHistoryObservation(Map<String, String> observations, Nameable nameable) {
-		if (observations == null
-				|| nameable == null
-				|| nameable.getName() == null
-				|| nameable.getName().trim().isEmpty()
-				|| nameable.getPrevName() == null
-				|| nameable.getPrevName().trim().isEmpty()) {
+		if (observations == null || nameable == null || nameable.getName() == null || nameable.getName().trim().isEmpty() || nameable.getPrevName() == null || nameable.getPrevName().trim().isEmpty()) {
 			return;
 		}
-
 		observations.put(nameable.getName(), nameable.getPrevName());
 	}
 
@@ -944,29 +933,21 @@ public class RuneTags extends Plugin {
 
 	@Subscribe
 	public void onPlayerSpawned(PlayerSpawned event) {
-		if (event == null
-				|| event.getPlayer() == null
-				|| playerDirectory == null
-				|| client.getGameState() != GameState.LOGGED_IN) {
+		if (event == null || event.getPlayer() == null || playerDirectory == null || client.getGameState() != GameState.LOGGED_IN) {
 			return;
 		}
 
 		playerDirectory.addNearbyPlayer(event.getPlayer());
-
 		refreshOpenQuickProfile();
 	}
 
 	@Subscribe
 	public void onPlayerDespawned(PlayerDespawned event) {
-		if (event == null
-				|| event.getPlayer() == null
-				|| playerDirectory == null
-				|| client.getGameState() != GameState.LOGGED_IN) {
+		if (event == null || event.getPlayer() == null || playerDirectory == null || client.getGameState() != GameState.LOGGED_IN) {
 			return;
 		}
 
 		playerDirectory.removeNearbyPlayer(event.getPlayer());
-
 		refreshOpenQuickProfile();
 	}
 
@@ -1001,7 +982,6 @@ public class RuneTags extends Plugin {
 		if (event != null && partyContextService != null) {
 			partyContextService.removeMember(event.getMemberId());
 		}
-
 		queueFullDirectoryRefresh();
 	}
 
@@ -1036,17 +1016,13 @@ public class RuneTags extends Plugin {
 			queueDirectoryPlayerRefresh(playerName);
 		}
 
-		if (event.getCoord() != null && partyContextService != null
-				&& partyContextService.findByMemberId(event.getMemberId()) != null) {
+		if (event.getCoord() != null && partyContextService != null && partyContextService.findByMemberId(event.getMemberId()) != null) {
 			refreshOpenQuickProfile();
 		}
 	}
 
 	private void queueDirectoryPlayerRefresh(String playerName) {
-		if (playerDirectory == null
-				|| fullDirectoryRefreshPending
-				|| playerName == null
-				|| playerName.trim().isEmpty()) {
+		if (playerDirectory == null || fullDirectoryRefreshPending || playerName == null || playerName.trim().isEmpty()) {
 			return;
 		}
 
@@ -1157,12 +1133,7 @@ public class RuneTags extends Plugin {
 			}
 		}
 
-		final TaggedMessage taggedMessage = chatProcessor.process(
-				++nextMessageId,
-				event.getType(),
-				Text.removeTags(event.getName()),
-				semanticMessage,
-				localName);
+		final TaggedMessage taggedMessage = chatProcessor.process(++nextMessageId, event.getType(), Text.removeTags(event.getName()), semanticMessage, localName);
 
 		// TaggedMessage remains the semantic source of truth
 		messageRepository.add(taggedMessage);
@@ -1180,11 +1151,7 @@ public class RuneTags extends Plugin {
 					? quickProfileController.resolveHistoryContext(taggedMessage.getCanonicalSender())
 					: QuickProfileController.ProfileContextSnapshot.empty();
 
-			mentionHistoryService.add(
-					taggedMessage,
-					historyContext.getWorld(),
-					historyContext.getLocationName(),
-					historyChannelName(taggedMessage, historyContext));
+			mentionHistoryService.add(taggedMessage, historyContext.getWorld(), historyContext.getLocationName(), historyChannelName(taggedMessage, historyContext));
 
 			// Reload the history panel after persistent history is updated.
 			if (mentionHistoryPanel != null) {
@@ -1196,9 +1163,7 @@ public class RuneTags extends Plugin {
 		 * Reuse ChatProcessor semantic match state for formatting, notifications,
 		 * highlighting, and history.
 		 */
-		if (mentionNotificationService != null
-				&& taggedMessage.getLocalMentionMatch().isMatchesLocalPlayer()
-				&& !isLocalSender(taggedMessage, localName)) {
+		if (mentionNotificationService != null && taggedMessage.getLocalMentionMatch().isMatchesLocalPlayer() && !isLocalSender(taggedMessage, localName)) {
 			mentionNotificationService.notifyMention(taggedMessage);
 		}
 
@@ -1210,11 +1175,7 @@ public class RuneTags extends Plugin {
 	}
 
 	private boolean isLocalSender(TaggedMessage taggedMessage, String localPlayerName) {
-		if (taggedMessage == null
-				|| localPlayerName == null
-				|| localPlayerName.isEmpty()
-				|| taggedMessage.getCanonicalSender() == null
-				|| taggedMessage.getCanonicalSender().isEmpty()) {
+		if (taggedMessage == null || localPlayerName == null || localPlayerName.isEmpty() || taggedMessage.getCanonicalSender() == null || taggedMessage.getCanonicalSender().isEmpty()) {
 			return false;
 		}
 
@@ -1249,9 +1210,7 @@ public class RuneTags extends Plugin {
 		}
 	}
 
-	private static String historyChannelName(
-			TaggedMessage taggedMessage,
-			QuickProfileController.ProfileContextSnapshot context) {
+	private static String historyChannelName(TaggedMessage taggedMessage, QuickProfileController.ProfileContextSnapshot context) {
 		if (taggedMessage == null || taggedMessage.getType() == null) {
 			return null;
 		}
@@ -1323,9 +1282,7 @@ public class RuneTags extends Plugin {
 
 		if (event != null && event.getMenuEntries() != null) {
 			for (MenuEntry entry : event.getMenuEntries()) {
-				if (entry == null
-						|| entry.getType() != MenuAction.RUNELITE_PLAYER
-						|| !PLAYER_MENU_OPEN_PROFILE.equals(entry.getOption())) {
+				if (entry == null || entry.getType() != MenuAction.RUNELITE_PLAYER || !PLAYER_MENU_OPEN_PROFILE.equals(entry.getOption())) {
 					continue;
 				}
 
@@ -1376,10 +1333,8 @@ public class RuneTags extends Plugin {
 			if (player == null || player.getName() == null) {
 				continue;
 			}
-			final boolean isFavorite = config.showFavorites()
-					&& localPlayerRecordService.isFavorite(player.getName());
-			final boolean isTarget = config.targetPlayerOption() && targetController != null
-					&& targetController.isTargetingName(player.getName());
+			final boolean isFavorite = config.showFavorites() && localPlayerRecordService.isFavorite(player.getName());
+			final boolean isTarget = config.targetPlayerOption() && targetController != null && targetController.isTargetingName(player.getName());
 			if (!isFavorite && !isTarget) {
 				continue;
 			}
@@ -1429,17 +1384,15 @@ public class RuneTags extends Plugin {
 		if (target == null || target.isEmpty() || color == null) {
 			return target;
 		}
-		final String hex = String.format(Locale.ROOT, "%02x%02x%02x",
-				color.getRed(), color.getGreen(), color.getBlue());
-		// PI generally inserts <img=rank><col=...>name<col=...> (level-n).
-		// Replace the first color tag rather than rebuilding the string: preserve
-		// all rank icons, suffixes, and subsequent client-supplied color tags.
+		final String hex = String.format(Locale.ROOT, "%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
+
+		// Replace the first color tag rather than rebuilding the string.
+		// Preserve all rank icons, suffixes, and subsequent client-supplied color tags.
 		final int colorStart = target.toLowerCase(Locale.ROOT).indexOf("<col=");
 		if (colorStart >= 0) {
 			final int colorEnd = target.indexOf('>', colorStart);
 			if (colorEnd > colorStart) {
-				return target.substring(0, colorStart) + "<col=" + hex + ">"
-						+ target.substring(colorEnd + 1);
+				return target.substring(0, colorStart) + "<col=" + hex + ">" + target.substring(colorEnd + 1);
 			}
 		}
 		// No color tag supplied: insert after any leading <img> decorations.
@@ -1451,16 +1404,12 @@ public class RuneTags extends Plugin {
 			}
 			insertion = imageEnd + 1;
 		}
-		return target.substring(0, insertion) + "<col=" + hex + ">"
-				+ target.substring(insertion);
+		return target.substring(0, insertion) + "<col=" + hex + ">" + target.substring(insertion);
 	}
 
 	@Subscribe
 	public void onMenuOptionClicked(MenuOptionClicked event) {
-		if (event == null
-				|| event.getMenuAction() != MenuAction.RUNELITE_PLAYER
-				|| !PLAYER_MENU_OPEN_PROFILE.equals(event.getMenuOption())
-				|| quickProfileController == null) {
+		if (event == null || event.getMenuAction() != MenuAction.RUNELITE_PLAYER || !PLAYER_MENU_OPEN_PROFILE.equals(event.getMenuOption()) || quickProfileController == null) {
 			return;
 		}
 
@@ -1615,11 +1564,7 @@ public class RuneTags extends Plugin {
 	 * ================================================================
 	 */
 	private void bootstrapNativeChatIfPending() {
-		if (!nativeChatBootstrapPending
-				|| nativeBootstrapService == null
-				|| messageRepository == null
-				|| chatProcessor == null
-				|| client.getGameState() != GameState.LOGGED_IN) {
+		if (!nativeChatBootstrapPending || nativeBootstrapService == null || messageRepository == null || chatProcessor == null || client.getGameState() != GameState.LOGGED_IN) {
 			return;
 		}
 
