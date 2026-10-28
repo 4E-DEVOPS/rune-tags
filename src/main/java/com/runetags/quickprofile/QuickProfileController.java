@@ -255,7 +255,6 @@ public class QuickProfileController {
 		}
 
 		final PlayerContext context = resolveProfileContext(identity);
-
 		return new ProfileContextSnapshot(identity.getWorld(), context != null
 				? context.getLocationName()
 				: null, identity.getChannelName(), identity.getChannelSource());
@@ -523,7 +522,6 @@ public class QuickProfileController {
 			final int maxWidth = noteDisplayMaxWidth;
 			if (metrics != null && maxWidth > 0) {
 				final NoteTextLayout.Result layout = NoteTextLayout.layout(metrics, candidate, maxWidth, NoteTextLayout.MAX_RENDERED_ROWS);
-
 				if (layout.isOverflow()) {
 					noteInput.prompt("RuneTags Note: max " + NoteTextLayout.MAX_RENDERED_ROWS + " display lines");
 					return false;
@@ -613,7 +611,6 @@ public class QuickProfileController {
 		// Prefer the current directory identity over the chat snapshot.
 		if (reference.getLookupName() != null && !reference.getLookupName().trim().isEmpty()) {
 			final PlayerIdentity currentIdentity = playerDirectory.find(reference.getLookupName()).orElse(null);
-
 			if (currentIdentity != null) {
 				identity = currentIdentity;
 			}
@@ -627,7 +624,6 @@ public class QuickProfileController {
 		} else {
 			lookupName = reference.getRawText();
 		}
-
 		if (lookupName == null || lookupName.trim().isEmpty()) {
 			return;
 		}
@@ -909,7 +905,6 @@ public class QuickProfileController {
 	private static String formatRegionGrid(int regionId) {
 		final int regionX = (regionId >>> 8) & 0xFF;
 		final int regionY = regionId & 0xFF;
-
 		return "Region: [" + regionX + ", " + regionY + "]";
 	}
 
