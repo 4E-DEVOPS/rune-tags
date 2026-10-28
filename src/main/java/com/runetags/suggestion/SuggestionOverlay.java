@@ -72,12 +72,10 @@ public final class SuggestionOverlay extends Overlay {
 		for (int i = 0; i < suggestions.size(); i++) {
 			final int rowY = y + PADDING + (i * ROW_HEIGHT);
 			final boolean selected = i == selectedIndex;
-
 			if (selected) {
 				graphics.setColor(SELECTED_BACKGROUND);
 				graphics.fillRoundRect(x + 2, rowY, WIDTH - 4, ROW_HEIGHT, 4, 4);
 			}
-
 			graphics.setColor(selected
 					? SELECTED_TEXT
 					: TEXT);
