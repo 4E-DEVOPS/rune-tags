@@ -253,7 +253,6 @@ public class FontLayoutService {
 
 		final boolean hasPlayerReference = message.getReferences() != null && !message.getReferences().isEmpty();
 		final boolean hasLocalMention = message.getLocalMentionMatch() != null && message.getLocalMentionMatch().isMatchesLocalPlayer();
-
 		return hasPlayerReference || hasLocalMention;
 	}
 
@@ -297,7 +296,6 @@ public class FontLayoutService {
 		if (senderlessFallback != null) {
 			constructedMessageIds.add(senderlessFallback.getId());
 		}
-
 		return senderlessFallback;
 	}
 
@@ -409,10 +407,8 @@ public class FontLayoutService {
 				if (i > 0) {
 					prefixText.append(' ');
 				}
-
 				prefixText.append(normalizeRawForMeasurement(components.get(i)));
 			}
-
 			final int textWidth = baseFont.getTextWidth(prefixText.toString());
 			int decorationWidth = 0;
 
@@ -427,7 +423,6 @@ public class FontLayoutService {
 					decorationWidth = Math.max(0, widthCandidate - 1);
 				}
 			}
-
 			return new PrefixMeasurement(textWidth + decorationWidth);
 		}
 
@@ -459,7 +454,6 @@ public class FontLayoutService {
 
 			output.add(raw);
 		}
-
 		return output;
 	}
 
@@ -488,7 +482,6 @@ public class FontLayoutService {
 			if (resolved != null) {
 				fontCache.put(fontId, resolved);
 			}
-
 			return resolved;
 		} finally {
 			probe.setFontId(originalFontId);

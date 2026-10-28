@@ -471,7 +471,6 @@ public class ReferenceLayoutService {
 		final boolean favoritesEnabled = config.showFavorites();
 		final Color favoriteColor = configuredFavoriteColor();
 		final int favoriteColorRgb = favoriteColor.getRGB();
-
 		if (!favoriteSenderRowsDirty && favoriteRevision == lastFavoriteRevision && favoritesEnabled == lastFavoritesEnabled && favoriteColorRgb == lastFavoriteColorRgb) {
 			return;
 		}
@@ -592,7 +591,6 @@ public class ReferenceLayoutService {
 		}
 
 		final String appliedText = rawText.substring(0, rawStart) + "<col=" + colorHex(configuredFavoriteColor()) + ">" + rawText.substring(rawStart, rawEnd) + "</col>" + rawText.substring(rawEnd);
-
 		if (appliedText.equals(rawText)) {
 			return;
 		}
@@ -625,7 +623,6 @@ public class ReferenceLayoutService {
 				widget.setText(state.originalText);
 			}
 		}
-
 		favoriteSenderTextStates.clear();
 	}
 
@@ -1090,7 +1087,6 @@ public class ReferenceLayoutService {
 
 		final boolean hasPlayerReference = message.getReferences() != null && !message.getReferences().isEmpty();
 		final boolean hasLocalMention = message.getLocalMentionMatch() != null && message.getLocalMentionMatch().isMatchesLocalPlayer();
-
 		if (!hasPlayerReference && !hasLocalMention) {
 			restoreOriginalFont(messageWidget);
 			return;
@@ -1116,7 +1112,6 @@ public class ReferenceLayoutService {
 			mentionFontStates.remove(messageWidget);
 			baseFontId = currentFontId;
 		}
-
 		final int fontId = MentionFontResolver.fontIdFor(mentionFont, baseFontId);
 		if (fontId == baseFontId) {
 			return;
@@ -1124,7 +1119,6 @@ public class ReferenceLayoutService {
 		if (currentFontId != fontId) {
 			messageWidget.setFontId(fontId);
 		}
-
 		mentionFontStates.put(messageWidget, new MentionFontState(baseFontId, fontId));
 	}
 
@@ -1351,7 +1345,6 @@ public class ReferenceLayoutService {
 	 */
 	private Widget findWidgetForMessage(TaggedMessage message, List<Widget> widgets, Set<Widget> usedWidgets) {
 		final Widget exactMatch = findWidgetForMessage(message, widgets, usedWidgets, false);
-
 		if (exactMatch != null || !isPrivateMessage(message)) {
 			return exactMatch;
 		}
@@ -1398,7 +1391,6 @@ public class ReferenceLayoutService {
 			} else {
 				bodyMatches = semantic != null && semantic.equals(needle);
 			}
-
 			if (!bodyMatches) {
 				continue;
 			}
@@ -2224,7 +2216,6 @@ public class ReferenceLayoutService {
 				if (Character.isWhitespace(current)) {
 					lastWhitespace = cursor;
 				}
-
 				final int candidateEnd = cursor + 1;
 				final int candidateWidth = semanticWidth(rawWidgetText, map, font, lineStart, candidateEnd);
 				if (candidateWidth <= widgetBounds.width) {
@@ -2264,7 +2255,6 @@ public class ReferenceLayoutService {
 			if (acceptedEnd == lineStart) {
 				acceptedEnd = Math.min(textLength, lineStart + 1);
 			}
-
 			final int lineWidth = semanticWidth(rawWidgetText, map, font, lineStart, acceptedEnd);
 			lines.add(new WrappedLine(lineStart, acceptedEnd, Math.max(0, lineWidth)));
 
@@ -2300,7 +2290,6 @@ public class ReferenceLayoutService {
 		if (lines.isEmpty()) {
 			lines.add(new WrappedLine(0, textLength, semanticWidth(rawWidgetText, map, font, 0, textLength)));
 		}
-
 		return lines;
 	}
 
@@ -2488,7 +2477,6 @@ public class ReferenceLayoutService {
 			cached.rawText = rawText;
 			cached.semanticText = semanticText;
 		}
-
 		output.add(new RenderedTextWidget(cached.widget, rawText, semanticText, new Rectangle(bounds)));
 	}
 
@@ -2516,7 +2504,6 @@ public class ReferenceLayoutService {
 			cached.semanticText = ChatText.toSemanticPlain(rawText);
 			output.add(cached);
 		}
-
 		discoverRenderedSurfaceChildren(widget.getChildren(), output, visited, depth + 1);
 		discoverRenderedSurfaceChildren(widget.getStaticChildren(), output, visited, depth + 1);
 		discoverRenderedSurfaceChildren(widget.getNestedChildren(), output, visited, depth + 1);

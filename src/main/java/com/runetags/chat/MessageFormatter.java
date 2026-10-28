@@ -154,7 +154,6 @@ public class MessageFormatter {
 		if (wholeMessageColorTag != null) {
 			formatted = wholeMessageColorTag + formatted + ColorUtil.CLOSING_COLOR_TAG;
 		}
-
 		return formatted;
 	}
 
@@ -212,7 +211,6 @@ public class MessageFormatter {
 						? config.selfMentionColor()
 						: null, underline, shadowColor));
 			}
-
 			from = start + 1;
 		}
 	}

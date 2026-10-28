@@ -71,7 +71,6 @@ public class ChatProcessor {
 				bestMatch = messageMatch;
 			}
 		}
-
 		return TaggedMessage.builder().id(id).type(type).originalSender(sender).canonicalSender(sender).originalMessage(message).timestamp(Instant.now()).references(references).localMentionMatch(bestMatch).build();
 	}
 }

@@ -114,7 +114,6 @@ public class NativeBootstrapService {
 			if (rawMessage == null) {
 				rawMessage = "";
 			}
-
 			final String semanticMessage = ChatText.toSemanticPlain(rawMessage);
 			final String canonicalSender = rawName != null
 					? Text.removeTags(rawName)

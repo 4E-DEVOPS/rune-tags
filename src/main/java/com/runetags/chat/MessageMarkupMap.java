@@ -2,8 +2,6 @@ package com.runetags.chat;
 
 import java.util.Arrays;
 
-import net.runelite.client.util.Text;
-
 /**
  * Maps offsets from RuneTags' plain semantic message back to the raw RuneLite
  * message string, preserving any existing Jagex/RuneLite formatting tags.
@@ -60,7 +58,6 @@ public final class MessageMarkupMap {
 				plainIndex++;
 				boundaries[plainIndex] = rawIndex + 1;
 			}
-
 			rawIndex++;
 		}
 
@@ -70,7 +67,6 @@ public final class MessageMarkupMap {
 		if (expectedPlain.isEmpty()) {
 			boundaries[0] = 0;
 		}
-
 		return new MessageMarkupMap(expectedPlain, boundaries);
 	}
 
