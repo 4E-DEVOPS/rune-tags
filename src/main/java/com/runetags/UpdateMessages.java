@@ -22,7 +22,7 @@ public final class UpdateMessages {
 			+ " Report any issues you find to Github.";
 	private static final String UNINSTALL_MESSAGE = "Thank you for using RuneTags!"
 			+ " Please submit a review/issue report on Github of your experience.";
-	private static final String UPDATE_MESSAGE = "Optimized chat reference layout and correlation with the <shad=ffffff>ChatXL</shad> plugin, whilst improving performance and handling of duplicate tag/mention messages.";
+	private static final String UPDATE_MESSAGE = "Introduced customizable Favorite names and highlights, improved targeting, overlay priorities, and player menu interactions, whilst resolving RuneLite API compatibility issues.";
 
 	private final Client client;
 	private final ClientThread clientThread;
@@ -30,11 +30,7 @@ public final class UpdateMessages {
 	private final ExternalPluginManager externalPluginManager;
 
 	@Inject
-	public UpdateMessages(
-			Client client,
-			ClientThread clientThread,
-			ConfigManager configManager,
-			ExternalPluginManager externalPluginManager) {
+	public UpdateMessages(Client client, ClientThread clientThread, ConfigManager configManager, ExternalPluginManager externalPluginManager) {
 		this.client = client;
 		this.clientThread = clientThread;
 		this.configManager = configManager;

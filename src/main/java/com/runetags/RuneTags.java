@@ -1011,7 +1011,9 @@ public class RuneTags extends Plugin {
 				final PartyMember member = partyService != null
 						? partyService.getMemberById(event.getMemberId())
 						: null;
-				playerName = member != null ? member.getDisplayName() : null;
+				playerName = member != null
+						? member.getDisplayName()
+						: null;
 			}
 			queueDirectoryPlayerRefresh(playerName);
 		}
