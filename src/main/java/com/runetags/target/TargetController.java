@@ -29,8 +29,7 @@ public class TargetController {
 	}
 
 	public boolean toggleTarget(QuickProfileModel model) {
-		if (model == null || !model.isNearby() || model.getDisplayName() == null
-				|| model.getDisplayName().trim().isEmpty()) {
+		if (model == null || !model.isNearby() || model.getDisplayName() == null || model.getDisplayName().trim().isEmpty()) {
 			return isTargeting();
 		}
 
@@ -106,9 +105,7 @@ public class TargetController {
 		}
 
 		final int timeoutSeconds = Math.max(0, config.targetTimeout());
-		if (timeoutSeconds > 0
-				&& targetStartedNanos > 0
-				&& System.nanoTime() - targetStartedNanos >= timeoutSeconds * 1_000_000_000L) {
+		if (timeoutSeconds > 0 && targetStartedNanos > 0 && System.nanoTime() - targetStartedNanos >= timeoutSeconds * 1_000_000_000L) {
 			clear("timeout");
 			return;
 		}
@@ -145,7 +142,6 @@ public class TargetController {
 
 	public boolean isTargetingName(String playerName) {
 		final String currentName = targetName;
-
 		return currentName != null && normalize(currentName).equals(normalize(playerName));
 	}
 
