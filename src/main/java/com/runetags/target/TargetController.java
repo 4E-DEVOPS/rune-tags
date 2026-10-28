@@ -185,7 +185,6 @@ public class TargetController {
 
 		final long elapsedNanos = System.nanoTime() - hideOthersStartedNanos;
 		final long durationNanos = mode.getDurationSeconds() * 1_000_000_000L;
-
 		return elapsedNanos < durationNanos;
 	}
 
