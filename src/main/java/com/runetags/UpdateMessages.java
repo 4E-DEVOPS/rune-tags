@@ -54,7 +54,6 @@ public final class UpdateMessages {
 
 	public boolean prepareShutdown() {
 		final boolean uninstalling = isBeingUninstalled();
-
 		if (uninstalling) {
 			configManager.unsetConfiguration(Constants.CONFIG_GROUP, VERSION_CONFIG_KEY);
 		}
@@ -81,7 +80,6 @@ public final class UpdateMessages {
 
 	private String getCurrentVersion() {
 		final PluginHubManifest.DisplayData displayData = ExternalPluginManager.getDisplayData(RuneTags.class);
-
 		return displayData != null
 				? displayData.getVersion()
 				: null;
@@ -89,14 +87,12 @@ public final class UpdateMessages {
 
 	private boolean isBeingUninstalled() {
 		final String internalName = ExternalPluginManager.getInternalName(RuneTags.class);
-
 		return internalName != null && !externalPluginManager.getInstalledExternalPlugins().contains(internalName);
 	}
 
 	private void showUpdateMessage() {
 		final String previousVersion = configManager.getConfiguration(Constants.CONFIG_GROUP, VERSION_CONFIG_KEY);
 		final String currentVersion = getCurrentVersion();
-
 		if (currentVersion == null || currentVersion.equals(previousVersion)) {
 			return;
 		}
@@ -106,7 +102,6 @@ public final class UpdateMessages {
 		} else {
 			showVersionMessage(currentVersion);
 		}
-
 		configManager.setConfiguration(Constants.CONFIG_GROUP, VERSION_CONFIG_KEY, currentVersion);
 	}
 

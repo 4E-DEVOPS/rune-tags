@@ -135,7 +135,7 @@ import okhttp3.OkHttpClient;
 @PluginDescriptor(
 		name = "RuneTags",
 		description = "Quick-card profiles for player mentions and tags.",
-		tags = {"1877", "card", "chat", "clan", "mentions", "player", "players", "profile", "quick", "tagging", "tags", "rune-tags", "runetags"},
+		tags = {"1877", "card", "chat", "clan", "ehb", "ehp", "favorites", "friends", "highlighting", "mentions", "notes", "outlines", "overlays", "party", "player", "players", "profiles", "quick", "rune-tags", "runetags", "runewatch", "stats", "suggestions", "tagging", "tags", "targeting"},
 		enabledByDefault = true
 )
 public class RuneTags extends Plugin {
@@ -875,7 +875,6 @@ public class RuneTags extends Plugin {
 				addNameHistoryObservation(observations, member);
 			}
 		}
-
 		localPlayerRecordService.observeNameChanges(observations);
 	}
 
@@ -1183,7 +1182,6 @@ public class RuneTags extends Plugin {
 
 		final String senderKey = nameNormalizer.comparisonKey(taggedMessage.getCanonicalSender());
 		final String localKey = nameNormalizer.comparisonKey(localPlayerName);
-
 		return !senderKey.isEmpty() && senderKey.equals(localKey);
 	}
 
