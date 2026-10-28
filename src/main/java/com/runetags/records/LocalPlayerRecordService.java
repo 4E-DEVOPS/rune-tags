@@ -313,13 +313,8 @@ public class LocalPlayerRecordService {
 		ioExecutor.shutdown();
 	}
 
-	private LocalPlayerRecord mergeRename(
-			String currentRsn,
-			String previousRsn,
-			LocalPlayerRecord currentRecord,
-			LocalPlayerRecord previousRecord) {
-		final boolean favorite = (currentRecord != null && currentRecord.isFavorite())
-				|| (previousRecord != null && previousRecord.isFavorite());
+	private LocalPlayerRecord mergeRename(String currentRsn, String previousRsn, LocalPlayerRecord currentRecord, LocalPlayerRecord previousRecord) {
+		final boolean favorite = (currentRecord != null && currentRecord.isFavorite()) || (previousRecord != null && previousRecord.isFavorite());
 		final String note = firstNonBlank(
 				currentRecord != null
 						? currentRecord.getNote()
@@ -330,20 +325,10 @@ public class LocalPlayerRecordService {
 		final List<String> tags = mergeTags(currentRecord, previousRecord);
 		final List<String> previousRsns = mergePreviousRsns(currentRsn, previousRsn, currentRecord, previousRecord);
 
-		return sanitize(LocalPlayerRecord.builder()
-					.currentRsn(currentRsn)
-					.previousRsns(previousRsns)
-					.favorite(favorite)
-					.note(note)
-					.tags(tags)
-					.build());
+		return sanitize(LocalPlayerRecord.builder().currentRsn(currentRsn).previousRsns(previousRsns).favorite(favorite).note(note).tags(tags).build());
 	}
 
-	private List<String> mergePreviousRsns(
-			String currentRsn,
-			String previousRsn,
-			LocalPlayerRecord currentRecord,
-			LocalPlayerRecord previousRecord) {
+	private List<String> mergePreviousRsns(String currentRsn, String previousRsn, LocalPlayerRecord currentRecord, LocalPlayerRecord previousRecord) {
 		final LinkedHashMap<String, String> merged = new LinkedHashMap<>();
 
 		// Keep previous names ordered for display in the history UI.
@@ -388,13 +373,8 @@ public class LocalPlayerRecordService {
 
 	private List<String> mergeTags(LocalPlayerRecord first, LocalPlayerRecord second) {
 		final List<String> merged = new ArrayList<>();
-
-		addTags(merged, first != null
-					? first.getTags()
-					: null);
-		addTags(merged, second != null
-					? second.getTags()
-					: null);
+		addTags(merged, first != null ? first.getTags() : null);
+		addTags(merged, second != null ? second.getTags() : null);
 
 		return sanitizeTags(merged);
 	}
@@ -433,11 +413,7 @@ public class LocalPlayerRecordService {
 	}
 
 	private boolean shouldRetain(LocalPlayerRecord record) {
-		return record != null
-				&& (record.isFavorite()
-				|| !isBlank(record.getNote())
-				|| (record.getTags() != null && !record.getTags().isEmpty())
-				|| (record.getPreviousRsns() != null && !record.getPreviousRsns().isEmpty()));
+		return record != null && (record.isFavorite() || !isBlank(record.getNote()) || (record.getTags() != null && !record.getTags().isEmpty()) || (record.getPreviousRsns() != null && !record.getPreviousRsns().isEmpty()));
 	}
 
 	private LocalPlayerRecord sanitize(LocalPlayerRecord record) {
@@ -450,13 +426,7 @@ public class LocalPlayerRecordService {
 
 		addPreviousRsns(previous, record.getPreviousRsns(), currentRsn);
 		final List<String> tags = mergeTags(record, null);
-		return LocalPlayerRecord.builder()
-				.currentRsn(currentRsn)
-				.previousRsns(Collections.unmodifiableList(new ArrayList<>(previous.values())))
-				.favorite(record.isFavorite())
-				.note(sanitizeNote(record.getNote()))
-				.tags(tags)
-				.build();
+		return LocalPlayerRecord.builder().currentRsn(currentRsn).previousRsns(Collections.unmodifiableList(new ArrayList<>(previous.values()))).favorite(record.isFavorite()).note(sanitizeNote(record.getNote())).tags(tags).build();
 	}
 
 	private void load() {
@@ -523,9 +493,7 @@ public class LocalPlayerRecordService {
 			removeLegacyConfig();
 			log.info("[RuneTags][Records] Migrated Legacy ConfigManager Records to '{}'", recordFile);
 		} catch (RuntimeException exception) {
-			log.warn(
-					"[RuneTags][Records] Unable to Migrate Legacy ConfigManager Records | ERROR: {}",
-					exception.getMessage());
+			log.warn("[RuneTags][Records] Unable to Migrate Legacy ConfigManager Records | ERROR: {}", exception.getMessage());
 		}
 	}
 
@@ -602,8 +570,7 @@ public class LocalPlayerRecordService {
 			}
 
 			try {
-				Files.move(
-					recordTempFile, recordFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+				Files.move(recordTempFile, recordFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 			} catch (IOException atomicMoveFailure) {
 				Files.move(recordTempFile, recordFile, StandardCopyOption.REPLACE_EXISTING);
 			}
