@@ -43,7 +43,8 @@ public class LocationIndex {
 			throw new IllegalStateException("Missing RuneTags location resource: " + RESOURCE);
 		}
 
-		final Type type = new TypeToken<LinkedHashMap<String, List<List<Integer>>>>() { }.getType();
+		final Type type = new TypeToken<LinkedHashMap<String, List<List<Integer>>>>() {
+		}.getType();
 
 		final Map<String, List<List<Integer>>> source = gson.fromJson(new InputStreamReader(stream, StandardCharsets.UTF_8), type);
 		final Map<Integer, String> result = new LinkedHashMap<>();
