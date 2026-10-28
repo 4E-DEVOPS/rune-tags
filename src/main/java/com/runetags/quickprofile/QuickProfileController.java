@@ -149,28 +149,15 @@ public class QuickProfileController {
 		final String lookupName;
 		if (semanticIdentity != null) {
 			lookupName = semanticIdentity.getCanonicalName();
-			model = QuickProfileModel.builder().displayName(semanticIdentity.getCanonicalName()).resolved(true)
-					.accountType(semanticIdentity.getAccountType() != null
-							? semanticIdentity.getAccountType()
-							: AccountType.UNKNOWN)
-					.combatLevel(liveIdentity != null && liveIdentity.getCombatLevel() != null
-							? liveIdentity.getCombatLevel()
-							: semanticIdentity.getCombatLevel())
-					.world(liveIdentity != null
-							? liveIdentity.getWorld()
-							: null)
-					.onlineState(liveIdentity != null && liveIdentity.getOnlineState() != null
-							? liveIdentity.getOnlineState()
-							: OnlineState.UNKNOWN)
-					.locationName(displayLocation(semanticIdentity.getCanonicalName(), liveIdentity, profileContext))
-					.channelName(displayChannelName(liveIdentity, originatingChatType))
-					.channelRank(displayChannelRank(liveIdentity))
-					.channelSource(displayChannelSource(liveIdentity))
-					.originatingChatType(originatingChatType)
-					.nearby(liveIdentity != null && liveIdentity.isNearby())
-					.identity(liveIdentity)
-					.enrichmentState(HiscoreEnrichmentState.LOCAL)
-					.build();
+			model = QuickProfileModel.builder().displayName(semanticIdentity.getCanonicalName()).resolved(true).accountType(semanticIdentity.getAccountType() != null
+					? semanticIdentity.getAccountType()
+					: AccountType.UNKNOWN).combatLevel(liveIdentity != null && liveIdentity.getCombatLevel() != null
+					? liveIdentity.getCombatLevel()
+					: semanticIdentity.getCombatLevel()).world(liveIdentity != null
+					? liveIdentity.getWorld()
+					: null).onlineState(liveIdentity != null && liveIdentity.getOnlineState() != null
+					? liveIdentity.getOnlineState()
+					: OnlineState.UNKNOWN).locationName(displayLocation(semanticIdentity.getCanonicalName(), liveIdentity, profileContext)).channelName(displayChannelName(liveIdentity, originatingChatType)).channelRank(displayChannelRank(liveIdentity)).channelSource(displayChannelSource(liveIdentity)).originatingChatType(originatingChatType).nearby(liveIdentity != null && liveIdentity.isNearby()).identity(liveIdentity).enrichmentState(HiscoreEnrichmentState.LOCAL).build();
 		} else {
 			lookupName = reference.getLookupName() != null && !reference.getLookupName().isEmpty()
 					? reference.getLookupName()
@@ -179,19 +166,13 @@ public class QuickProfileController {
 		}
 
 		if (model != null) {
-			model = model.toBuilder()
-					.previousRsns(localPlayerRecordService != null
-							? localPlayerRecordService.getPreviousRsns(model.getDisplayName())
-							: Collections.emptyList())
-					.tags(localPlayerRecordService != null
-							? localPlayerRecordService.getTags(model.getDisplayName())
-							: Collections.emptyList())
-					.favorite(localPlayerRecordService != null
-							&& localPlayerRecordService.isFavorite(model.getDisplayName()))
-					.note(localPlayerRecordService != null
-							? localPlayerRecordService.getNote(model.getDisplayName())
-							: null)
-					.build();
+			model = model.toBuilder().previousRsns(localPlayerRecordService != null
+					? localPlayerRecordService.getPreviousRsns(model.getDisplayName())
+					: Collections.emptyList()).tags(localPlayerRecordService != null
+					? localPlayerRecordService.getTags(model.getDisplayName())
+					: Collections.emptyList()).favorite(localPlayerRecordService != null && localPlayerRecordService.isFavorite(model.getDisplayName())).note(localPlayerRecordService != null
+					? localPlayerRecordService.getNote(model.getDisplayName())
+					: null).build();
 		}
 
 		anchorPoint = clickPoint != null
@@ -248,7 +229,9 @@ public class QuickProfileController {
 
 		final List<ProfileMetricValue> refreshedMetrics = buildContextMetrics(refreshedContext, enrichmentData);
 
-		model = current.toBuilder().accountType(resolveAccountType(identity.getAccountType(), enrichmentData)).world(identity.getWorld()).onlineState(identity.getOnlineState() != null ? identity.getOnlineState() : OnlineState.UNKNOWN).locationName(displayLocation(identity.getCanonicalName(), identity, refreshedContext)).contextMetrics(refreshedMetrics).channelName(displayChannelName(identity, current.getOriginatingChatType())).channelRank(displayChannelRank(identity)).channelSource(displayChannelSource(identity)).nearby(identity.isNearby()).identity(identity).build();
+		model = current.toBuilder().accountType(resolveAccountType(identity.getAccountType(), enrichmentData)).world(identity.getWorld()).onlineState(identity.getOnlineState() != null
+				? identity.getOnlineState()
+				: OnlineState.UNKNOWN).locationName(displayLocation(identity.getCanonicalName(), identity, refreshedContext)).contextMetrics(refreshedMetrics).channelName(displayChannelName(identity, current.getOriginatingChatType())).channelRank(displayChannelRank(identity)).channelSource(displayChannelSource(identity)).nearby(identity.isNearby()).identity(identity).build();
 	}
 
 	public QuickProfileModel getModel() {
@@ -273,7 +256,9 @@ public class QuickProfileController {
 
 		final PlayerContext context = resolveProfileContext(identity);
 
-		return new ProfileContextSnapshot(identity.getWorld(), context != null ? context.getLocationName() : null, identity.getChannelName(), identity.getChannelSource());
+		return new ProfileContextSnapshot(identity.getWorld(), context != null
+				? context.getLocationName()
+				: null, identity.getChannelName(), identity.getChannelSource());
 	}
 
 	/*
@@ -299,7 +284,9 @@ public class QuickProfileController {
 
 		clientThread.invokeLater(() -> {
 			final PlayerIdentity identity = playerDirectory.find(requestedName).orElse(null);
-			final PlayerReference reference = PlayerReference.builder().rawText(requestedName).lookupName(identity != null ? identity.getCanonicalName() : requestedName).locallyResolved(identity != null).identity(identity).chatType(chatType).build();
+			final PlayerReference reference = PlayerReference.builder().rawText(requestedName).lookupName(identity != null
+					? identity.getCanonicalName()
+					: requestedName).locallyResolved(identity != null).identity(identity).chatType(chatType).build();
 
 			openResolved(reference, requestedPoint);
 		});
@@ -696,7 +683,7 @@ public class QuickProfileController {
 		}
 
 		if (reference.getIdentity() != null && reference.getIdentity().getCanonicalName() != null && !reference.getIdentity().getCanonicalName().trim().isEmpty()) {
-			final PlayerIdentity identity = playerDirectory.find(reference.getIdentity().getCanonicalName()) .orElse(null);
+			final PlayerIdentity identity = playerDirectory.find(reference.getIdentity().getCanonicalName()).orElse(null);
 			if (identity != null) {
 				return identity;
 			}
@@ -834,17 +821,11 @@ public class QuickProfileController {
 		final PlayerContext playerContext = profileContext;
 		final List<ProfileMetricValue> contextMetrics = buildContextMetrics(playerContext, enrichmentData);
 
-		model = current.toBuilder()
-				.accountType(resolveAccountType(current.getAccountType(), data))
-				.combatLevel(data != null && data.getCombatLevel() != null
-						? data.getCombatLevel()
-						: current.getCombatLevel())
-				.totalLevel(data != null
-						? data.getTotalLevel()
-						: current.getTotalLevel())
-				.contextMetrics(contextMetrics)
-				.enrichmentState(state)
-				.build();
+		model = current.toBuilder().accountType(resolveAccountType(current.getAccountType(), data)).combatLevel(data != null && data.getCombatLevel() != null
+				? data.getCombatLevel()
+				: current.getCombatLevel()).totalLevel(data != null
+				? data.getTotalLevel()
+				: current.getTotalLevel()).contextMetrics(contextMetrics).enrichmentState(state).build();
 	}
 
 	private static AccountType resolveAccountType(AccountType current, HiscoreProfileData data) {
@@ -876,8 +857,7 @@ public class QuickProfileController {
 			return null;
 		}
 
-		return profileMetricResolver.resolveLocation(
-				new PlayerLocation(partyContext.getLocationName(), partyContext.getRegionId()));
+		return profileMetricResolver.resolveLocation(new PlayerLocation(partyContext.getLocationName(), partyContext.getRegionId()));
 	}
 
 	private String displayLocation(String playerName, PlayerIdentity identity, PlayerContext context) {
