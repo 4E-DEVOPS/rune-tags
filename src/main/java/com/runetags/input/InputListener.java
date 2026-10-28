@@ -74,6 +74,10 @@ public class InputListener extends MouseAdapter implements KeyListener {
 			return super.mousePressed(event);
 		}
 
+		// A drag may finish without a MOUSE_CLICKED event to clear suppression.
+		suppressCurrentLeftClick = false;
+		quickProfileController.stopCardDrag();
+
 		/*
 		 * An open RuneScape menu owns the click. Do not route it to an underlying
 		 * RuneTags hitbox, and do not consume it because RuneScape must execute the
@@ -151,6 +155,7 @@ public class InputListener extends MouseAdapter implements KeyListener {
 			}
 
 			if (quickProfileController.isInsideCard(point)) {
+				quickProfileController.startCardDrag(point);
 				suppressCurrentLeftClick = true;
 				event.consume();
 				return event;
@@ -379,9 +384,25 @@ public class InputListener extends MouseAdapter implements KeyListener {
 	}
 
 	@Override
-	public MouseEvent mouseReleased(MouseEvent event) {
-		if (event.getButton() == MouseEvent.BUTTON1 && suppressCurrentLeftClick) {
+	public MouseEvent mouseDragged(MouseEvent event) {
+		if (quickProfileController.isDraggingCard()) {
+			quickProfileController.dragCard(event.getPoint());
 			event.consume();
+			return event;
+		}
+		return super.mouseDragged(event);
+	}
+
+	@Override
+	public MouseEvent mouseReleased(MouseEvent event) {
+		if (event.getButton() == MouseEvent.BUTTON1) {
+			if (quickProfileController.isDraggingCard()) {
+				quickProfileController.dragCard(event.getPoint());
+				quickProfileController.stopCardDrag();
+			}
+			if (suppressCurrentLeftClick) {
+				event.consume();
+			}
 		}
 		return super.mouseReleased(event);
 	}

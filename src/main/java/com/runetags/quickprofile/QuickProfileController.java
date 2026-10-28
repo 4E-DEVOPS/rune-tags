@@ -44,6 +44,7 @@ import net.runelite.client.util.LinkBrowser;
 
 @Slf4j
 public class QuickProfileController {
+	public static final int CARD_ANCHOR_OFFSET = 8;
 	private final Client client;
 	private final ClientThread clientThread;
 	private final PlayerDirectory playerDirectory;
@@ -61,7 +62,9 @@ public class QuickProfileController {
 	private final ChatboxPanelManager chatboxPanelManager;
 
 	private volatile QuickProfileModel model;
-	private Point anchorPoint;
+	private volatile Point anchorPoint;
+	private Point dragStartPoint;
+	private Point dragStartAnchor;
 
 	/*
 	 * Profile context is shared only through authoritative live relationships.
@@ -70,7 +73,7 @@ public class QuickProfileController {
 	private PlayerContext profileContext;
 	private volatile HiscoreProfileData enrichmentData;
 
-	private Rectangle cardBounds;
+	private volatile Rectangle cardBounds;
 	private Rectangle closeButtonBounds;
 	private Rectangle tagButtonBounds;
 	private Rectangle noteButtonBounds;
@@ -239,9 +242,43 @@ public class QuickProfileController {
 	}
 
 	public Point getAnchorPoint() {
-		return anchorPoint == null
+		final Point currentAnchor = anchorPoint;
+		return currentAnchor == null
 				? null
-				: new Point(anchorPoint);
+				: new Point(currentAnchor);
+	}
+
+	/*
+	 * Drag relative to the last rendered card bounds, not the original click
+	 * anchor. This prevents a jump when the card was clamped to the canvas.
+	 */
+	public boolean startCardDrag(Point point) {
+		final Rectangle currentBounds = cardBounds;
+		if (!isOpen() || anchorPoint == null || point == null || currentBounds == null || !currentBounds.contains(point)) {
+			return false;
+		}
+
+		dragStartPoint = new Point(point);
+		dragStartAnchor = new Point(currentBounds.x - CARD_ANCHOR_OFFSET, currentBounds.y - CARD_ANCHOR_OFFSET);
+		return true;
+	}
+
+	public boolean dragCard(Point point) {
+		if (!isOpen() || point == null || dragStartPoint == null || dragStartAnchor == null) {
+			return false;
+		}
+
+		anchorPoint = new Point(dragStartAnchor.x + point.x - dragStartPoint.x, dragStartAnchor.y + point.y - dragStartPoint.y);
+		return true;
+	}
+
+	public boolean isDraggingCard() {
+		return dragStartPoint != null;
+	}
+
+	public void stopCardDrag() {
+		dragStartPoint = null;
+		dragStartAnchor = null;
 	}
 
 	public ProfileContextSnapshot resolveHistoryContext(String playerName) {
@@ -1006,6 +1043,7 @@ public class QuickProfileController {
 	}
 
 	private void clearLayoutBounds() {
+		stopCardDrag();
 		cardBounds = null;
 		closeButtonBounds = null;
 		tagButtonBounds = null;

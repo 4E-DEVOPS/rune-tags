@@ -78,7 +78,6 @@ public class QuickProfileOverlay extends Overlay {
 	private static final int BUTTON_HEIGHT = 22;
 	private static final int BUTTON_GAP = 6;
 	private static final int BUTTON_TOP_GAP = 8;
-	private static final int ANCHOR_OFFSET = 8;
 
 	private static final int PLAYER_NAME_BASELINE_OFFSET = 12;
 	private static final int PLAYER_NAME_FONT_INCREASE = 2;
@@ -232,8 +231,8 @@ public class QuickProfileOverlay extends Overlay {
 		final int cardHeight = Math.max(CARD_MIN_HEIGHT, (PADDING * 2) + contentHeight + BUTTON_TOP_GAP + BUTTON_HEIGHT);
 
 		// Clamp the card to the RuneLite canvas.
-		final int x = Math.max(4, Math.min(anchor.x + ANCHOR_OFFSET, client.getCanvasWidth() - CARD_WIDTH - 4));
-		final int y = Math.max(4, Math.min(anchor.y + ANCHOR_OFFSET, client.getCanvasHeight() - cardHeight - 4));
+		final int x = Math.max(4, Math.min(anchor.x + QuickProfileController.CARD_ANCHOR_OFFSET, client.getCanvasWidth() - CARD_WIDTH - 4));
+		final int y = Math.max(4, Math.min(anchor.y + QuickProfileController.CARD_ANCHOR_OFFSET, client.getCanvasHeight() - cardHeight - 4));
 		final Rectangle cardBounds = new Rectangle(x, y, CARD_WIDTH, cardHeight);
 		final Rectangle closeBounds = new Rectangle(x + CARD_WIDTH - 22, y + 5, 16, 16);
 		int nextHeaderControlX = closeBounds.x - 18;
@@ -274,7 +273,10 @@ public class QuickProfileOverlay extends Overlay {
 		}
 
 		// Reuse one mouse position for every interactive region in this render.
-		final Point mouse = new Point(client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY());
+		final net.runelite.api.Point mouseCanvasPoint = client.getMouseCanvasPosition();
+		final Point mouse = mouseCanvasPoint != null
+				? new Point(mouseCanvasPoint.getX(), mouseCanvasPoint.getY())
+				: new Point(-1, -1);
 		final Map<String, Rectangle> tagRemoveBounds = new LinkedHashMap<>();
 		final boolean targetHovered = targetBounds != null && targetBounds.contains(mouse);
 		final boolean lookupHovered = lookupBounds.contains(mouse);
