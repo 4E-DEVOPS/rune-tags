@@ -136,9 +136,10 @@ public class EfficiencyMetricService {
 				} catch (RuntimeException exception) {
 					log.debug("[RuneTags][WOM] Unable to Parse Efficiency Response for Player='{}' | ERROR: {}", playerName, exception.getMessage());
 				} finally {
-					complete(key, future, data, data != null
-							? SUCCESS_TTL
-							: NEGATIVE_TTL);
+					complete(
+							key, future, data, data != null
+									? SUCCESS_TTL
+									: NEGATIVE_TTL);
 				}
 			}
 		});

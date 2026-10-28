@@ -36,17 +36,18 @@ public class HiscoreEnrichmentService {
 			final CompletableFuture<HiscoreResult> hardcoreFuture = safeLookup(playerName, HiscoreEndpoint.HARDCORE_IRONMAN);
 			final CompletableFuture<HiscoreResult> ultimateFuture = safeLookup(playerName, HiscoreEndpoint.ULTIMATE_IRONMAN);
 
-			return hardcoreFuture.thenCombine(ultimateFuture, (hardcoreResult, ultimateResult) -> {
-				if (hardcoreResult != null) {
-					return AccountType.HARDCORE;
-				}
+			return hardcoreFuture.thenCombine(
+					ultimateFuture, (hardcoreResult, ultimateResult) -> {
+						if (hardcoreResult != null) {
+							return AccountType.HARDCORE;
+						}
 
-				if (ultimateResult != null) {
-					return AccountType.ULTIMATE;
-				}
+						if (ultimateResult != null) {
+							return AccountType.ULTIMATE;
+						}
 
-				return AccountType.IRONMAN;
-			});
+						return AccountType.IRONMAN;
+					});
 		});
 	}
 
@@ -136,13 +137,14 @@ public class HiscoreEnrichmentService {
 
 			final CompletableFuture<AccountType> accountTypeFuture = detectAccountType(playerName);
 			final CompletableFuture<HiscoreEnrichmentCache.CachedProfileEnrichment> mapped = normalFuture.handle((result, throwable) -> {
-						if (throwable != null) {
-							log.debug("[RuneTags][HiScore] Lookup Failed for Player='{}' | ERROR: {}", playerName, throwable.getMessage());
-							return new BaseLookupResult(null, throwable);
-						}
+				if (throwable != null) {
+					log.debug("[RuneTags][HiScore] Lookup Failed for Player='{}' | ERROR: {}", playerName, throwable.getMessage());
+					return new BaseLookupResult(null, throwable);
+				}
 
-						return new BaseLookupResult(result, null);
-					}).thenCombine(accountTypeFuture, (baseLookup, accountType) -> {
+				return new BaseLookupResult(result, null);
+			}).thenCombine(
+					accountTypeFuture, (baseLookup, accountType) -> {
 						if (baseLookup.getThrowable() != null) {
 							return new HiscoreEnrichmentCache.CachedProfileEnrichment(HiscoreEnrichmentState.ERROR, null);
 						}
