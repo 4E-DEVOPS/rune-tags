@@ -90,22 +90,7 @@ public class QuickProfileController {
 	private volatile FontMetrics noteDisplayFontMetrics;
 	private volatile int noteDisplayMaxWidth;
 
-	public QuickProfileController(
-			Client client,
-			ClientThread clientThread,
-			PlayerDirectory playerDirectory,
-			HiscoreEnrichmentService hiscoreEnrichmentService,
-			EfficiencyMetricService efficiencyMetricService,
-			Configurations config,
-			PlayerContextService playerContextService,
-			PartyContextService partyContextService,
-			ProfileMetricResolver profileMetricResolver,
-			TargetController targetController,
-			PlayerLookupService playerLookupService,
-			ClanLookupService clanLookupService,
-			ReportCaseService reportCaseService,
-			LocalPlayerRecordService localPlayerRecordService,
-			ChatboxPanelManager chatboxPanelManager) {
+	public QuickProfileController(Client client, ClientThread clientThread, PlayerDirectory playerDirectory, HiscoreEnrichmentService hiscoreEnrichmentService, EfficiencyMetricService efficiencyMetricService, Configurations config, PlayerContextService playerContextService, PartyContextService partyContextService, ProfileMetricResolver profileMetricResolver, TargetController targetController, PlayerLookupService playerLookupService, ClanLookupService clanLookupService, ReportCaseService reportCaseService, LocalPlayerRecordService localPlayerRecordService, ChatboxPanelManager chatboxPanelManager) {
 		this.client = client;
 		this.clientThread = clientThread;
 		this.playerDirectory = playerDirectory;
@@ -164,7 +149,6 @@ public class QuickProfileController {
 		final String lookupName;
 		if (semanticIdentity != null) {
 			lookupName = semanticIdentity.getCanonicalName();
-
 			model = QuickProfileModel.builder().displayName(semanticIdentity.getCanonicalName()).resolved(true)
 					.accountType(semanticIdentity.getAccountType() != null
 							? semanticIdentity.getAccountType()
@@ -191,13 +175,7 @@ public class QuickProfileController {
 			lookupName = reference.getLookupName() != null && !reference.getLookupName().isEmpty()
 					? reference.getLookupName()
 					: reference.getRawText();
-
-			model = QuickProfileModel.unresolved(lookupName)
-					.toBuilder()
-					.locationName(displayLocation(lookupName, null, null))
-					.channelName(displayMessageChannel(originatingChatType))
-					.originatingChatType(originatingChatType)
-					.build();
+			model = QuickProfileModel.unresolved(lookupName).toBuilder().locationName(displayLocation(lookupName, null, null)).channelName(displayMessageChannel(originatingChatType)).originatingChatType(originatingChatType).build();
 		}
 
 		if (model != null) {
@@ -222,9 +200,7 @@ public class QuickProfileController {
 
 		clearLayoutBounds();
 
-		final String resolutionSources = liveIdentity != null
-				&& liveIdentity.getSources() != null
-				&& !liveIdentity.getSources().isEmpty()
+		final String resolutionSources = liveIdentity != null && liveIdentity.getSources() != null && !liveIdentity.getSources().isEmpty()
 				? liveIdentity.getSources().toString()
 				: semanticIdentity != null
 						? "[HISTORICAL_ONLY]"
@@ -262,17 +238,7 @@ public class QuickProfileController {
 		if (identity == null) {
 			profileContext = null;
 
-			model = current.toBuilder()
-					.world(null)
-					.onlineState(OnlineState.UNKNOWN)
-					.locationName(displayLocation(current.getDisplayName(), null, null))
-					.contextMetrics(Collections.emptyList())
-					.channelName(displayMessageChannel(current.getOriginatingChatType()))
-					.channelRank(null)
-					.channelSource(null)
-					.nearby(false)
-					.identity(null)
-					.build();
+			model = current.toBuilder().world(null).onlineState(OnlineState.UNKNOWN).locationName(displayLocation(current.getDisplayName(), null, null)).contextMetrics(Collections.emptyList()).channelName(displayMessageChannel(current.getOriginatingChatType())).channelRank(null).channelSource(null).nearby(false).identity(null).build();
 
 			return;
 		}
@@ -282,19 +248,7 @@ public class QuickProfileController {
 
 		final List<ProfileMetricValue> refreshedMetrics = buildContextMetrics(refreshedContext, enrichmentData);
 
-		model = current.toBuilder().accountType(resolveAccountType(identity.getAccountType(), enrichmentData))
-				.world(identity.getWorld())
-				.onlineState(identity.getOnlineState() != null
-						? identity.getOnlineState()
-						: OnlineState.UNKNOWN)
-				.locationName(displayLocation(identity.getCanonicalName(), identity, refreshedContext))
-				.contextMetrics(refreshedMetrics)
-				.channelName(displayChannelName(identity, current.getOriginatingChatType()))
-				.channelRank(displayChannelRank(identity))
-				.channelSource(displayChannelSource(identity))
-				.nearby(identity.isNearby())
-				.identity(identity)
-				.build();
+		model = current.toBuilder().accountType(resolveAccountType(identity.getAccountType(), enrichmentData)).world(identity.getWorld()).onlineState(identity.getOnlineState() != null ? identity.getOnlineState() : OnlineState.UNKNOWN).locationName(displayLocation(identity.getCanonicalName(), identity, refreshedContext)).contextMetrics(refreshedMetrics).channelName(displayChannelName(identity, current.getOriginatingChatType())).channelRank(displayChannelRank(identity)).channelSource(displayChannelSource(identity)).nearby(identity.isNearby()).identity(identity).build();
 	}
 
 	public QuickProfileModel getModel() {
@@ -319,13 +273,7 @@ public class QuickProfileController {
 
 		final PlayerContext context = resolveProfileContext(identity);
 
-		return new ProfileContextSnapshot(
-				identity.getWorld(),
-				context != null
-						? context.getLocationName()
-						: null,
-				identity.getChannelName(),
-				identity.getChannelSource());
+		return new ProfileContextSnapshot(identity.getWorld(), context != null ? context.getLocationName() : null, identity.getChannelName(), identity.getChannelSource());
 	}
 
 	/*
@@ -351,16 +299,7 @@ public class QuickProfileController {
 
 		clientThread.invokeLater(() -> {
 			final PlayerIdentity identity = playerDirectory.find(requestedName).orElse(null);
-
-			final PlayerReference reference = PlayerReference.builder()
-					.rawText(requestedName)
-					.lookupName(identity != null
-							? identity.getCanonicalName()
-							: requestedName)
-					.locallyResolved(identity != null)
-					.identity(identity)
-					.chatType(chatType)
-					.build();
+			final PlayerReference reference = PlayerReference.builder().rawText(requestedName).lookupName(identity != null ? identity.getCanonicalName() : requestedName).locallyResolved(identity != null).identity(identity).chatType(chatType).build();
 
 			openResolved(reference, requestedPoint);
 		});
@@ -394,17 +333,7 @@ public class QuickProfileController {
 		return copy(lookupButtonBounds);
 	}
 
-	public void updateLayoutBounds(
-			Rectangle cardBounds,
-			Rectangle closeButtonBounds,
-			Rectangle tagButtonBounds,
-			Rectangle noteButtonBounds,
-			Rectangle favoriteButtonBounds,
-			Rectangle targetButtonBounds,
-			Rectangle lookupButtonBounds,
-			Rectangle clanLinkBounds,
-			Rectangle reportCaseLinkBounds,
-			Map<String, Rectangle> tagRemoveBounds) {
+	public void updateLayoutBounds(Rectangle cardBounds, Rectangle closeButtonBounds, Rectangle tagButtonBounds, Rectangle noteButtonBounds, Rectangle favoriteButtonBounds, Rectangle targetButtonBounds, Rectangle lookupButtonBounds, Rectangle clanLinkBounds, Rectangle reportCaseLinkBounds, Map<String, Rectangle> tagRemoveBounds) {
 		this.cardBounds = copy(cardBounds);
 		this.closeButtonBounds = copy(closeButtonBounds);
 		this.tagButtonBounds = copy(tagButtonBounds);
@@ -458,8 +387,7 @@ public class QuickProfileController {
 
 	public void removeTag(String tag) {
 		final QuickProfileModel current = model;
-		if (current == null || tag == null || current.getDisplayName() == null
-				|| current.getDisplayName().trim().isEmpty() || localPlayerRecordService == null) {
+		if (current == null || tag == null || current.getDisplayName() == null || current.getDisplayName().trim().isEmpty() || localPlayerRecordService == null) {
 			return;
 		}
 
@@ -502,8 +430,7 @@ public class QuickProfileController {
 
 	public void editTags() {
 		final QuickProfileModel current = model;
-		if (current == null || current.getDisplayName() == null || current.getDisplayName().trim().isEmpty()
-				|| localPlayerRecordService == null || chatboxPanelManager == null || tagEditorOpen || noteEditorOpen) {
+		if (current == null || current.getDisplayName() == null || current.getDisplayName().trim().isEmpty() || localPlayerRecordService == null || chatboxPanelManager == null || tagEditorOpen || noteEditorOpen) {
 			return;
 		}
 
@@ -513,8 +440,7 @@ public class QuickProfileController {
 				? new Point(anchorPoint)
 				: new Point(20, 20);
 
-		final TagChatboxInput input = new TagChatboxInput(chatboxPanelManager, clientThread)
-				.prompt("RuneTags Tags: " + playerName).value(localPlayerRecordService.getTags(playerName));
+		final TagChatboxInput input = new TagChatboxInput(chatboxPanelManager, clientThread).prompt("RuneTags Tags: " + playerName).value(localPlayerRecordService.getTags(playerName));
 
 		tagEditorOpen = true;
 		reopenProfileAfterTagEdit = true;
@@ -547,10 +473,7 @@ public class QuickProfileController {
 
 	public void toggleFavorite() {
 		final QuickProfileModel current = model;
-		if (current == null
-				|| current.getDisplayName() == null
-				|| current.getDisplayName().trim().isEmpty()
-				|| localPlayerRecordService == null) {
+		if (current == null || current.getDisplayName() == null || current.getDisplayName().trim().isEmpty() || localPlayerRecordService == null) {
 			return;
 		}
 
@@ -568,13 +491,7 @@ public class QuickProfileController {
 	 */
 	public void editNote() {
 		final QuickProfileModel current = model;
-		if (current == null
-				|| current.getDisplayName() == null
-				|| current.getDisplayName().trim().isEmpty()
-				|| localPlayerRecordService == null
-				|| chatboxPanelManager == null
-				|| noteEditorOpen
-				|| tagEditorOpen) {
+		if (current == null || current.getDisplayName() == null || current.getDisplayName().trim().isEmpty() || localPlayerRecordService == null || chatboxPanelManager == null || noteEditorOpen || tagEditorOpen) {
 			return;
 		}
 
@@ -585,9 +502,7 @@ public class QuickProfileController {
 				: new Point(20, 20);
 		final String existingNote = localPlayerRecordService.getNote(playerName);
 
-		final NoteChatboxInput noteInput = new NoteChatboxInput(chatboxPanelManager, clientThread)
-				.prompt("RuneTags Note: " + playerName).lines(4).maxLength(LocalPlayerRecordService.MAX_NOTE_LENGTH)
-				.maxLogicalLines(NoteTextLayout.MAX_LOGICAL_LINES).value(existingNote);
+		final NoteChatboxInput noteInput = new NoteChatboxInput(chatboxPanelManager, clientThread).prompt("RuneTags Note: " + playerName).lines(4).maxLength(LocalPlayerRecordService.MAX_NOTE_LENGTH).maxLogicalLines(NoteTextLayout.MAX_LOGICAL_LINES).value(existingNote);
 
 		noteEditorOpen = true;
 		reopenProfileAfterNoteEdit = true;
@@ -620,8 +535,7 @@ public class QuickProfileController {
 			final FontMetrics metrics = noteDisplayFontMetrics;
 			final int maxWidth = noteDisplayMaxWidth;
 			if (metrics != null && maxWidth > 0) {
-				final NoteTextLayout.Result layout = NoteTextLayout.layout(
-						metrics, candidate, maxWidth, NoteTextLayout.MAX_RENDERED_ROWS);
+				final NoteTextLayout.Result layout = NoteTextLayout.layout(metrics, candidate, maxWidth, NoteTextLayout.MAX_RENDERED_ROWS);
 
 				if (layout.isOverflow()) {
 					noteInput.prompt("RuneTags Note: max " + NoteTextLayout.MAX_RENDERED_ROWS + " display lines");
@@ -678,9 +592,7 @@ public class QuickProfileController {
 	 */
 	public boolean isReferenceTargeted(PlayerReference reference) {
 		final PlayerIdentity identity = resolveLiveIdentity(reference);
-		return identity != null && identity.isNearby()
-				&& identity.getCanonicalName() != null
-				&& targetController.isTargetingName(identity.getCanonicalName());
+		return identity != null && identity.isNearby() && identity.getCanonicalName() != null && targetController.isTargetingName(identity.getCanonicalName());
 	}
 
 	/*
@@ -688,8 +600,7 @@ public class QuickProfileController {
 	 */
 	public void target(PlayerReference reference) {
 		final PlayerIdentity identity = resolveLiveIdentity(reference);
-		if (identity == null || !identity.isNearby()
-				|| identity.getCanonicalName() == null || identity.getCanonicalName().trim().isEmpty()) {
+		if (identity == null || !identity.isNearby() || identity.getCanonicalName() == null || identity.getCanonicalName().trim().isEmpty()) {
 			return;
 		}
 
@@ -722,9 +633,7 @@ public class QuickProfileController {
 		}
 
 		final String lookupName;
-		if (identity != null
-				&& identity.getCanonicalName() != null
-				&& !identity.getCanonicalName().trim().isEmpty()) {
+		if (identity != null && identity.getCanonicalName() != null && !identity.getCanonicalName().trim().isEmpty()) {
 			lookupName = identity.getCanonicalName();
 		} else if (reference.getLookupName() != null && !reference.getLookupName().trim().isEmpty()) {
 			lookupName = reference.getLookupName();
@@ -786,11 +695,8 @@ public class QuickProfileController {
 			}
 		}
 
-		if (reference.getIdentity() != null
-				&& reference.getIdentity().getCanonicalName() != null
-				&& !reference.getIdentity().getCanonicalName().trim().isEmpty()) {
-			final PlayerIdentity identity =
-					playerDirectory.find(reference.getIdentity().getCanonicalName()) .orElse(null);
+		if (reference.getIdentity() != null && reference.getIdentity().getCanonicalName() != null && !reference.getIdentity().getCanonicalName().trim().isEmpty()) {
+			final PlayerIdentity identity = playerDirectory.find(reference.getIdentity().getCanonicalName()) .orElse(null);
 			if (identity != null) {
 				return identity;
 			}
@@ -871,16 +777,11 @@ public class QuickProfileController {
 	}
 
 	private void startEfficiencyLookup(String playerName, long generation) {
-		if (efficiencyMetricService == null
-				|| !config.wiseOldManMetrics()
-				|| (!config.showEhp() && !config.showEhb())
-				|| playerName == null
-				|| playerName.trim().isEmpty()) {
+		if (efficiencyMetricService == null || !config.wiseOldManMetrics() || (!config.showEhp() && !config.showEhb()) || playerName == null || playerName.trim().isEmpty()) {
 			return;
 		}
 
-		efficiencyMetricService.lookup(playerName)
-				.thenAccept(data -> applyEfficiencyMetrics(generation, playerName, data));
+		efficiencyMetricService.lookup(playerName).thenAccept(data -> applyEfficiencyMetrics(generation, playerName, data));
 	}
 
 	private void applyEfficiencyMetrics(long generation, String playerName, EfficiencyProfileData data) {
@@ -917,11 +818,7 @@ public class QuickProfileController {
 		future.thenAccept(result -> applyEnrichment(generation, playerName, result.getState(), result.getData()));
 	}
 
-	private void applyEnrichment(
-			long generation,
-			String playerName,
-			HiscoreEnrichmentState state,
-			HiscoreProfileData data) {
+	private void applyEnrichment(long generation, String playerName, HiscoreEnrichmentState state, HiscoreProfileData data) {
 		if (generation != openGeneration) {
 			return;
 		}
@@ -970,9 +867,7 @@ public class QuickProfileController {
 		}
 
 		// Remote Party members may use their own shared context.
-		if (identity.getSources() == null
-				|| !identity.getSources().contains(PlayerSource.PARTY)
-				|| partyContextService == null) {
+		if (identity.getSources() == null || !identity.getSources().contains(PlayerSource.PARTY) || partyContextService == null) {
 			return null;
 		}
 
@@ -1120,8 +1015,7 @@ public class QuickProfileController {
 	private static String normalize(String value) {
 		return value == null
 				? ""
-				: value.trim().replace('\u00A0', ' ').replace('\u202F', ' ').replaceAll("[ _-]+", "")
-						.toLowerCase(java.util.Locale.ROOT);
+				: value.trim().replace('\u00A0', ' ').replace('\u202F', ' ').replaceAll("[ _-]+", "").toLowerCase(java.util.Locale.ROOT);
 	}
 
 	@lombok.Value

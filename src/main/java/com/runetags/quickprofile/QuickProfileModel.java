@@ -63,12 +63,6 @@ public class QuickProfileModel {
 	HiscoreEnrichmentState enrichmentState = HiscoreEnrichmentState.LOCAL;
 
 	public static QuickProfileModel unresolved(String name) {
-		return QuickProfileModel.builder()
-				.displayName(name)
-				.resolved(false)
-				.onlineState(OnlineState.UNKNOWN)
-				.nearby(false)
-				.enrichmentState(HiscoreEnrichmentState.LOCAL)
-				.build();
+		return QuickProfileModel.builder().displayName(name).resolved(false).onlineState(OnlineState.UNKNOWN).nearby(false).enrichmentState(HiscoreEnrichmentState.LOCAL).build();
 	}
 }
