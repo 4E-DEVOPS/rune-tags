@@ -45,8 +45,7 @@ public class LocationIndex {
 
 		final Type type = new TypeToken<LinkedHashMap<String, List<List<Integer>>>>() { }.getType();
 
-		final Map<String, List<List<Integer>>> source = gson.fromJson(
-				new InputStreamReader(stream, StandardCharsets.UTF_8), type);
+		final Map<String, List<List<Integer>>> source = gson.fromJson(new InputStreamReader(stream, StandardCharsets.UTF_8), type);
 		final Map<Integer, String> result = new LinkedHashMap<>();
 
 		for (Map.Entry<String, List<List<Integer>>> entry : source.entrySet()) {
