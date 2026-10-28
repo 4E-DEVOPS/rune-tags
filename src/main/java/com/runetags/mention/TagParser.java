@@ -35,17 +35,7 @@ public class TagParser {
 			final Optional<PlayerIdentity> identity = playerDirectory.find(canonicalLookupName);
 			final String resolvedLookupName = identity.map(PlayerIdentity::getCanonicalName).orElse(canonicalLookupName);
 
-			references.add(
-					PlayerReference.builder()
-							.rawText(matcher.group(0))
-							.normalizedToken(nameNormalizer.taggedToken(token))
-							.lookupName(resolvedLookupName)
-							.startOffset(matcher.start())
-							.endOffset(matcher.end())
-							.type(ReferenceType.TAG)
-							.locallyResolved(identity.isPresent())
-							.identity(identity.orElse(null))
-							.build());
+			references.add(PlayerReference.builder().rawText(matcher.group(0)).normalizedToken(nameNormalizer.taggedToken(token)).lookupName(resolvedLookupName).startOffset(matcher.start()).endOffset(matcher.end()).type(ReferenceType.TAG).locallyResolved(identity.isPresent()).identity(identity.orElse(null)).build());
 		}
 
 		return references;

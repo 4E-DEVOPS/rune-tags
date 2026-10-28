@@ -83,8 +83,7 @@ public class LocalMentionMatcher {
 	}
 
 	private Set<String> uniqueHighlightKeys() {
-		return configuredHighlights().stream()
-				.map(normalizer::comparisonKey).filter(key -> !key.isEmpty()).collect(Collectors.toSet());
+		return configuredHighlights().stream().map(normalizer::comparisonKey).filter(key -> !key.isEmpty()).collect(Collectors.toSet());
 	}
 
 	private Set<String> configuredHighlights() {
@@ -93,8 +92,7 @@ public class LocalMentionMatcher {
 			return new HashSet<>();
 		}
 
-		return Arrays.stream(configured.split(","))
-				.map(String::trim).filter(value -> !value.isEmpty()).collect(Collectors.toCollection(HashSet::new));
+		return Arrays.stream(configured.split(",")).map(String::trim).filter(value -> !value.isEmpty()).collect(Collectors.toCollection(HashSet::new));
 	}
 
 	private static boolean containsWholePhrase(String message, String phrase) {

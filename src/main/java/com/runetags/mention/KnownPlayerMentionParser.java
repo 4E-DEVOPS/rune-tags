@@ -58,13 +58,7 @@ public class KnownPlayerMentionParser {
 		return removeOverlaps(matches);
 	}
 
-	private void findVariant(
-			String original,
-			String lowered,
-			String candidate,
-			PlayerIdentity identity,
-			List<PlayerReference> output,
-			List<PlayerReference> reserved) {
+	private void findVariant(String original, String lowered, String candidate, PlayerIdentity identity, List<PlayerReference> output, List<PlayerReference> reserved) {
 		if (candidate == null || candidate.isEmpty()) {
 			return;
 		}
@@ -79,10 +73,7 @@ public class KnownPlayerMentionParser {
 			}
 
 			final int end = start + needle.length();
-			if (hasBoundaries(lowered, start, end)
-					&& !isInsideExplicitTag(lowered, start)
-					&& !overlapsAny(start, end, reserved)
-					&& !overlapsAny(start, end, output)) {
+			if (hasBoundaries(lowered, start, end) && !isInsideExplicitTag(lowered, start) && !overlapsAny(start, end, reserved) && !overlapsAny(start, end, output)) {
 				addReference(original, start, end, identity, output);
 			}
 
@@ -90,12 +81,7 @@ public class KnownPlayerMentionParser {
 		}
 	}
 
-	private void findNormalizedVariant(
-			String original,
-			PlayerIdentity identity,
-			Map<String, List<NormalizedMessageSpan>> normalizedSpanIndex,
-			List<PlayerReference> output,
-			List<PlayerReference> reserved) {
+	private void findNormalizedVariant(String original, PlayerIdentity identity, Map<String, List<NormalizedMessageSpan>> normalizedSpanIndex, List<PlayerReference> output, List<PlayerReference> reserved) {
 		String targetKey = identity.getNormalizedName();
 		if (targetKey == null || targetKey.isEmpty()) {
 			targetKey = normalizer.comparisonKey(identity.getCanonicalName());
@@ -114,9 +100,7 @@ public class KnownPlayerMentionParser {
 		for (NormalizedMessageSpan candidate : candidates) {
 			final int start = candidate.start;
 			final int end = candidate.end;
-			if (!hasBoundaries(original, start, end)
-					|| overlapsAny(start, end, reserved)
-					|| overlapsAny(start, end, output)) {
+			if (!hasBoundaries(original, start, end) || overlapsAny(start, end, reserved) || overlapsAny(start, end, output)) {
 				continue;
 			}
 
@@ -156,8 +140,7 @@ public class KnownPlayerMentionParser {
 					continue;
 				}
 
-				index.computeIfAbsent(candidateKey, ignored -> new ArrayList<>())
-						.add(new NormalizedMessageSpan(start, end));
+				index.computeIfAbsent(candidateKey, ignored -> new ArrayList<>()).add(new NormalizedMessageSpan(start, end));
 			}
 		}
 
@@ -165,22 +148,11 @@ public class KnownPlayerMentionParser {
 	}
 
 	private void addReference(String original, int start, int end, PlayerIdentity identity, List<PlayerReference> output) {
-		output.add(
-				PlayerReference.builder()
-						.rawText(original.substring(start, end))
-						.normalizedToken(normalizer.taggedToken(identity.getCanonicalName()))
-						.lookupName(identity.getCanonicalName())
-						.startOffset(start)
-						.endOffset(end)
-						.type(ReferenceType.MENTION)
-						.locallyResolved(true)
-						.identity(identity)
-						.build());
+		output.add(PlayerReference.builder().rawText(original.substring(start, end)).normalizedToken(normalizer.taggedToken(identity.getCanonicalName())).lookupName(identity.getCanonicalName()).startOffset(start).endOffset(end).type(ReferenceType.MENTION).locallyResolved(true).identity(identity).build());
 	}
 
 	private static boolean hasBoundaries(String text, int start, int end) {
-		return (start == 0 || !isNameChar(text.charAt(start - 1)))
-				&& (end == text.length() || !isNameChar(text.charAt(end)));
+		return (start == 0 || !isNameChar(text.charAt(start - 1))) && (end == text.length() || !isNameChar(text.charAt(end)));
 	}
 
 	private static boolean isInsideExplicitTag(String text, int start) {
