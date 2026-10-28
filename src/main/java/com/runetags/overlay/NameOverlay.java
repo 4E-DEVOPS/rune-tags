@@ -78,6 +78,7 @@ public class NameOverlay extends Overlay {
 		if (client.getGameState() != GameState.LOGGED_IN) {
 			return null;
 		}
+
 		final Player target = config.targetPlayerOption() && targetController != null
 				? targetController.getTargetPlayer()
 				: null;
@@ -95,6 +96,7 @@ public class NameOverlay extends Overlay {
 				}
 			}
 		}
+
 		// Target is rendered once and last.
 		if (target != null && target.getName() != null) {
 			final boolean favorite = config.showFavorites() && records != null && records.isFavorite(target.getName()) && favoriteOverlay.canHighlightFavorite(target);

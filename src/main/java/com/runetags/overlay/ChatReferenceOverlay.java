@@ -213,7 +213,6 @@ public class ChatReferenceOverlay extends Overlay {
 		if (result != null) {
 			result.grow(BACKGROUND_HORIZONTAL_PADDING, BACKGROUND_VERTICAL_PADDING);
 		}
-
 		return result;
 	}
 

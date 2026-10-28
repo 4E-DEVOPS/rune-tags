@@ -58,6 +58,7 @@ public class TargetOverlay extends Overlay {
 		if (target == null) {
 			return null;
 		}
+
 		final boolean favorite = config.showFavorites() && records != null && target.getName() != null && records.isFavorite(target.getName()) && favoriteOverlay != null && favoriteOverlay.canHighlightFavorite(target);
 		final Color configuredColor = favorite
 				? config.favoriteColor()
@@ -67,6 +68,7 @@ public class TargetOverlay extends Overlay {
 				: (favorite
 						? new Color(255, 205, 70)
 						: new Color(80, 100, 255, 200));
+
 		final TargetMode targetMode = config.targetMode() != null
 				? config.targetMode()
 				: TargetMode.OFF;
@@ -79,6 +81,7 @@ public class TargetOverlay extends Overlay {
 		final boolean tile = favorite
 				? favoriteMode.showsTile()
 				: targetMode.showsTile();
+
 		if (outline) {
 			// Preserve FavoriteOverlay's scene alpha behavior for gold highlights.
 			final Color outlineColor = favorite
@@ -95,6 +98,7 @@ public class TargetOverlay extends Overlay {
 				OverlayUtil.renderPolygon(graphics, tilePoly, tileColor);
 			}
 		}
+
 		if (config.targetLine()) {
 			drawTargetLine(graphics, target, targetColor);
 		}

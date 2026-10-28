@@ -348,7 +348,6 @@ public class QuickProfileOverlay extends Overlay {
 
 		if (config.showPreviousRsns() && tooltipManager != null && model.getPreviousRsns() != null && !model.getPreviousRsns().isEmpty()) {
 			final Rectangle playerNameBounds = new Rectangle(playerNameDrawX, textY - playerNameMetrics.getAscent(), playerNameWidth, playerNameMetrics.getHeight());
-
 			if (playerNameBounds.contains(mouse)) {
 				final StringBuilder tooltip = new StringBuilder("Previously:");
 				for (String previousRsn : model.getPreviousRsns()) {
@@ -533,7 +532,6 @@ public class QuickProfileOverlay extends Overlay {
 							if (j > 0) {
 								rowText.append("  •  ");
 							}
-
 							rowText.append(metric.getLabel()).append(": ").append(metric.getValue());
 						}
 
@@ -892,7 +890,6 @@ public class QuickProfileOverlay extends Overlay {
 	private Color reportBackgroundColor() {
 		final Color base = sectionBackgroundColor();
 		final float inverse = 1f - REPORT_TINT_STRENGTH;
-
 		return new Color(clampColor(Math.round((base.getRed() * inverse) + (REPORT_TINT.getRed() * REPORT_TINT_STRENGTH))), clampColor(Math.round((base.getGreen() * inverse) + (REPORT_TINT.getGreen() * REPORT_TINT_STRENGTH))), clampColor(Math.round((base.getBlue() * inverse) + (REPORT_TINT.getBlue() * REPORT_TINT_STRENGTH))), base.getAlpha());
 	}
 
@@ -1023,14 +1020,12 @@ public class QuickProfileOverlay extends Overlay {
 		final Color base = runeLiteConfig.overlayBackgroundColor();
 		final int opacity = Math.max(0, Math.min(100, config.quickCardOpacity()));
 		final int alpha = Math.round(opacity * 255f / 100f);
-
 		return new Color(base.getRed(), base.getGreen(), base.getBlue(), alpha);
 	}
 
 	private Color sectionBackgroundColor() {
 		final Color base = overlayBackgroundColor();
 		final float factor = Math.max(0f, Math.min(1f, (100f - SECTION_DARKEN_PERCENT) / 100f));
-
 		return new Color(clampColor(Math.round(base.getRed() * factor)), clampColor(Math.round(base.getGreen() * factor)), clampColor(Math.round(base.getBlue() * factor)), base.getAlpha());
 	}
 
@@ -1362,7 +1357,6 @@ public class QuickProfileOverlay extends Overlay {
 			if (text.length() > 0) {
 				text.append("  •  ");
 			}
-
 			text.append("EHB: ").append(formatEfficiencyValue(model.getEfficientHoursBossed()));
 		}
 
@@ -1394,7 +1388,6 @@ public class QuickProfileOverlay extends Overlay {
 			if (showRank) {
 				channelText += "  •  " + model.getChannelRank();
 			}
-
 			sectionContentWidth = Math.max(sectionContentWidth, metrics.stringWidth(channelText));
 		}
 
@@ -1410,7 +1403,6 @@ public class QuickProfileOverlay extends Overlay {
 				if (tagsWidth > 0) {
 					tagsWidth += TAG_PILL_GAP_X;
 				}
-
 				tagsWidth += pillWidth;
 			}
 
@@ -1435,6 +1427,7 @@ public class QuickProfileOverlay extends Overlay {
 				if (!countText.isEmpty()) {
 					headerWidth += 10 + metrics.stringWidth(countText);
 				}
+
 				final String ratingText = evidenceRatingText(graphics, summary.getEvidenceRating());
 				final String reason = summary.getReason() == null || summary.getReason().trim().isEmpty()
 						? "Case details unavailable"
@@ -1443,6 +1436,7 @@ public class QuickProfileOverlay extends Overlay {
 				if (!ratingText.isEmpty()) {
 					reasonWidth += 10 + metrics.stringWidth(ratingText);
 				}
+
 				final String formattedDate = summary.getFormattedDate();
 				final int dateWidth = formattedDate.isEmpty()
 						? 0
@@ -1469,10 +1463,8 @@ public class QuickProfileOverlay extends Overlay {
 					if (j > 0) {
 						row.append("  •  ");
 					}
-
 					row.append(metric.getLabel()).append(": ").append(metric.getValue());
 				}
-
 				sectionContentWidth = Math.max(sectionContentWidth, metrics.stringWidth(row.toString()));
 			}
 		}
