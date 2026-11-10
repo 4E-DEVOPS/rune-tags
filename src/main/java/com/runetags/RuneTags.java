@@ -81,9 +81,9 @@ import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.ClanMemberJoined;
 import net.runelite.api.events.ClanMemberLeft;
 import net.runelite.api.events.CommandExecuted;
-import net.runelite.api.events.FriendsChatChanged;
 import net.runelite.api.events.FriendsChatMemberJoined;
 import net.runelite.api.events.FriendsChatMemberLeft;
+import net.runelite.api.events.FriendsChatSync;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuEntryAdded;
@@ -911,7 +911,7 @@ public class RuneTags extends Plugin {
 	}
 
 	@Subscribe
-	public void onFriendsChatChanged(FriendsChatChanged event) {
+	public void onFriendsChatSync(FriendsChatSync event) {
 		// Rebuild once for initial Friends Chat population instead of processing each event.
 		queueFullDirectoryRefresh();
 	}

@@ -23,7 +23,7 @@ public final class ProfileMetricCatalog {
 	private static final ProfileMetric LMS = metric("LMS", "LAST_MAN_STANDING");
 	private static final ProfileMetric LUNAR_CHESTS = metric("Lunar Chests", "LUNAR_CHESTS");
 	private static final ProfileMetric NEX = metric("Nex", "NEX");
-	private static final ProfileMetric TFA = metric("TFA", "FRACTURED_ARCHIVE");
+	private static final ProfileMetric TFA = metric("TFA", "THE_FRACTURED_ARCHIVE");
 	private static final ProfileMetric TOA = metric("ToA", "TOMBS_OF_AMASCUT");
 	private static final ProfileMetric TOA_EXPERT = metric("Expert", "TOMBS_OF_AMASCUT_EXPERT");
 	private static final ProfileMetric TOB = metric("ToB", "THEATRE_OF_BLOOD");
