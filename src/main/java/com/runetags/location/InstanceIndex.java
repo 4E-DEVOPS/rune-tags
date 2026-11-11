@@ -15,32 +15,32 @@ import java.util.Map;
 import javax.inject.Inject;
 
 /**
- * Loads RuneTags' coarse-location map from the bundled Locations.json.
+ * Loads RuneTags' instanced-area template map from the bundled Instances.json.
  *
- * JSON values are RuneScape region-grid coordinates [regionX, regionY].
+ * JSON values are template region-grid coordinates [instanceX, instanceY].
  */
-public class LocationIndex {
-	private static final String RESOURCE = "/com/runetags/context/Locations.json";
+public class InstanceIndex {
+	private static final String RESOURCE = "/com/runetags/context/Instances.json";
 
-	private final Map<Integer, String> byRegion;
+	private final Map<Integer, String> byInstance;
 
 	@Inject
-	public LocationIndex(Gson gson) {
-		this.byRegion = load(gson);
+	public InstanceIndex(Gson gson) {
+		this.byInstance = load(gson);
 	}
 
-	public String findName(int regionId) {
-		return byRegion.get(regionId);
+	public String findName(int instanceId) {
+		return byInstance.get(instanceId);
 	}
 
 	public int size() {
-		return byRegion.size();
+		return byInstance.size();
 	}
 
 	private static Map<Integer, String> load(Gson gson) {
-		final InputStream stream = LocationIndex.class.getResourceAsStream(RESOURCE);
+		final InputStream stream = InstanceIndex.class.getResourceAsStream(RESOURCE);
 		if (stream == null) {
-			throw new IllegalStateException("Missing RuneTags location resource: " + RESOURCE);
+			throw new IllegalStateException("Missing RuneTags instance resource: " + RESOURCE);
 		}
 
 		final Type type = new TypeToken<LinkedHashMap<String, List<List<Integer>>>>() {
@@ -55,10 +55,10 @@ public class LocationIndex {
 					continue;
 				}
 
-				final int regionX = pair.get(0);
-				final int regionY = pair.get(1);
-				final int regionId = (regionX << 8) | regionY;
-				result.put(regionId, entry.getKey());
+				final int instanceX = pair.get(0);
+				final int instanceY = pair.get(1);
+				final int instanceId = (instanceX << 8) | instanceY;
+				result.put(instanceId, entry.getKey());
 			}
 		}
 

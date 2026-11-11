@@ -11,7 +11,10 @@ public final class ProfileMetricCatalog {
 	}
 
 	public static List<ProfileMetric> metricsForLocation(String locationName) {
-		return ContextRegions.metricsForLocation(locationName);
+		final List<ProfileMetric> regionMetrics = ContextRegions.metricsForLocation(locationName);
+		return !regionMetrics.isEmpty()
+				? regionMetrics
+				: ContextScenes.metricsForInstance(locationName);
 	}
 
 	public static ContextOverride overrideForNpc(String npcName) {

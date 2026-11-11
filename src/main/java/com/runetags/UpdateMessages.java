@@ -22,7 +22,7 @@ public final class UpdateMessages {
 			+ " Report any issues you find to Github.";
 	private static final String UNINSTALL_MESSAGE = "Thank you for using RuneTags!"
 			+ " Please submit a review/issue report on Github of your experience.";
-	private static final String UPDATE_MESSAGE = "Added support for <shad=ffffff>The Fractured Archive</shad> raid and introduced draggable Quick-Card profiles (thanks to the request from <shad=ffffff>@RegentalAsh</shad>).";
+	private static final String UPDATE_MESSAGE = "Introducing smarter <shad=ffffff>Context Metrics</shad> with Region, Instance, NPC, Object, and Animation detection. This now provides more accurate and relevant skill/KC stats.";
 
 	private final Client client;
 	private final ClientThread clientThread;

@@ -99,6 +99,16 @@ public class ContextNPCs {
 		npc(map, "skotizo", "Skotizo's Lair", metric("Skotizo KC", "SKOTIZO"));
 		npc(map, "sol heredit", "Fortis Colosseum", metric("Sol Heredit KC", "SOL_HEREDIT"));
 		npc(map, "tempoross", "Tempoross Cove", metric("Tempoross", "TEMPOROSS"));
+		npc(map, "archive guardian", "Archive Guardian", TFA);
+		npc(map, "bork", "Bork and the Smorks", TFA);
+		npc(map, "the smorks", "Bork and the Smorks", TFA);
+		npc(map, "dagon'hai elder", "Xarth", TFA);
+		npc(map, "dagon'hai monk", "Xarth", TFA);
+		npc(map, "dreadnoth the jellied", "Dreadnoth the Jellied", TFA);
+		npc(map, "ezekiel", "Ezekiel", TFA);
+		npc(map, "moia", "Moia", TFA);
+		npc(map, "ocellus", "Ocellus", TFA);
+		npc(map, "xarth", "Xarth", TFA);
 		npc(map, "nylocas vasilias", "Nylocas Vasilias", TOB, HMT);
 		npc(map, "pestilent bloat", "Pestilent Bloat", TOB, HMT);
 		npc(map, "sotetseg", "Sotetseg", TOB, HMT);

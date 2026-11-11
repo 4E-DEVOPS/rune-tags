@@ -1,6 +1,7 @@
 package com.runetags.context;
 
 import static com.runetags.context.ContextMetrics.*;
+import static com.runetags.context.ContextSkills.*;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -10,7 +11,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Maps named regions/locations to contextual profile metrics.
+ * Maps named normal-world regions to contextual profile metrics.
  */
 public final class ContextRegions {
 	private static final Map<String, List<ProfileMetric>> BY_LOCATION = buildLocationMetrics();
@@ -57,7 +58,6 @@ public final class ContextRegions {
 		put(map, "Catacombs of Kourend", SLAYER);
 		put(map, "Cerberus' Lair", metric("Cerberus KC", "CERBERUS"));
 		put(map, "Chambers of Xeric", COX, CM);
-		put(map, "Great Olm", COX, CM);
 		put(map, "Chaos Altar", RUNECRAFT);
 		put(map, "Colossal Wyrm Remains", AGILITY);
 		put(map, "Corporeal Beast", metric("Corporeal Beast KC", "CORPOREAL_BEAST"));
@@ -171,26 +171,9 @@ public final class ContextRegions {
 		put(map, "The Summer Shore", metric("Shellbane Gryphon KC", "SHELLBANE_GRYPHON"));
 		put(map, "Ruins of Camdozaal", metric("Whisperer KC", "THE_WHISPERER"));
 		put(map, "Ver Sinhaza", TOB, HMT);
-		put(map, "The Maiden of Sugadinti", TOB, HMT);
-		put(map, "Nylocas Vasilias", TOB, HMT);
-		put(map, "Pestilent Bloat", TOB, HMT);
-		put(map, "Sotetseg", TOB, HMT);
-		put(map, "Verzik Vitur", TOB, HMT);
-		put(map, "Xarpus", TOB, HMT);
 		put(map, "Tithe Farm", FARMING);
 		put(map, "Tombs of Amascut", TOA, TOA_EXPERT);
 		put(map, "Tombs of Amascut Lobby", TOA, TOA_EXPERT);
-		put(map, "Akkha", TOA, TOA_EXPERT);
-		put(map, "Ba-Ba", TOA, TOA_EXPERT);
-		put(map, "Kephri", TOA, TOA_EXPERT);
-		put(map, "Osmumten's Burial Chamber", TOA, TOA_EXPERT);
-		put(map, "Path of Apmeken", TOA, TOA_EXPERT);
-		put(map, "Path of Crondis", TOA, TOA_EXPERT);
-		put(map, "Path of Het", TOA, TOA_EXPERT);
-		put(map, "Path of Scabaras", TOA, TOA_EXPERT);
-		put(map, "The Nexus", TOA, TOA_EXPERT);
-		put(map, "The Wardens", TOA, TOA_EXPERT);
-		put(map, "Zebak", TOA, TOA_EXPERT);
 		put(map, "Tree Gnome Stronghold", AGILITY);
 		put(map, "Ungael", VORKATH);
 		put(map, "Varrock Sewers", metric("Scurrius KC", "SCURRIUS"));

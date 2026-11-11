@@ -29,7 +29,7 @@ dependencies {
 }
 
 group = 'com.runetags'
-version = '1.2.1'
+version = '2.0'
 
 tasks.withType(JavaCompile).configureEach {
 	options.encoding = 'UTF-8'
@@ -171,11 +171,12 @@ tasks.register('testContext', Test) {
         includeTestsMatching 'com.runetags.context.ContextRegionsTest'
         includeTestsMatching 'com.runetags.context.ContextScenesTest'
         includeTestsMatching 'com.runetags.context.ContextServiceTest'
+        includeTestsMatching 'com.runetags.context.ContextSkillsTest'
+        includeTestsMatching 'com.runetags.context.PartyContextServiceTest'
+        includeTestsMatching 'com.runetags.context.PlayerContextServiceTest'
 		includeTestsMatching 'com.runetags.context.PlayerContextTest'
+        includeTestsMatching 'com.runetags.context.ProfileMetricCatalogTest'
 		includeTestsMatching 'com.runetags.context.ProfileMetricResolverTest'
-		includeTestsMatching 'com.runetags.context.PlayerContextServiceTest'
-		includeTestsMatching 'com.runetags.context.PartyContextServiceTest'
-		includeTestsMatching 'com.runetags.context.ProfileMetricCatalogTest'
 	}
 
 	testLogging {
@@ -261,9 +262,10 @@ tasks.register('testLocation', Test) {
 	useJUnit()
 
 	filter {
-		includeTestsMatching 'com.runetags.location.LocationIndexTest'
-		includeTestsMatching 'com.runetags.location.PlayerLocationTest'
+		includeTestsMatching 'com.runetags.location.InstanceIndexTest'
 		includeTestsMatching 'com.runetags.location.PlayerLocationServiceTest'
+        includeTestsMatching 'com.runetags.location.PlayerLocationTest'
+        includeTestsMatching 'com.runetags.location.RegionIndexTest'
 	}
 
 	testLogging {

@@ -24,7 +24,8 @@ import com.runetags.input.InputListener;
 import com.runetags.input.InterfaceInput;
 import com.runetags.input.MinigameInput;
 import com.runetags.input.RaidInterfaces;
-import com.runetags.location.LocationIndex;
+import com.runetags.location.InstanceIndex;
+import com.runetags.location.RegionIndex;
 import com.runetags.location.PlayerLocationService;
 import com.runetags.mention.KnownPlayerMentionParser;
 import com.runetags.mention.LocalMentionMatcher;
@@ -179,7 +180,9 @@ public class RuneTags extends Plugin {
 	@Inject
 	private KeyManager keyManager;
 	@Inject
-	private LocationIndex locationIndex;
+	private InstanceIndex instanceIndex;
+	@Inject
+	private RegionIndex regionIndex;
 	@Inject
 	private MentionHistoryService mentionHistoryService;
 	@Inject
@@ -322,10 +325,10 @@ public class RuneTags extends Plugin {
 		hiscoreEnrichmentCache = new HiscoreEnrichmentCache();
 		hiscoreEnrichmentService = new HiscoreEnrichmentService(hiscoreClient, hiscoreEnrichmentCache);
 		efficiencyMetricService = new EfficiencyMetricService(okHttpClient, gson);
-		playerLocationService = new PlayerLocationService(client, locationIndex);
+		playerLocationService = new PlayerLocationService(client, regionIndex);
 		profileMetricResolver = new ProfileMetricResolver();
-		contextService = new ContextService(client, playerLocationService, locationIndex);
-		partyContextService = new PartyContextService(partyService, locationIndex, nameNormalizer);
+		contextService = new ContextService(client, playerLocationService, regionIndex, instanceIndex);
+		partyContextService = new PartyContextService(partyService, regionIndex, nameNormalizer);
 		// Request Party names/coordinates even when the native Party UI is disabled.
 		partyDataService.subscribe(this, PartyDataType.CHARACTER_NAME, PartyDataType.COORD);
 

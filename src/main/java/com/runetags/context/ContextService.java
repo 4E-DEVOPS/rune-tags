@@ -1,8 +1,9 @@
 package com.runetags.context;
 
-import com.runetags.location.LocationIndex;
+import com.runetags.location.InstanceIndex;
 import com.runetags.location.PlayerLocation;
 import com.runetags.location.PlayerLocationService;
+import com.runetags.location.RegionIndex;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -22,7 +23,7 @@ import net.runelite.api.coords.WorldPoint;
 public class ContextService {
 	private final Client client;
 	private final PlayerLocationService playerLocationService;
-	private final LocationIndex locationIndex;
+	private final RegionIndex regionIndex;
 	private final ContextScenes contextScenes;
 	private final ContextNPCs contextNPCs;
 	private final ContextObjects contextObjects;
@@ -30,20 +31,20 @@ public class ContextService {
 
 	private volatile PlayerContext current = PlayerContext.unknown();
 
-	public ContextService(Client client, PlayerLocationService playerLocationService, LocationIndex locationIndex) {
+	public ContextService(Client client, PlayerLocationService playerLocationService, RegionIndex regionIndex, InstanceIndex instanceIndex) {
 		this.client = client;
 		this.playerLocationService = playerLocationService;
-		this.locationIndex = locationIndex;
+		this.regionIndex = regionIndex;
 		this.contextObjects = new ContextObjects(client);
 		this.contextNPCs = new ContextNPCs();
 		this.contextAnimations = new ContextAnimations();
-		this.contextScenes = new ContextScenes(client, locationIndex, contextObjects);
+		this.contextScenes = new ContextScenes(client, instanceIndex, contextObjects);
 	}
 
-	ContextService(Client client, PlayerLocationService playerLocationService, LocationIndex locationIndex, ContextScenes contextScenes, ContextNPCs contextNPCs, ContextObjects contextObjects, ContextAnimations contextAnimations) {
+	ContextService(Client client, PlayerLocationService playerLocationService, RegionIndex regionIndex, ContextScenes contextScenes, ContextNPCs contextNPCs, ContextObjects contextObjects, ContextAnimations contextAnimations) {
 		this.client = client;
 		this.playerLocationService = playerLocationService;
-		this.locationIndex = locationIndex;
+		this.regionIndex = regionIndex;
 		this.contextScenes = contextScenes;
 		this.contextNPCs = contextNPCs;
 		this.contextObjects = contextObjects;
@@ -70,16 +71,21 @@ public class ContextService {
 		final ContextDefinition animationContext = contextAnimations.resolve(player);
 		final ContextScenes.SceneContext sceneContext = contextScenes.resolve(player);
 
+		/*
+		 * TODO(v2-instance-mapping): Re-enable NPC/object location overrides before
+		 * publishing v2. They are temporarily disabled so unmapped instances/regions
+		 * expose their raw IDs while Instances.json and Regions.json are audited.
+		 */
 		final String locationName = firstNonBlank(
-				uniqueLocation(npcContexts),
-				objectContext.getLocationName(),
+				// uniqueLocation(npcContexts),
+				// objectContext.getLocationName(),
 				sceneContext.getLocationName(),
 				instanceFallback(sceneContext, isLocalPlayer(player)),
 				!sceneContext.isInstance()
 						? regionLocation.getLocationName()
 						: null);
 		final int regionId = sceneContext.isInstance()
-				? sceneContext.getRegionId()
+				? sceneContext.getInstanceId()
 				: regionLocation.getRegionId();
 		final PlayerLocation resolvedLocation = new PlayerLocation(locationName, regionId);
 
@@ -151,8 +157,8 @@ public class ContextService {
 		}
 
 		final int regionId = worldPoint.getRegionID();
-		final String locationName = locationIndex != null
-				? locationIndex.findName(regionId)
+		final String locationName = regionIndex != null
+				? regionIndex.findName(regionId)
 				: null;
 		return new PlayerLocation(locationName, regionId);
 	}
@@ -162,14 +168,14 @@ public class ContextService {
 	}
 
 	private static String instanceFallback(ContextScenes.SceneContext sceneContext, boolean localPlayer) {
-		if (!localPlayer || sceneContext == null || !sceneContext.isInstance() || sceneContext.getRegionId() < 0) {
+		if (!localPlayer || sceneContext == null || !sceneContext.isInstance() || sceneContext.getInstanceId() < 0) {
 			return null;
 		}
 
-		final int regionId = sceneContext.getRegionId();
-		final int regionX = (regionId >>> 8) & 0xFF;
-		final int regionY = regionId & 0xFF;
-		return "Instance: [" + regionX + ", " + regionY + "]";
+		final int instanceId = sceneContext.getInstanceId();
+		final int instanceX = (instanceId >>> 8) & 0xFF;
+		final int instanceY = instanceId & 0xFF;
+		return "Instance: [" + instanceX + ", " + instanceY + "]";
 	}
 
 	private static boolean hasMetrics(List<ContextDefinition> definitions) {
@@ -225,7 +231,7 @@ public class ContextService {
 			if (metric == null || metric.getHiscoreSkillName() == null) {
 				continue;
 			}
-			if (skillsOnly && !ContextMetrics.isSkillMetric(metric)) {
+			if (skillsOnly && !ContextSkills.isSkillMetric(metric)) {
 				continue;
 			}
 

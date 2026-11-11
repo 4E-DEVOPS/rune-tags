@@ -1,6 +1,6 @@
 package com.runetags.context;
 
-import static com.runetags.context.ContextMetrics.WOODCUTTING;
+import static com.runetags.context.ContextSkills.WOODCUTTING;
 
 import java.util.Collections;
 import java.util.HashMap;

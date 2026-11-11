@@ -11,13 +11,13 @@ import net.runelite.api.coords.WorldPoint;
  */
 public class PlayerLocationService {
 	private final Client client;
-	private final LocationIndex locationIndex;
+	private final RegionIndex regionIndex;
 
 	private volatile PlayerLocation current = PlayerLocation.unknown();
 
-	public PlayerLocationService(Client client, LocationIndex locationIndex) {
+	public PlayerLocationService(Client client, RegionIndex regionIndex) {
 		this.client = client;
-		this.locationIndex = locationIndex;
+		this.regionIndex = regionIndex;
 	}
 
 	public PlayerLocation getCurrent() {
@@ -45,7 +45,7 @@ public class PlayerLocationService {
 		}
 
 		final int regionId = point.getRegionID();
-		final String locationName = locationIndex.findName(regionId);
+		final String locationName = regionIndex.findName(regionId);
 		current = new PlayerLocation(locationName, regionId);
 	}
 }

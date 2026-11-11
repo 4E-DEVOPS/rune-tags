@@ -1,7 +1,7 @@
 package com.runetags.context;
 
-import static com.runetags.context.ContextMetrics.COOKING;
-import static com.runetags.context.ContextMetrics.SMITHING;
+import static com.runetags.context.ContextSkills.COOKING;
+import static com.runetags.context.ContextSkills.SMITHING;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,7 +32,7 @@ import net.runelite.api.gameval.ObjectID;
  * Tracks context-relevant scene objects through spawn/despawn events.
  */
 public class ContextObjects {
-	public static final int CONTEXT_RADIUS = 20;
+	public static final int CONTEXT_RADIUS = 12;
 
 	private static final Map<Integer, ObjectDefinition> EXACT_OBJECTS = buildExactObjects();
 
@@ -239,6 +239,7 @@ public class ContextObjects {
 		object(map, ObjectID.ANVIL, null, SMITHING);
 		object(map, ObjectID.RANGE, null, COOKING);
 		map.put(ObjectID.POH_EXIT_PORTAL, ObjectDefinition.pohMarker());
+		map.put(ObjectID.POH_EXIT_PORTAL_WILDERNESS, ObjectDefinition.pohMarker());
 
 		/*
 		 * Exact location overrides belong here when an object uniquely identifies a room/activity.

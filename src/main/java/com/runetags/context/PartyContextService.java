@@ -1,6 +1,6 @@
 package com.runetags.context;
 
-import com.runetags.location.LocationIndex;
+import com.runetags.location.RegionIndex;
 import com.runetags.mention.NameNormalizer;
 
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ public class PartyContextService {
 	private static final long CONTEXT_TTL_MILLIS = 60_000L;
 
 	private final PartyService partyService;
-	private final LocationIndex locationIndex;
+	private final RegionIndex regionIndex;
 	private final NameNormalizer nameNormalizer;
 
 	/*
@@ -30,9 +30,9 @@ public class PartyContextService {
 	private final Map<Long, PartyContext> contextsByMemberId = new LinkedHashMap<>();
 	private final Map<String, Long> memberIdsByName = new LinkedHashMap<>();
 
-	public PartyContextService(PartyService partyService, LocationIndex locationIndex, NameNormalizer nameNormalizer) {
+	public PartyContextService(PartyService partyService, RegionIndex regionIndex, NameNormalizer nameNormalizer) {
 		this.partyService = partyService;
-		this.locationIndex = locationIndex;
+		this.regionIndex = regionIndex;
 		this.nameNormalizer = nameNormalizer;
 	}
 
@@ -72,8 +72,8 @@ public class PartyContextService {
 		if (packedCoord != null) {
 			final WorldPoint worldPoint = WorldPoint.fromCoord(packedCoord);
 			final int regionId = worldPoint.getRegionID();
-			final String locationName = locationIndex != null
-					? locationIndex.findName(regionId)
+			final String locationName = regionIndex != null
+					? regionIndex.findName(regionId)
 					: null;
 			putContext(new PartyContext(memberId, playerName, regionId, locationName, System.currentTimeMillis()));
 		} else if (characterNameUpdate != null && previous != null) {

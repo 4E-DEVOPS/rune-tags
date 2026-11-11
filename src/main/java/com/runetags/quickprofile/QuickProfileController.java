@@ -983,7 +983,7 @@ public class QuickProfileController {
 	}
 
 	/*
-	 * Locations.json stores [regionX, regionY]; region IDs pack that pair as
+	 * Regions.json stores [regionX, regionY]; region IDs pack that pair as
 	 * (regionX << 8) | regionY.
 	 */
 	private static String formatRegionGrid(int regionId) {

@@ -29,9 +29,6 @@
     [52, 44],
     [47, 73]
   ],
-  "Akkha": [
-    [57, 84]
-  ],
   "Al Kharid": [
     [51, 49]
   ],
@@ -115,9 +112,6 @@
   ],
   "Baba Yaga's House": [
     [38, 72]
-  ],
-  "Ba-Ba": [
-    [59, 84]
   ],
   "Barbarian Assault": [
     [29, 85],
@@ -632,9 +626,6 @@
   "Grand Tree Tunnels": [
     [38, 154]
   ],
-  "Great Olm": [
-    [50, 89]
-  ],
   "Grimstone": [
     [45, 63]
   ],
@@ -773,9 +764,6 @@
     [18, 56],
     [19, 56],
     [20, 56]
-  ],
-  "Kephri": [
-    [55, 84]
   ],
   "Kharazi Jungle": [
     [43, 45],
@@ -1034,17 +1022,11 @@
     [26, 61],
     [24, 60]
   ],
-  "Nylocas Vasilias": [
-    [51, 66]
-  ],
   "Observatory": [
     [38, 49]
   ],
   "Observatory Dungeon": [
     [36, 146]
-  ],
-  "Osmumten's Burial Chamber": [
-    [57, 80]
   ],
   "Ourania Cave": [
     [47, 87]
@@ -1055,23 +1037,8 @@
   "Paterdomus Basement": [
     [53, 154]
   ],
-  "Path of Apmeken": [
-    [59, 82]
-  ],
-  "Path of Crondis": [
-    [61, 82]
-  ],
-  "Path of Het": [
-    [57, 82]
-  ],
-  "Path of Scabaras": [
-    [55, 82]
-  ],
   "Pest Control": [
     [41, 40]
-  ],
-  "Pestilent Bloat": [
-    [51, 69]
   ],
   "Phantom Muspah": [
     [44, 68]
@@ -1305,9 +1272,6 @@
   "Sorceress's Garden": [
     [45, 85]
   ],
-  "Sotetseg": [
-    [51, 67]
-  ],
   "Soul Altar": [
     [50, 74]
   ],
@@ -1407,13 +1371,6 @@
   "The Little Pearl": [
     [52, 34]
   ],
-  "The Maiden of Sugadinti": [
-    [49, 69],
-    [50, 69]
-  ],
-  "The Nexus": [
-    [55, 80]
-  ],
   "The Onyx Crest": [
     [46, 35]
   ],
@@ -1441,9 +1398,6 @@
     [51, 37],
     [50, 36],
     [51, 36]
-  ],
-  "The Wardens": [
-    [59, 80]
   ],
   "The Warrens": [
     [27, 158],
@@ -1542,9 +1496,6 @@
   ],
   "Ver Sinhaza": [
     [57, 50]
-  ],
-  "Verzik Vitur": [
-    [49, 67]
   ],
   "Varrock": [
     [50, 54],
@@ -1721,9 +1672,6 @@
     [56, 160],
     [56, 159]
   ],
-  "Xarpus": [
-    [49, 68]
-  ],
   "Yama": [
     [23, 157]
   ],
@@ -1744,9 +1692,6 @@
   ],
   "Zalcano": [
     [47, 94]
-  ],
-  "Zebak": [
-    [61, 84]
   ],
   "Zemouregal's Base": [
     [55, 71],
