@@ -11,8 +11,8 @@ import com.runetags.chat.NativeBootstrapService;
 import com.runetags.chat.ReferenceLayoutService;
 import com.runetags.chat.TaggedMessage;
 import com.runetags.chat.TaggedMessageRepository;
+import com.runetags.context.ContextService;
 import com.runetags.context.PartyContextService;
-import com.runetags.context.PlayerContextService;
 import com.runetags.context.ProfileMetricResolver;
 import com.runetags.hiscores.EfficiencyMetricService;
 import com.runetags.hiscores.HiscoreEnrichmentCache;
@@ -81,13 +81,19 @@ import net.runelite.api.events.ClanChannelChanged;
 import net.runelite.api.events.ClanMemberJoined;
 import net.runelite.api.events.ClanMemberLeft;
 import net.runelite.api.events.CommandExecuted;
+import net.runelite.api.events.DecorativeObjectDespawned;
+import net.runelite.api.events.DecorativeObjectSpawned;
 import net.runelite.api.events.FriendsChatMemberJoined;
 import net.runelite.api.events.FriendsChatMemberLeft;
 import net.runelite.api.events.FriendsChatSync;
+import net.runelite.api.events.GameObjectDespawned;
+import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOpened;
+import net.runelite.api.events.GroundObjectDespawned;
+import net.runelite.api.events.GroundObjectSpawned;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.NameableNameChanged;
 import net.runelite.api.events.PlayerDespawned;
@@ -96,6 +102,8 @@ import net.runelite.api.events.PostClientTick;
 import net.runelite.api.events.PostMenuSort;
 import net.runelite.api.events.RemovedFriend;
 import net.runelite.api.events.ScriptPreFired;
+import net.runelite.api.events.WallObjectDespawned;
+import net.runelite.api.events.WallObjectSpawned;
 import net.runelite.client.Notifier;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.callback.Hooks;
@@ -246,7 +254,7 @@ public class RuneTags extends Plugin {
 	private PlayerLocationService playerLocationService;
 	private ProfileMetricResolver profileMetricResolver;
 
-	private PlayerContextService playerContextService;
+	private ContextService contextService;
 	private PartyContextService partyContextService;
 
 	private HiscoreEnrichmentCache hiscoreEnrichmentCache;
@@ -316,7 +324,7 @@ public class RuneTags extends Plugin {
 		efficiencyMetricService = new EfficiencyMetricService(okHttpClient, gson);
 		playerLocationService = new PlayerLocationService(client, locationIndex);
 		profileMetricResolver = new ProfileMetricResolver();
-		playerContextService = new PlayerContextService(client, playerLocationService, profileMetricResolver);
+		contextService = new ContextService(client, playerLocationService, locationIndex);
 		partyContextService = new PartyContextService(partyService, locationIndex, nameNormalizer);
 		// Request Party names/coordinates even when the native Party UI is disabled.
 		partyDataService.subscribe(this, PartyDataType.CHARACTER_NAME, PartyDataType.COORD);
@@ -327,7 +335,7 @@ public class RuneTags extends Plugin {
 		playerLookupService = new PlayerLookupService(config);
 		clanLookupService = new ClanLookupService();
 		reportCaseService = new ReportCaseService(okHttpClient, gson, clientThread, config);
-		quickProfileController = new QuickProfileController(client, clientThread, playerDirectory, hiscoreEnrichmentService, efficiencyMetricService, config, playerContextService, partyContextService, profileMetricResolver, targetController, playerLookupService, clanLookupService, reportCaseService, localPlayerRecordService, chatboxPanelManager, configManager);
+		quickProfileController = new QuickProfileController(client, clientThread, playerDirectory, hiscoreEnrichmentService, efficiencyMetricService, config, contextService, partyContextService, profileMetricResolver, targetController, playerLookupService, clanLookupService, reportCaseService, localPlayerRecordService, chatboxPanelManager, configManager);
 		quickProfileOverlay = new QuickProfileOverlay(client, config, runeLiteConfig, quickProfileController, tooltipManager);
 		favoriteOverlay = new FavoriteOverlay(client, config, localPlayerRecordService, targetController, modelOutlineRenderer, partyService);
 		targetOverlay = new TargetOverlay(client, config, targetController, modelOutlineRenderer, localPlayerRecordService, favoriteOverlay);
@@ -379,8 +387,9 @@ public class RuneTags extends Plugin {
 				playerLocationService.refresh();
 			}
 
-			if (playerContextService != null) {
-				playerContextService.refresh();
+			if (contextService != null) {
+				contextService.bootstrapSceneObjects();
+				contextService.refresh();
 			}
 
 			if (playerDirectory != null) {
@@ -534,8 +543,8 @@ public class RuneTags extends Plugin {
 			playerDirectory.clear();
 		}
 
-		if (playerContextService != null) {
-			playerContextService.clear();
+		if (contextService != null) {
+			contextService.clear();
 		}
 
 		if (partyContextService != null) {
@@ -601,7 +610,7 @@ public class RuneTags extends Plugin {
 		hiscoreEnrichmentCache = null;
 
 		partyContextService = null;
-		playerContextService = null;
+		contextService = null;
 
 		profileMetricResolver = null;
 
@@ -639,6 +648,10 @@ public class RuneTags extends Plugin {
 			updateMessages.onLoggedIn();
 		}
 
+		if (gameState == GameState.LOADING && contextService != null) {
+			contextService.clearSceneObjects();
+		}
+
 		if (playerDirectory == null) {
 			return;
 		}
@@ -648,8 +661,8 @@ public class RuneTags extends Plugin {
 				playerLocationService.refresh();
 			}
 
-			if (playerContextService != null) {
-				playerContextService.refresh();
+			if (contextService != null) {
+				contextService.refresh();
 			}
 
 			playerDirectory.rebuild();
@@ -682,8 +695,8 @@ public class RuneTags extends Plugin {
 				targetController.clear("world change");
 			}
 
-			if (playerContextService != null) {
-				playerContextService.clear();
+			if (contextService != null) {
+				contextService.clear();
 			}
 
 			if (partyContextService != null) {
@@ -710,8 +723,8 @@ public class RuneTags extends Plugin {
 				targetController.clear("logged out");
 			}
 
-			if (playerContextService != null) {
-				playerContextService.clear();
+			if (contextService != null) {
+				contextService.clear();
 			}
 
 			if (partyContextService != null) {
@@ -721,6 +734,62 @@ public class RuneTags extends Plugin {
 			if (reportCaseService != null) {
 				reportCaseService.clear();
 			}
+		}
+	}
+
+	@Subscribe
+	public void onGameObjectSpawned(GameObjectSpawned event) {
+		if (event != null && contextService != null) {
+			contextService.onObjectSpawned(event.getGameObject());
+		}
+	}
+
+	@Subscribe
+	public void onGameObjectDespawned(GameObjectDespawned event) {
+		if (event != null && contextService != null) {
+			contextService.onObjectDespawned(event.getGameObject());
+		}
+	}
+
+	@Subscribe
+	public void onGroundObjectSpawned(GroundObjectSpawned event) {
+		if (event != null && contextService != null) {
+			contextService.onObjectSpawned(event.getGroundObject());
+		}
+	}
+
+	@Subscribe
+	public void onGroundObjectDespawned(GroundObjectDespawned event) {
+		if (event != null && contextService != null) {
+			contextService.onObjectDespawned(event.getGroundObject());
+		}
+	}
+
+	@Subscribe
+	public void onWallObjectSpawned(WallObjectSpawned event) {
+		if (event != null && contextService != null) {
+			contextService.onObjectSpawned(event.getWallObject());
+		}
+	}
+
+	@Subscribe
+	public void onWallObjectDespawned(WallObjectDespawned event) {
+		if (event != null && contextService != null) {
+			contextService.onObjectDespawned(event.getWallObject());
+		}
+	}
+
+	@Subscribe
+	public void onDecorativeObjectSpawned(DecorativeObjectSpawned event) {
+		if (event != null && contextService != null) {
+			contextService.onObjectSpawned(event.getDecorativeObject());
+		}
+	}
+
+	@Subscribe
+	public void onDecorativeObjectDespawned(DecorativeObjectDespawned event) {
+		if (event != null && contextService != null) {
+			contextService.onObjectDespawned(event.getDecorativeObject());
 		}
 	}
 
@@ -771,8 +840,8 @@ public class RuneTags extends Plugin {
 			playerLocationService.refresh();
 		}
 
-		if (playerContextService != null) {
-			playerContextService.refresh();
+		if (contextService != null) {
+			contextService.refresh();
 		}
 
 		/*

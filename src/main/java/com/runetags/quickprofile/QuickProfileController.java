@@ -5,7 +5,7 @@ import com.runetags.Constants;
 import com.runetags.config.QuickCardOpenPosition;
 import com.runetags.context.PartyContextService;
 import com.runetags.context.PlayerContext;
-import com.runetags.context.PlayerContextService;
+import com.runetags.context.ContextService;
 import com.runetags.context.ProfileMetric;
 import com.runetags.context.ProfileMetricResolver;
 import com.runetags.context.ProfileMetricValue;
@@ -56,7 +56,7 @@ public class QuickProfileController {
 	private final EfficiencyMetricService efficiencyMetricService;
 	private final Configurations config;
 	private final ConfigManager configManager;
-	private final PlayerContextService playerContextService;
+	private final ContextService contextService;
 	private final PartyContextService partyContextService;
 	private final ProfileMetricResolver profileMetricResolver;
 	private final PlayerLookupService playerLookupService;
@@ -99,7 +99,7 @@ public class QuickProfileController {
 	private volatile FontMetrics noteDisplayFontMetrics;
 	private volatile int noteDisplayMaxWidth;
 
-	public QuickProfileController(Client client, ClientThread clientThread, PlayerDirectory playerDirectory, HiscoreEnrichmentService hiscoreEnrichmentService, EfficiencyMetricService efficiencyMetricService, Configurations config, PlayerContextService playerContextService, PartyContextService partyContextService, ProfileMetricResolver profileMetricResolver, TargetController targetController, PlayerLookupService playerLookupService, ClanLookupService clanLookupService, ReportCaseService reportCaseService, LocalPlayerRecordService localPlayerRecordService, ChatboxPanelManager chatboxPanelManager, ConfigManager configManager) {
+	public QuickProfileController(Client client, ClientThread clientThread, PlayerDirectory playerDirectory, HiscoreEnrichmentService hiscoreEnrichmentService, EfficiencyMetricService efficiencyMetricService, Configurations config, ContextService contextService, PartyContextService partyContextService, ProfileMetricResolver profileMetricResolver, TargetController targetController, PlayerLookupService playerLookupService, ClanLookupService clanLookupService, ReportCaseService reportCaseService, LocalPlayerRecordService localPlayerRecordService, ChatboxPanelManager chatboxPanelManager, ConfigManager configManager) {
 		this.client = client;
 		this.clientThread = clientThread;
 		this.playerDirectory = playerDirectory;
@@ -107,7 +107,7 @@ public class QuickProfileController {
 		this.efficiencyMetricService = efficiencyMetricService;
 		this.config = config;
 		this.configManager = configManager;
-		this.playerContextService = playerContextService;
+		this.contextService = contextService;
 		this.partyContextService = partyContextService;
 		this.profileMetricResolver = profileMetricResolver;
 		this.targetController = targetController;
@@ -912,10 +912,18 @@ public class QuickProfileController {
 			return null;
 		}
 
-		// Nearby scene context takes priority.
+		// Resolve nearby environmental context against the player whose card is open.
 		if (identity.isNearby()) {
-			return playerContextService != null
-					? playerContextService.getCurrent()
+			if (contextService == null) {
+				return null;
+			}
+
+			if (identity.getNearbyPlayer() != null) {
+				return contextService.resolve(identity.getNearbyPlayer());
+			}
+
+			return isLocalPlayerName(identity.getCanonicalName())
+					? contextService.getCurrent()
 					: null;
 		}
 
@@ -942,8 +950,8 @@ public class QuickProfileController {
 		if (isLocalPlayerName(playerName)) {
 			final PlayerContext localContext = context != null
 					? context
-					: playerContextService != null
-							? playerContextService.getCurrent()
+					: contextService != null
+							? contextService.getCurrent()
 							: null;
 
 			if (localContext != null) {

@@ -165,6 +165,12 @@ tasks.register('testContext', Test) {
 	useJUnit()
 
 	filter {
+        includeTestsMatching 'com.runetags.context.ContextAnimationsTest'
+        includeTestsMatching 'com.runetags.context.ContextNPCsTest'
+        includeTestsMatching 'com.runetags.context.ContextObjectsTest'
+        includeTestsMatching 'com.runetags.context.ContextRegionsTest'
+        includeTestsMatching 'com.runetags.context.ContextScenesTest'
+        includeTestsMatching 'com.runetags.context.ContextServiceTest'
 		includeTestsMatching 'com.runetags.context.PlayerContextTest'
 		includeTestsMatching 'com.runetags.context.ProfileMetricResolverTest'
 		includeTestsMatching 'com.runetags.context.PlayerContextServiceTest'
