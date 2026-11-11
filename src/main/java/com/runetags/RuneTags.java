@@ -912,7 +912,12 @@ public class RuneTags extends Plugin {
 
 	@Subscribe
 	public void onFriendsChatSync(FriendsChatSync event) {
-		// Rebuild once for initial Friends Chat population instead of processing each event.
+		/*
+		 * A full Friends Chat sync invalidates previous membership whether this is
+		 * an initial join, a leave, or a server resync of the current channel.
+		 * Rebuild once after the sync instead of processing the subsequent
+		 * FriendsChatMemberJoined initialization events individually.
+		 */
 		queueFullDirectoryRefresh();
 	}
 
