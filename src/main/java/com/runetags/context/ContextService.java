@@ -30,6 +30,7 @@ public class ContextService {
 	private final ContextAnimations contextAnimations;
 
 	private volatile PlayerContext current = PlayerContext.unknown();
+	private volatile ContextScenes.SceneContext currentSceneContext = ContextScenes.SceneContext.empty();
 
 	public ContextService(Client client, PlayerLocationService playerLocationService, RegionIndex regionIndex, InstanceIndex instanceIndex) {
 		this.client = client;
@@ -55,11 +56,19 @@ public class ContextService {
 		return current;
 	}
 
+	public ContextScenes.SceneContext getCurrentSceneContext() {
+		return currentSceneContext;
+	}
+
 	/**
 	 * Resolves context for a specific nearby player. Environmental and animation
 	 * signals are evaluated against that player's own state and WorldView.
 	 */
 	public PlayerContext resolve(Player player) {
+		return resolve(player, contextScenes.resolve(player));
+	}
+
+	private PlayerContext resolve(Player player, ContextScenes.SceneContext sceneContext) {
 		if (player == null) {
 			return PlayerContext.unknown();
 		}
@@ -69,7 +78,6 @@ public class ContextService {
 		final List<ContextDefinition> npcContexts = contextNPCs.findAll(worldView);
 		final ContextDefinition objectContext = contextObjects.resolveNearby(player);
 		final ContextDefinition animationContext = contextAnimations.resolve(player);
-		final ContextScenes.SceneContext sceneContext = contextScenes.resolve(player);
 
 		/*
 		 * TODO(v2-instance-mapping): Re-enable NPC/object location overrides before
@@ -104,6 +112,7 @@ public class ContextService {
 
 	public void clear() {
 		current = PlayerContext.unknown();
+		currentSceneContext = ContextScenes.SceneContext.empty();
 		contextObjects.clear();
 	}
 
@@ -137,9 +146,14 @@ public class ContextService {
 		final Player localPlayer = client != null
 				? client.getLocalPlayer()
 				: null;
-		current = localPlayer != null
-				? resolve(localPlayer)
-				: PlayerContext.unknown();
+		if (localPlayer == null) {
+			current = PlayerContext.unknown();
+			currentSceneContext = ContextScenes.SceneContext.empty();
+			return;
+		}
+
+		currentSceneContext = contextScenes.resolve(localPlayer);
+		current = resolve(localPlayer, currentSceneContext);
 	}
 
 	private PlayerLocation resolveRegionLocation(Player player) {

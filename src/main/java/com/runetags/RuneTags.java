@@ -11,9 +11,11 @@ import com.runetags.chat.NativeBootstrapService;
 import com.runetags.chat.ReferenceLayoutService;
 import com.runetags.chat.TaggedMessage;
 import com.runetags.chat.TaggedMessageRepository;
+import com.runetags.context.ContextScenes;
 import com.runetags.context.ContextService;
 import com.runetags.context.PartyContextService;
 import com.runetags.context.ProfileMetricResolver;
+import com.runetags.context.PartyContextService.PartyContextUpdate;
 import com.runetags.hiscores.EfficiencyMetricService;
 import com.runetags.hiscores.HiscoreEnrichmentCache;
 import com.runetags.hiscores.HiscoreEnrichmentService;
@@ -25,8 +27,8 @@ import com.runetags.input.InterfaceInput;
 import com.runetags.input.MinigameInput;
 import com.runetags.input.RaidInterfaces;
 import com.runetags.location.InstanceIndex;
-import com.runetags.location.RegionIndex;
 import com.runetags.location.PlayerLocationService;
+import com.runetags.location.RegionIndex;
 import com.runetags.mention.KnownPlayerMentionParser;
 import com.runetags.mention.LocalMentionMatcher;
 import com.runetags.mention.NameNormalizer;
@@ -57,6 +59,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -124,6 +127,7 @@ import net.runelite.client.party.PartyDataService;
 import net.runelite.client.party.PartyDataType;
 import net.runelite.client.party.PartyMember;
 import net.runelite.client.party.PartyService;
+import net.runelite.client.party.WSClient;
 import net.runelite.client.party.events.UserJoin;
 import net.runelite.client.party.events.UserPart;
 import net.runelite.client.party.messages.PartyData;
@@ -156,6 +160,7 @@ public class RuneTags extends Plugin {
 	 */
 	private static final int DIRECTORY_RECONCILE_GAME_TICKS = 25;
 	private static final int DIRECTORY_TARGETED_REFRESH_LIMIT = 2;
+	private static final int PARTY_CONTEXT_HEARTBEAT_GAME_TICKS = 25;
 
 	@Inject
 	private Client client;
@@ -199,6 +204,8 @@ public class RuneTags extends Plugin {
 	private PartyService partyService;
 	@Inject
 	private PartyDataService partyDataService;
+	@Inject
+	private WSClient wsClient;
 	@Inject
 	private Provider<MenuManager> menuManager;
 	@Inject
@@ -259,6 +266,12 @@ public class RuneTags extends Plugin {
 
 	private ContextService contextService;
 	private PartyContextService partyContextService;
+
+	private boolean partyContextShared;
+	private boolean lastSharedPartyInstance;
+	private int lastSharedPartyInstanceId = -1;
+	private String lastSharedPartyInstanceLocationName;
+	private int partyContextShareTicks;
 
 	private HiscoreEnrichmentCache hiscoreEnrichmentCache;
 	private HiscoreEnrichmentService hiscoreEnrichmentService;
@@ -328,7 +341,8 @@ public class RuneTags extends Plugin {
 		playerLocationService = new PlayerLocationService(client, regionIndex);
 		profileMetricResolver = new ProfileMetricResolver();
 		contextService = new ContextService(client, playerLocationService, regionIndex, instanceIndex);
-		partyContextService = new PartyContextService(partyService, regionIndex, nameNormalizer);
+		partyContextService = new PartyContextService(partyService, regionIndex, instanceIndex, nameNormalizer);
+		wsClient.registerMessage(PartyContextUpdate.class);
 		// Request Party names/coordinates even when the native Party UI is disabled.
 		partyDataService.subscribe(this, PartyDataType.CHARACTER_NAME, PartyDataType.COORD);
 
@@ -374,6 +388,7 @@ public class RuneTags extends Plugin {
 		fullDirectoryRefreshPending = false;
 		directoryReconcileTicks = 0;
 		playerProfileIndexNames.clear();
+		resetSharedPartyContext();
 
 		/*
 		 * Initial client-state synchronization must run on the client thread when
@@ -394,6 +409,8 @@ public class RuneTags extends Plugin {
 				contextService.bootstrapSceneObjects();
 				contextService.refresh();
 			}
+
+			sharePartyContext(false);
 
 			if (playerDirectory != null) {
 				playerDirectory.rebuild();
@@ -443,7 +460,9 @@ public class RuneTags extends Plugin {
 	@Override
 	protected void shutDown() {
 		final boolean uninstalling = updateMessages.prepareShutdown();
+		clearSharedPartyContext();
 		partyDataService.unsubscribe(this, PartyDataType.CHARACTER_NAME, PartyDataType.COORD);
+		wsClient.unregisterMessage(PartyContextUpdate.class);
 		// 1. Stop external interaction first
 		if (raidInterfaces != null) {
 			mouseManager.unregisterMouseListener(raidInterfaces);
@@ -668,6 +687,8 @@ public class RuneTags extends Plugin {
 				contextService.refresh();
 			}
 
+			sharePartyContext(false);
+
 			playerDirectory.rebuild();
 			markDirectoryFullySynchronized();
 
@@ -682,6 +703,8 @@ public class RuneTags extends Plugin {
 		}
 
 		if (gameState == GameState.HOPPING) {
+			clearSharedPartyContext();
+
 			/*
 			 * Preserve retained chat semantics, hitboxes, and durable account observations.
 			 * Only live world/session profile state becomes invalid.
@@ -710,6 +733,8 @@ public class RuneTags extends Plugin {
 		}
 
 		if (gameState == GameState.LOGIN_SCREEN) {
+			clearSharedPartyContext();
+
 			/*
 			 * Preserve retained chat semantics, hitboxes, and durable account observations.
 			 * Only live world/session player state becomes invalid.
@@ -846,6 +871,9 @@ public class RuneTags extends Plugin {
 		if (contextService != null) {
 			contextService.refresh();
 		}
+
+		partyContextShareTicks++;
+		sharePartyContext(false);
 
 		/*
 		 * Refresh only the open Quick-Card here. Full PlayerDirectory discovery remains
@@ -1036,6 +1064,7 @@ public class RuneTags extends Plugin {
 
 	@Subscribe
 	public void onPartyChanged(PartyChanged event) {
+		resetSharedPartyContext();
 		if (partyContextService != null) {
 			partyContextService.clear();
 		}
@@ -1051,6 +1080,8 @@ public class RuneTags extends Plugin {
 		if (event != null && partyContextService != null) {
 			partyContextService.removeMember(event.getMemberId());
 		}
+
+		sharePartyContext(true);
 	}
 
 	@Subscribe
@@ -1097,6 +1128,59 @@ public class RuneTags extends Plugin {
 		if (event.getCoord() != null && partyContextService != null && partyContextService.findByMemberId(event.getMemberId()) != null) {
 			refreshOpenQuickProfile();
 		}
+	}
+
+	@Subscribe
+	public void onPartyContextUpdate(PartyContextUpdate event) {
+		if (event == null || partyContextService == null) {
+			return;
+		}
+
+		partyContextService.onPartyContextUpdate(event);
+		refreshOpenQuickProfile();
+	}
+
+	private void sharePartyContext(boolean force) {
+		if (partyService == null || contextService == null || !partyService.isInParty()) {
+			return;
+		}
+
+		final ContextScenes.SceneContext sceneContext = contextService.getCurrentSceneContext();
+		final boolean instance = sceneContext != null && sceneContext.isInstance();
+		final int instanceId = instance
+				? sceneContext.getInstanceId()
+				: -1;
+		final String instanceLocationName = instance
+				? sceneContext.getLocationName()
+				: null;
+
+		final boolean unchanged = partyContextShared && lastSharedPartyInstance == instance && lastSharedPartyInstanceId == instanceId && Objects.equals(lastSharedPartyInstanceLocationName, instanceLocationName);
+		if (!force && unchanged && (!instance || partyContextShareTicks < PARTY_CONTEXT_HEARTBEAT_GAME_TICKS)) {
+			return;
+		}
+
+		partyService.send(new PartyContextUpdate(instance, instanceId, instanceLocationName));
+		partyContextShared = true;
+		lastSharedPartyInstance = instance;
+		lastSharedPartyInstanceId = instanceId;
+		lastSharedPartyInstanceLocationName = instanceLocationName;
+		partyContextShareTicks = 0;
+	}
+
+	private void clearSharedPartyContext() {
+		if (partyContextShared && partyService != null && partyService.isInParty()) {
+			partyService.send(new PartyContextUpdate(false, -1, null));
+		}
+
+		resetSharedPartyContext();
+	}
+
+	private void resetSharedPartyContext() {
+		partyContextShared = false;
+		lastSharedPartyInstance = false;
+		lastSharedPartyInstanceId = -1;
+		lastSharedPartyInstanceLocationName = null;
+		partyContextShareTicks = 0;
 	}
 
 	private void queueDirectoryPlayerRefresh(String playerName) {

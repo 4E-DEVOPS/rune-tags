@@ -937,6 +937,10 @@ public class QuickProfileController {
 			return null;
 		}
 
+		if (partyContext.isInstance()) {
+			return profileMetricResolver.resolveLocation(new PlayerLocation(partyContext.getInstanceLocationName(), partyContext.getInstanceId()));
+		}
+
 		return profileMetricResolver.resolveLocation(new PlayerLocation(partyContext.getLocationName(), partyContext.getRegionId()));
 	}
 

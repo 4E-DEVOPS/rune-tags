@@ -85,6 +85,8 @@ public class ContextScenes {
 	private static Map<String, List<ProfileMetric>> buildInstanceMetrics() {
 		final Map<String, List<ProfileMetric>> map = new HashMap<>();
 
+		put(map, PLAYER_OWNED_HOUSE, CONSTRUCTION);
+
 		put(map, "Great Olm", COX, CM);
 
 		put(map, "Maiden of Sugadinti", TOB, HMT);
