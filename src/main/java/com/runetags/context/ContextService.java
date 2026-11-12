@@ -79,14 +79,9 @@ public class ContextService {
 		final ContextDefinition objectContext = contextObjects.resolveNearby(player);
 		final ContextDefinition animationContext = contextAnimations.resolve(player);
 
-		/*
-		 * TODO(v2-instance-mapping): Re-enable NPC/object location overrides before
-		 * publishing v2. They are temporarily disabled so unmapped instances/regions
-		 * expose their raw IDs while Instances.json and Regions.json are audited.
-		 */
 		final String locationName = firstNonBlank(
-				// uniqueLocation(npcContexts),
-				// objectContext.getLocationName(),
+				uniqueLocation(npcContexts),
+				objectContext.getLocationName(),
 				sceneContext.getLocationName(),
 				instanceFallback(sceneContext, isLocalPlayer(player)),
 				!sceneContext.isInstance()
