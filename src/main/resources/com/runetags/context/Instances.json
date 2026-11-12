@@ -5,6 +5,15 @@
   "Ba-Ba": [
     [59, 84]
   ],
+  "Bork and the Smorks": [
+    [65, 87]
+  ],
+  "Dreadnoth the Jellied": [
+    [65, 88]
+  ],
+  "Fractured Archive Nexus": [
+    [64, 87]
+  ],
   "Great Olm": [
     [50, 89]
   ],
@@ -15,11 +24,17 @@
     [49, 69],
     [50, 69]
   ],
-  "The Nexus": [
+  "Moia": [
+    [63, 88]
+  ],
+  "Tombs of Amascut Nexus": [
     [55, 80]
   ],
   "Nylocas Vasilias": [
     [51, 66]
+  ],
+  "Ocellus": [
+    [64, 88]
   ],
   "Osmumten's Burial Chamber": [
     [57, 80]
@@ -45,8 +60,14 @@
   "Verzik Vitur": [
     [49, 67]
   ],
+  "Verzik Vitur's Vault": [
+    [50, 67]
+  ],
   "The Wardens": [
     [59, 80]
+  ],
+  "Xarth": [
+    [65, 86]
   ],
   "Xarpus": [
     [49, 68]
